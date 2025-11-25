@@ -105,12 +105,14 @@ run_with_progress() {
     # Cleanup
     rm -f "$tmp_output" "$tmp_error"
     
-    # Show result
+    # Show result (on new line after spinner)
     if [ $exit_code -eq 0 ]; then
-        echo -e "\r\033[1;32m[SUCCESS] ${message}\033[0m"
+        echo ""
+        echo -e "\033[1;32m[SUCCESS] ${message}\033[0m"
         return 0
     else
-        echo -e "\r\033[1;31m[ERROR] ${message} (exit code: $exit_code)\033[0m"
+        echo ""
+        echo -e "\033[1;31m[ERROR] ${message} (exit code: $exit_code)\033[0m"
         return $exit_code
     fi
 }
