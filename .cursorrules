@@ -1,0 +1,28 @@
+# Konfigurasi Proyek & Instruksi AI
+
+## Deskripsi Proyek
+Proyek ini adalah "VPS Remote Dev Bootstrap", sebuah skrip otomatisasi untuk menyiapkan VPS Debian 13 (Trixie/Bookworm) menjadi workstation development remote yang lengkap.
+Fitur mencakup: XFCE/XRDP, Docker, Node.js, Python, VS Code, keamanan (UFW/Fail2Ban/SSH hardening), dan WireGuard.
+
+## Tech Stack
+- **Bahasa Utama**: Bash Shell Scripting
+- **OS Target**: Debian 13 (Trixie/Bookworm)
+- **Tools**: Docker, NVM, Python venv, UFW, Fail2Ban, WireGuard, XFCE4, XRDP
+
+## Aturan Coding (Bash Best Practices)
+1.  **Header**: Selalu gunakan shebang `#!/bin/bash`.
+2.  **Error Handling**: Gunakan `set -euo pipefail` di awal skrip untuk menangani error dengan ketat, atau tangani error secara eksplisit jika command boleh gagal.
+3.  **Variabel**: Selalu quote variabel (`"$VAR"`) untuk mencegah word splitting yang tidak diinginkan.
+4.  **Fungsi**: Gunakan fungsi untuk memecah logika yang kompleks. Gunakan `local` untuk variabel di dalam fungsi.
+5.  **Idempotency**: Jika memungkinkan, buat perintah agar bisa dijalankan berulang kali tanpa merusak sistem (misal: cek apakah file ada sebelum append).
+6.  **Logging**: Berikan output yang jelas kepada user tentang apa yang sedang terjadi (gunakan `echo` atau fungsi log khusus).
+7.  **Root Check**: Pastikan skrip dijalankan sebagai root atau gunakan `sudo` di mana perlu (namun skrip bootstrap biasanya dijalankan sebagai root/sudo).
+
+## Preferensi Bahasa & Komunikasi
+- **Penjelasan**: Berikan penjelasan dan respons dalam **Bahasa Indonesia**.
+- **Komentar Kode**: Komentar di dalam kode boleh menggunakan Bahasa Inggris (standar industri) atau Indonesia, sesuai konteks agar mudah dipahami.
+- **Gaya**: Ringkas, jelas, dan to-the-point.
+
+## File Penting
+- `setup.sh`: Skrip utama (perlu dibuat ulang jika hilang).
+- `README.md`: Dokumentasi proyek.

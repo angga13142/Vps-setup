@@ -1,0 +1,23 @@
+# Git
+.git/
+.gitignore
+
+# System / Logs
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
+
+# Dependencies & Build Artifacts
+node_modules/
+__pycache__/
+*.pyc
+venv/
+.venv/
+dist/
+build/
+
+# Editor
+.vscode/
+.idea/
+*.swp
