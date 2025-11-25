@@ -71,15 +71,23 @@ setup_docker() {
     if [ $apt_exit_code -eq 0 ]; then
         log_success "Apt cache updated successfully"
     else
-        log_warning "Apt update had issues, checking if we can continue..."
-        # Check if it's just warnings or critical errors
-        if echo "$apt_update_output" | grep -qi "error"; then
-            log_error "Critical apt update errors detected"
-            echo "$apt_update_output"
-            return 1
-        else
-            log_warning "Apt update had non-critical warnings, continuing..."
+        # Non-zero exit code means apt-get update FAILED
+        # This should be treated as an error, not a warning
+        log_error "Apt update failed with exit code: $apt_exit_code"
+        log_error "This indicates a problem with package repository configuration"
+        echo ""
+        log_error "Apt update output:"
+        echo "$apt_update_output" | sed 's/^/  /'
+        echo ""
+        
+        # Check for common error patterns for better diagnostics
+        if echo "$apt_update_output" | grep -qiE "(error|failed|unable|cannot|404|403|timeout)"; then
+            log_error "Detected error patterns in output (error/failed/unable/cannot/404/403/timeout)"
         fi
+        
+        log_error "Cannot proceed with Docker installation with corrupted apt state"
+        log_error "Please fix apt repository issues before continuing"
+        return 1
     fi
     
     # Install Docker components
