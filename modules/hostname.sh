@@ -199,7 +199,7 @@ install_starship_prompt() {
     fi
     
     # Install Starship
-    if curl -sS https://starship.rs/install.sh | sh -s -- -y; then
+    if run_with_progress "Installing Starship prompt" "curl -sS https://starship.rs/install.sh | sh -s -- -y"; then
         log_success "  ✓ Starship installed"
         
         # Configure for bash

@@ -11,18 +11,7 @@ setup_cursor() {
     local CURSOR_INSTALLED=false
     
     # Method 1: Official installer (recommended)
-    log_info "Mencoba menginstal Cursor menggunakan installer resmi..."
-    if run_as_user "$DEV_USER" bash <<'CURSOR_INSTALL'
-set -e
-if curl -fsSL https://cursor.com/install | bash; then
-    echo "Cursor installer berhasil"
-    exit 0
-else
-    echo "Cursor installer gagal"
-    exit 1
-fi
-CURSOR_INSTALL
-    then
+    if run_with_progress "Installing Cursor (official installer)" "run_as_user \"$DEV_USER\" bash -c \"curl -fsSL https://cursor.com/install | bash\""; then
         log_success "Cursor berhasil diinstal menggunakan installer resmi"
         CURSOR_INSTALLED=true
         
@@ -50,8 +39,7 @@ EOF
     
     # Method 2: Snap (fallback)
     if [ "$CURSOR_INSTALLED" = false ] && command_exists snap; then
-        log_info "Mencoba install Cursor via Snap..."
-        if snap install cursor --classic 2>/dev/null; then
+        if run_with_progress "Installing Cursor via Snap" "snap install cursor --classic"; then
             log_success "Cursor berhasil diinstal via Snap"
             CURSOR_INSTALLED=true
         else
@@ -73,7 +61,7 @@ EOF
         
         for url in "${APPIMAGE_URLS[@]}"; do
             log_info "Mencoba download dari: $url"
-            if curl -L --max-time 300 --progress-bar "$url" -o /opt/cursor/cursor.AppImage 2>/dev/null; then
+            if run_with_progress "Downloading Cursor AppImage" "curl -L --max-time 300 -o '/opt/cursor/cursor.AppImage' '$url'"; then
                 local file_size
                 file_size=$(stat -c%s /opt/cursor/cursor.AppImage 2>/dev/null || echo 0)
                 

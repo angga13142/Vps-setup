@@ -17,16 +17,29 @@ setup_shell() {
     mkdir -p /usr/local/share/fonts
     local FONT_ZIP="/tmp/Hack-$$.zip"
     
-    if retry_command 3 5 "wget -q --show-progress -O $FONT_ZIP $NERD_FONTS_URL"; then
-        if unzip -o "$FONT_ZIP" -d /usr/local/share/fonts/ &>/dev/null; then
-            fc-cache -fv &>/dev/null
-            log_success "Nerd Fonts (Hack) berhasil diinstal"
+    local font_attempt=1
+    local font_success=false
+    while [ $font_attempt -le 3 ] && [ "$font_success" = false ]; do
+        if run_with_progress "Downloading Nerd Fonts (Hack) (attempt $font_attempt/3)" "wget -q -O '$FONT_ZIP' '$NERD_FONTS_URL'"; then
+            if unzip -o "$FONT_ZIP" -d /usr/local/share/fonts/ &>/dev/null; then
+                fc-cache -fv &>/dev/null
+                font_success=true
+                log_success "Nerd Fonts (Hack) berhasil diinstal"
+            else
+                log_warning "Gagal extract font"
+            fi
+            rm -f "$FONT_ZIP"
         else
-            log_warning "Gagal extract font"
+            if [ $font_attempt -lt 3 ]; then
+                log_warning "Download font gagal, retry dalam 5 detik..."
+                sleep 5
+            fi
+            font_attempt=$((font_attempt + 1))
         fi
-        rm -f "$FONT_ZIP"
-    else
-        log_warning "Gagal menginstal Nerd Fonts, skip..."
+    done
+    
+    if [ "$font_success" = false ]; then
+        log_warning "Gagal menginstal Nerd Fonts setelah 3 percobaan, skip..."
     fi
 
     # Set Zsh as default
@@ -55,7 +68,7 @@ setup_shell() {
     else
         [ -f "/home/$DEV_USER/.zshrc" ] && backup_file "/home/$DEV_USER/.zshrc"
         
-        if run_as_user "$DEV_USER" bash -c 'RUNZSH=no sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended'; then
+        if run_with_progress "Installing Oh My Zsh" "run_as_user \"$DEV_USER\" bash -c \"RUNZSH=no sh -c \\\"\\\$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)\\\" \\\"\\\" --unattended\""; then
             log_success "Oh My Zsh berhasil diinstal"
         else
             log_warning "Gagal menginstal Oh My Zsh, melanjutkan..."
