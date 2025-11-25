@@ -65,10 +65,9 @@ run_with_progress() {
     # Stop spinner
     stop_spinner
     
-    # Show last 3 lines of output if there's any (filter out common apt noise)
-    local verbose_lines=0
+    # Show last 3 meaningful lines of output if there's any (filter out common apt noise)
     if [ -s "$tmp_output" ] || [ -s "$tmp_error" ]; then
-        # Combine stdout and stderr, filter and show last 3 meaningful lines
+        # Combine stdout and stderr, filter out common apt messages, show last 3 lines
         {
             [ -s "$tmp_output" ] && cat "$tmp_output"
             [ -s "$tmp_error" ] && cat "$tmp_error"
@@ -76,9 +75,8 @@ run_with_progress() {
           grep -vE "^$" | \
           tail -n 3 | \
           while IFS= read -r line; do
-              if [ -n "$line" ] && [ $verbose_lines -lt 3 ]; then
+              if [ -n "$line" ]; then
                   echo -e "  \033[0;36m${line}\033[0m"
-                  verbose_lines=$((verbose_lines + 1))
               fi
           done
     fi
