@@ -4,6 +4,60 @@
 # Docker Module - Docker Installation (OOM-Resistant Version)
 # ==============================================================================
 
+# Helper: Check available memory and wait if too low
+wait_for_memory() {
+    local required_mb=${1:-300}  # Default 300MB required
+    local max_wait=${2:-60}      # Max wait 60 seconds
+    local waited=0
+    
+    while [ $waited -lt $max_wait ]; do
+        local available_mb=$(free -m | awk '/^Mem:/ {print $7}')
+        local swap_free=$(free -m | awk '/^Swap:/ {print $4}')
+        
+        # Consider swap in calculation (50% weight)
+        local effective_memory=$((available_mb + swap_free / 2))
+        
+        if [ "$effective_memory" -gt "$required_mb" ]; then
+            log_info "Memory check passed: ${available_mb}MB RAM + ${swap_free}MB swap"
+            return 0
+        fi
+        
+        log_warning "Low memory (${available_mb}MB RAM, ${swap_free}MB swap free), waiting..."
+        
+        # Aggressive cleanup
+        sync
+        echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true
+        apt-get clean -qq 2>/dev/null || true
+        
+        sleep 5
+        waited=$((waited + 5))
+    done
+    
+    log_error "Insufficient memory after waiting ${max_wait}s"
+    return 1
+}
+
+# Helper: Force garbage collection and memory release
+force_memory_release() {
+    log_info "Forcing memory release..."
+    
+    # Kill any apt processes that might be hanging
+    pkill -9 apt-get 2>/dev/null || true
+    pkill -9 dpkg 2>/dev/null || true
+    
+    # Clean apt thoroughly
+    apt-get clean -qq 2>/dev/null || true
+    rm -rf /var/cache/apt/archives/*.deb 2>/dev/null || true
+    rm -rf /var/cache/apt/archives/partial/*.deb 2>/dev/null || true
+    
+    # Drop all caches
+    sync
+    echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true
+    
+    # Give system time to reclaim memory
+    sleep 2
+}
+
 # Helper: Install single package with memory management
 install_package_safe() {
     local package_name="$1"
@@ -39,22 +93,44 @@ install_package_safe() {
         rm -rf /var/cache/apt/archives/*.deb 2>/dev/null || true
         sync
         
-        # Try installation with memory limits
-        # Use --no-install-recommends and -o APT::Cache-Limit to reduce memory
+        # Download package first (separate from install to manage memory)
+        log_info "Downloading $package_name..."
+        if ! DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
+            --no-install-recommends --no-install-suggests \
+            --download-only \
+            -o APT::Cache-Limit=25000000 \
+            -o Acquire::http::Timeout=30 \
+            -o Acquire::ForceIPv4=true \
+            "$package_name" 2>&1 | grep -v "^Get:"; then
+            
+            log_warning "Download failed for $package_name"
+            force_memory_release
+            continue
+        fi
+        
+        # Wait and cleanup before actual installation
+        force_memory_release
+        wait_for_memory 300 60 || continue
+        
+        # Now install the downloaded package
         if run_with_progress "Installing $package_name (attempt $retry/$max_retries)" \
             "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
             --no-install-recommends --no-install-suggests \
-            -o APT::Cache-Limit=50000000 \
-            -o Dir::Cache::Archives=/var/cache/apt/archives \
+            -o APT::Cache-Limit=25000000 \
+            -o DPkg::Options::=--force-confold \
             $package_name"; then
             
             log_success "$package_name installed successfully"
             
-            # Post-installation cleanup
-            apt-get clean -qq 2>/dev/null || true
-            rm -rf /var/cache/apt/archives/*.deb 2>/dev/null || true
-            sync
-            sleep 3  # Let system stabilize
+            # Aggressive post-installation cleanup
+            force_memory_release
+            
+            # Longer stabilization time for large packages
+            if [ "$package_name" = "docker-ce" ]; then
+                sleep 5
+            else
+                sleep 3
+            fi
             
             return 0
         else
@@ -62,7 +138,7 @@ install_package_safe() {
             log_warning "$package_name installation failed (attempt $retry/$max_retries), exit code: $exit_code"
             
             # Cleanup after failed attempt
-            apt-get clean -qq 2>/dev/null || true
+            force_memory_release
             dpkg --configure -a 2>/dev/null || true
             
             if [ $retry -lt $max_retries ]; then
@@ -103,8 +179,7 @@ setup_docker() {
     fi
     
     # Pre-flight memory check
-    local available_mb
-    available_mb=$(free -m | awk '/^Mem:/ {print $7}')
+    local available_mb=$(free -m | awk '/^Mem:/ {print $7}')
     log_info "Available memory: ${available_mb}MB"
     
     if [ "$available_mb" -lt 200 ]; then
@@ -152,12 +227,13 @@ setup_docker() {
     # Setup Docker repo directory
     install -m 0755 -d /etc/apt/keyrings
     
-    # Install Docker GPG key using helper function with progress
+    # Install Docker GPG key
     log_info "Installing Docker GPG key..."
     local gpg_attempt=1
     local gpg_success=false
     while [ $gpg_attempt -le 3 ] && [ "$gpg_success" = false ]; do
-        if run_with_progress "Downloading Docker GPG key (attempt $gpg_attempt/3)" "curl -fsSL 'https://download.docker.com/linux/debian/gpg' | gpg --dearmor -o '/etc/apt/keyrings/docker.gpg'"; then
+        if run_with_progress "Downloading Docker GPG key (attempt $gpg_attempt/3)" \
+            "curl -fsSL 'https://download.docker.com/linux/debian/gpg' | gpg --dearmor -o '/etc/apt/keyrings/docker.gpg'"; then
             chmod a+r /etc/apt/keyrings/docker.gpg
             gpg_success=true
             log_success "Docker GPG key installed successfully"
@@ -181,22 +257,23 @@ setup_docker() {
       $DEBIAN_CODENAME stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
 
     # Update apt with memory optimization
-    log_info "Updating package lists..."
-    wait_for_memory 300 120 || {
+    log_info "Updating package lists (this may take a moment)..."
+    wait_for_memory 250 120 || {
         log_error "Insufficient memory for apt update"
         return 1
     }
     
+    # Use minimal cache limit for apt update
     if ! run_with_progress "Updating apt cache for Docker" \
-        "DEBIAN_FRONTEND=noninteractive apt-get update -qq -o APT::Cache-Limit=50000000"; then
+        "DEBIAN_FRONTEND=noninteractive apt-get update -qq \
+        -o APT::Cache-Limit=25000000 \
+        -o Acquire::http::Timeout=30"; then
         log_error "Apt update failed"
         return 1
     fi
     
-    # Clean immediately after update
-    apt-get clean -qq 2>/dev/null || true
-    rm -rf /var/cache/apt/archives/*.deb 2>/dev/null || true
-    sync
+    # Aggressive cleanup immediately after update
+    force_memory_release
     
     # Ensure swap is active
     ensure_swap_active
