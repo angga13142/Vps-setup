@@ -169,12 +169,29 @@ check_and_install() {
 
 # --- Backup Functions ---
 create_backup_dir() {
+    # Dry-run mode: just report
+    if [ "${DRY_RUN_MODE:-false}" = "true" ]; then
+        echo -e "\033[1;33m[DRY-RUN] Would create backup directory: $BACKUP_DIR\033[0m"
+        return 0
+    fi
+    
     mkdir -p "$BACKUP_DIR"
     log_info "Backup directory: $BACKUP_DIR"
 }
 
 backup_file() {
     local file="$1"
+    
+    # Dry-run mode: just report
+    if [ "${DRY_RUN_MODE:-false}" = "true" ]; then
+        if [ -f "$file" ]; then
+            echo -e "\033[1;33m[DRY-RUN] Would backup file: $file\033[0m"
+        else
+            echo -e "\033[1;34m[DRY-RUN] File does not exist: $file (skip backup)\033[0m"
+        fi
+        return 0
+    fi
+    
     if [ -f "$file" ]; then
         local backup_path="$BACKUP_DIR$(dirname "$file")"
         mkdir -p "$backup_path"
@@ -308,6 +325,24 @@ install_gpg_key() {
 
 # --- Swap Management Helper ---
 ensure_swap_active() {
+    # Dry-run mode: just check and report
+    if [ "${DRY_RUN_MODE:-false}" = "true" ]; then
+        if grep -q "swapfile" /etc/fstab; then
+            if ! swapon --show | grep -q swapfile; then
+                if [ -f /swapfile ]; then
+                    echo -e "\033[1;33m[DRY-RUN] Would activate swap file\033[0m"
+                else
+                    echo -e "\033[1;34m[DRY-RUN] Swap file not found: /swapfile\033[0m"
+                fi
+            else
+                echo -e "\033[1;34m[DRY-RUN] Swap already active\033[0m"
+            fi
+        else
+            echo -e "\033[1;34m[DRY-RUN] No swapfile configured\033[0m"
+        fi
+        return 0
+    fi
+    
     # Ensure swap is active to prevent OOM kill
     if grep -q "swapfile" /etc/fstab; then
         if ! swapon --show | grep -q swapfile; then
