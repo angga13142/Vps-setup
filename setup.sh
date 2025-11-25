@@ -18,7 +18,7 @@ DEV_USER="${DEV_USER:-developer}"
 DEV_USER_PASSWORD="${DEV_USER_PASSWORD:-DevPass123!}"
 TIMEZONE="${TIMEZONE:-Asia/Jakarta}"
 NODE_VERSION="lts/*"  # Install latest LTS
-CURSOR_URL="https://downloader.cursor.sh/linux/appImage/x64"
+CURSOR_INSTALLER_URL="https://cursor.com/install"
 
 # --- Internal Variables ---
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -624,56 +624,104 @@ setup_editors() {
     fi
 
     log_info "Menginstal Cursor AI Editor..."
-    # Setup directory
-    mkdir -p /opt/cursor
     
-    # Check if libfuse is installed (required for AppImage)
-    if ! dpkg -l | grep -qE "libfuse2(t64)?"; then
-        log_warning "libfuse2 tidak terinstal, Cursor AppImage mungkin tidak berjalan"
-    fi
+    # Method 1: Try official installer (recommended)
+    log_info "Mencoba menginstal Cursor menggunakan installer resmi..."
+    local CURSOR_INSTALLED=false
     
-    # Download AppImage
-    log_info "Downloading Cursor AppImage..."
-    
-    # Retry logic for download (5 attempts)
-    local RETRY_COUNT=0
-    local MAX_RETRIES=5
-    local DOWNLOAD_SUCCESS=false
-    local TEMP_CURSOR="/tmp/cursor-$$.AppImage"
-
-    while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-        if curl -L --progress-bar "$CURSOR_URL" -o "$TEMP_CURSOR"; then
-            # Verify download (check file size is reasonable, > 100MB)
-            local file_size
-            file_size=$(stat -f%z "$TEMP_CURSOR" 2>/dev/null || stat -c%s "$TEMP_CURSOR" 2>/dev/null || echo 0)
-            
-            if [ "$file_size" -gt 104857600 ]; then  # 100MB in bytes
-                mv "$TEMP_CURSOR" /opt/cursor/cursor.AppImage
-                DOWNLOAD_SUCCESS=true
-                break
-            else
-                log_warning "Download corrupt (size: $file_size bytes), mencoba lagi..."
-                rm -f "$TEMP_CURSOR"
-            fi
+    # Install as user to get proper configuration
+    if sudo -H -u "$DEV_USER" bash <<'CURSOR_INSTALL'
+set -e
+# Download and run official installer
+if curl -fsSL https://cursor.com/install | bash; then
+    echo "Cursor installer berhasil"
+    exit 0
+else
+    echo "Cursor installer gagal"
+    exit 1
+fi
+CURSOR_INSTALL
+    then
+        log_success "Cursor berhasil diinstal menggunakan installer resmi"
+        CURSOR_INSTALLED=true
+        
+        # Verify installation
+        if sudo -u "$DEV_USER" bash -c 'command -v cursor' &>/dev/null; then
+            log_success "Cursor command tersedia di PATH"
         fi
         
-        log_warning "Download gagal, mencoba lagi dalam 5 detik... ($((RETRY_COUNT+1))/$MAX_RETRIES)"
-        sleep 5
-        RETRY_COUNT=$((RETRY_COUNT+1))
-    done
-
-    if [ "$DOWNLOAD_SUCCESS" = false ]; then
-        log_warning "Gagal mengunduh Cursor setelah $MAX_RETRIES percobaan."
-        log_warning "Melewati instalasi Cursor. Anda dapat mengunduhnya manual nanti dari: $CURSOR_URL"
-        rm -f "$TEMP_CURSOR"
-    else
-        chmod +x /opt/cursor/cursor.AppImage
-        
-        # Backup existing desktop entry if exists
+        # Create desktop entry for easy access
         [ -f /usr/share/applications/cursor.desktop ] && backup_file "/usr/share/applications/cursor.desktop"
         
-        # Create Desktop Entry
-        cat > /usr/share/applications/cursor.desktop <<'EOF'
+        # Find cursor binary location
+        local CURSOR_BIN
+        CURSOR_BIN=$(sudo -u "$DEV_USER" bash -c 'command -v cursor' 2>/dev/null || echo "/home/$DEV_USER/.local/bin/cursor")
+        
+        cat > /usr/share/applications/cursor.desktop <<EOF
+[Desktop Entry]
+Name=Cursor
+Comment=AI-first Code Editor
+Exec=$CURSOR_BIN %F
+Icon=utilities-terminal
+Terminal=false
+Type=Application
+Categories=Development;IDE;
+StartupNotify=true
+EOF
+        chmod 644 /usr/share/applications/cursor.desktop
+    else
+        log_warning "Installer resmi gagal, mencoba metode alternatif..."
+    fi
+    
+    # Method 2: Try Snap if available (fallback)
+    if [ "$CURSOR_INSTALLED" = false ] && command -v snap &>/dev/null; then
+        log_info "Mencoba install Cursor via Snap..."
+        if snap install cursor --classic 2>/dev/null; then
+            log_success "Cursor berhasil diinstal via Snap"
+            CURSOR_INSTALLED=true
+        else
+            log_warning "Instalasi via Snap gagal"
+        fi
+    fi
+    
+    # Method 3: Manual AppImage download (last resort)
+    if [ "$CURSOR_INSTALLED" = false ]; then
+        log_info "Mencoba download Cursor AppImage manual..."
+        
+        # Try multiple AppImage URLs
+        local APPIMAGE_URLS=(
+            "https://downloader.cursor.sh/linux/appImage/x64"
+            "https://download.cursor.sh/linux/appImage/x64"
+        )
+        
+        mkdir -p /opt/cursor
+        local DOWNLOAD_SUCCESS=false
+        
+        for url in "${APPIMAGE_URLS[@]}"; do
+            log_info "Mencoba download dari: $url"
+            if curl -L --max-time 300 --progress-bar "$url" -o /opt/cursor/cursor.AppImage 2>/dev/null; then
+                # Verify file size
+                local file_size
+                file_size=$(stat -c%s /opt/cursor/cursor.AppImage 2>/dev/null || echo 0)
+                
+                if [ "$file_size" -gt 52428800 ]; then  # > 50MB
+                    chmod +x /opt/cursor/cursor.AppImage
+                    DOWNLOAD_SUCCESS=true
+                    CURSOR_INSTALLED=true
+                    log_success "Cursor AppImage berhasil didownload"
+                    break
+                else
+                    log_warning "File terlalu kecil ($file_size bytes), mencoba URL lain..."
+                    rm -f /opt/cursor/cursor.AppImage
+                fi
+            fi
+        done
+        
+        if [ "$DOWNLOAD_SUCCESS" = true ]; then
+            # Create desktop entry
+            [ -f /usr/share/applications/cursor.desktop ] && backup_file "/usr/share/applications/cursor.desktop"
+            
+            cat > /usr/share/applications/cursor.desktop <<'EOF'
 [Desktop Entry]
 Name=Cursor
 Comment=AI-first Code Editor
@@ -684,17 +732,25 @@ Type=Application
 Categories=Development;IDE;
 StartupNotify=true
 EOF
-        
-        # Fix ownership
-        chown -R "$DEV_USER:$DEV_USER" /opt/cursor
-        log_success "Cursor terinstal di /opt/cursor/cursor.AppImage"
-        
-        # Test if AppImage can be executed
-        if /opt/cursor/cursor.AppImage --version &>/dev/null; then
-            log_success "Cursor AppImage verified OK"
-        else
-            log_warning "Cursor AppImage mungkin tidak bisa dijalankan. Cek libfuse2."
+            chmod 644 /usr/share/applications/cursor.desktop
+            chown -R "$DEV_USER:$DEV_USER" /opt/cursor
+            
+            # Create symlink for easy access
+            ln -sf /opt/cursor/cursor.AppImage /usr/local/bin/cursor 2>/dev/null || true
         fi
+    fi
+    
+    # Final status
+    if [ "$CURSOR_INSTALLED" = true ]; then
+        log_success "Cursor AI Editor berhasil diinstal!"
+        log_info "Akses Cursor via:"
+        log_info "  - Menu Aplikasi XFCE > Development > Cursor"
+        log_info "  - Terminal: cursor"
+    else
+        log_warning "Gagal menginstal Cursor menggunakan semua metode"
+        log_warning "Anda dapat menginstal manual dengan:"
+        log_warning "  curl https://cursor.com/install | bash"
+        log_warning "Atau download dari: https://cursor.com"
     fi
 }
 
@@ -841,7 +897,11 @@ verify_installation() {
     fi
     
     # Check Cursor
-    if [ -f /opt/cursor/cursor.AppImage ]; then
+    if command -v cursor &>/dev/null; then
+        log_success "✓ Cursor tersedia di PATH"
+    elif sudo -u "$DEV_USER" bash -c 'command -v cursor' &>/dev/null; then
+        log_success "✓ Cursor tersedia (user $DEV_USER)"
+    elif [ -f /opt/cursor/cursor.AppImage ]; then
         log_success "✓ Cursor AppImage tersedia"
     else
         log_warning "⚠ Cursor tidak ditemukan"
@@ -939,9 +999,9 @@ main() {
     log_info "2. Buka RDP Client (Remote Desktop Connection) di PC Anda."
     log_info "3. Masukkan IP Server dan User: $DEV_USER"
     log_info "4. Password: (yang Anda set di DEV_USER_PASSWORD)"
-    log_info "5. Setelah login RDP, buka Terminal:"
-    log_info "   - Jalankan: /opt/cursor/cursor.AppImage"
-    log_info "   - Atau cari 'Cursor' di Menu Aplikasi XFCE"
+    log_info "5. Setelah login RDP, buka Cursor:"
+    log_info "   - Menu: Applications > Development > Cursor"
+    log_info "   - Terminal: ketik 'cursor'"
     log_info ""
     log_info "Node.js tersedia via NVM (gunakan di shell user $DEV_USER):"
     log_info "   source ~/.nvm/nvm.sh && node --version"
