@@ -122,10 +122,32 @@ setup_system() {
     fi
 
     # Handle libfuse2 (Needed for AppImages) - with memory optimization
-    if ! dpkg-query -W -f='${Status}' libfuse2t64 2>/dev/null | grep -q "install ok installed"; then
+    # Check if either libfuse2t64 or libfuse2 is already installed
+    local fuse_installed=false
+    if dpkg-query -W -f='${Status}' libfuse2t64 2>/dev/null | grep -q "install ok installed"; then
+        fuse_installed=true
+    elif dpkg-query -W -f='${Status}' libfuse2 2>/dev/null | grep -q "install ok installed"; then
+        fuse_installed=true
+    fi
+    
+    if [ "$fuse_installed" = false ]; then
         ensure_swap_active
-        if ! run_with_progress "Installing libfuse2t64" "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends libfuse2t64"; then
-            run_with_progress "Installing libfuse2" "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends libfuse2" || log_warning "Gagal menginstal libfuse2. AppImage mungkin tidak berjalan."
+        
+        # Check which package is available in repository
+        local fuse_package=""
+        if apt-cache show libfuse2t64 &>/dev/null; then
+            fuse_package="libfuse2t64"
+        elif apt-cache show libfuse2 &>/dev/null; then
+            fuse_package="libfuse2"
+        else
+            log_warning "Tidak ada package libfuse2 tersedia di repository"
+            fuse_package="libfuse2"  # Try anyway as last resort
+        fi
+        
+        if [ -n "$fuse_package" ]; then
+            run_with_progress "Installing $fuse_package" "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends $fuse_package" || {
+                log_warning "Gagal menginstal $fuse_package. AppImage mungkin tidak berjalan."
+            }
         fi
         apt-get clean -qq 2>/dev/null || true
     fi
