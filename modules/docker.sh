@@ -84,68 +84,112 @@ setup_docker() {
         return 1
     fi
     
+    # Aggressive memory optimization before Docker installation
+    # Stop unnecessary services to free memory
+    log_info "Optimizing system memory before Docker installation..."
+    systemctl stop snapd.service 2>/dev/null || true
+    systemctl stop unattended-upgrades.service 2>/dev/null || true
+    
+    # Drop caches to free memory (aggressive approach)
+    sync
+    echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true
+    
     # Clean cache after update to free memory before installation
     apt-get clean -qq 2>/dev/null || true
+    rm -rf /var/lib/apt/lists/* 2>/dev/null || true
     
-    # Install Docker components in stages to reduce memory pressure
-    # Best practice: Install core components first, then plugins
-    # Stage 1: Install containerd.io (runtime dependency)
+    # Ensure swap is active
+    ensure_swap_active
+    
+    # Install Docker components ONE BY ONE to minimize peak memory usage
+    # This is more memory-efficient than batch installation for large packages
+    # Stage 1: Install containerd.io (runtime dependency) - MUST BE FIRST
     if ! dpkg-query -W -f='${Status}' containerd.io 2>/dev/null | grep -q "install ok installed"; then
+        log_info "Installing containerd.io (required runtime dependency)..."
+        sync
+        echo 1 > /proc/sys/vm/drop_caches 2>/dev/null || true
         ensure_swap_active
-        run_with_progress "Installing containerd.io (Docker runtime)" "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends containerd.io" || {
+        
+        run_with_progress "Installing containerd.io" "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends --no-install-suggests containerd.io" || {
             log_error "Failed to install containerd.io"
             return 1
         }
+        
+        # Clean and sync after each package
         apt-get clean -qq 2>/dev/null || true
+        sync
+        sleep 2  # Give system time to recover memory
     fi
     
-    # Stage 2: Install docker-ce and docker-ce-cli together (core components)
-    local docker_core=""
-    if ! dpkg-query -W -f='${Status}' docker-ce 2>/dev/null | grep -q "install ok installed"; then
-        docker_core="docker-ce"
-    fi
+    # Stage 2: Install docker-ce-cli FIRST (smaller, required for docker-ce)
     if ! dpkg-query -W -f='${Status}' docker-ce-cli 2>/dev/null | grep -q "install ok installed"; then
-        if [ -z "$docker_core" ]; then
-            docker_core="docker-ce-cli"
-        else
-            docker_core="$docker_core docker-ce-cli"
-        fi
-    fi
-    
-    if [ -n "$docker_core" ]; then
+        log_info "Installing docker-ce-cli (required before docker-ce)..."
+        sync
+        echo 1 > /proc/sys/vm/drop_caches 2>/dev/null || true
         ensure_swap_active
-        run_with_progress "Installing Docker Engine core: $docker_core" "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends $docker_core" || {
-            log_warning "Failed to install Docker core with --no-install-recommends, trying without..."
-            run_with_progress "Installing Docker Engine core (retry): $docker_core" "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq $docker_core" || {
-                log_error "Failed to install Docker Engine core"
+        
+        run_with_progress "Installing docker-ce-cli" "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends --no-install-suggests docker-ce-cli" || {
+            log_warning "Failed to install docker-ce-cli with --no-install-recommends, trying without..."
+            run_with_progress "Installing docker-ce-cli (retry)" "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-suggests docker-ce-cli" || {
+                log_error "Failed to install docker-ce-cli"
                 return 1
             }
         }
+        
         apt-get clean -qq 2>/dev/null || true
+        sync
+        sleep 2
     fi
     
-    # Stage 3: Install plugins (less critical, can be installed separately)
-    local docker_plugins=""
-    if ! dpkg-query -W -f='${Status}' docker-buildx-plugin 2>/dev/null | grep -q "install ok installed"; then
-        docker_plugins="docker-buildx-plugin"
-    fi
-    if ! dpkg-query -W -f='${Status}' docker-compose-plugin 2>/dev/null | grep -q "install ok installed"; then
-        if [ -z "$docker_plugins" ]; then
-            docker_plugins="docker-compose-plugin"
-        else
-            docker_plugins="$docker_plugins docker-compose-plugin"
-        fi
-    fi
-    
-    if [ -n "$docker_plugins" ]; then
+    # Stage 3: Install docker-ce (main engine) - LARGEST package, install separately
+    if ! dpkg-query -W -f='${Status}' docker-ce 2>/dev/null | grep -q "install ok installed"; then
+        log_info "Installing docker-ce (Docker Engine - this may take longer)..."
+        sync
+        echo 1 > /proc/sys/vm/drop_caches 2>/dev/null || true
         ensure_swap_active
-        run_with_progress "Installing Docker plugins: $docker_plugins" "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends $docker_plugins" || {
-            log_warning "Failed to install Docker plugins with --no-install-recommends, trying without..."
-            run_with_progress "Installing Docker plugins (retry): $docker_plugins" "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq $docker_plugins" || {
-                log_warning "Failed to install Docker plugins, continuing without them..."
+        
+        run_with_progress "Installing docker-ce" "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends --no-install-suggests docker-ce" || {
+            log_warning "Failed to install docker-ce with --no-install-recommends, trying without..."
+            run_with_progress "Installing docker-ce (retry)" "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-suggests docker-ce" || {
+                log_error "Failed to install docker-ce"
+                return 1
             }
         }
+        
         apt-get clean -qq 2>/dev/null || true
+        sync
+        sleep 3  # Longer delay after largest package
+    fi
+    
+    # Stage 4: Install plugins (optional, can skip if memory constrained)
+    # Install one at a time to reduce memory pressure
+    if ! dpkg-query -W -f='${Status}' docker-buildx-plugin 2>/dev/null | grep -q "install ok installed"; then
+        log_info "Installing docker-buildx-plugin (optional)..."
+        sync
+        echo 1 > /proc/sys/vm/drop_caches 2>/dev/null || true
+        ensure_swap_active
+        
+        run_with_progress "Installing docker-buildx-plugin" "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends --no-install-suggests docker-buildx-plugin" || {
+            log_warning "Failed to install docker-buildx-plugin, continuing without it..."
+        }
+        
+        apt-get clean -qq 2>/dev/null || true
+        sync
+        sleep 2
+    fi
+    
+    if ! dpkg-query -W -f='${Status}' docker-compose-plugin 2>/dev/null | grep -q "install ok installed"; then
+        log_info "Installing docker-compose-plugin (optional)..."
+        sync
+        echo 1 > /proc/sys/vm/drop_caches 2>/dev/null || true
+        ensure_swap_active
+        
+        run_with_progress "Installing docker-compose-plugin" "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends --no-install-suggests docker-compose-plugin" || {
+            log_warning "Failed to install docker-compose-plugin, continuing without it..."
+        }
+        
+        apt-get clean -qq 2>/dev/null || true
+        sync
     fi
 
     # Add user to docker group
