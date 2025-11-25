@@ -281,6 +281,32 @@ ensure_swap_active() {
     fi
 }
 
+# --- Memory Management Helper ---
+# Wait for sufficient memory before proceeding
+wait_for_memory() {
+    local required_mb=${1:-300}  # Default 300MB required
+    local max_wait=${2:-60}       # Max wait 60 seconds
+    local waited=0
+    
+    while [ $waited -lt $max_wait ]; do
+        local available_mb
+        available_mb=$(free -m | awk '/^Mem:/ {print $7}')
+        if [ "$available_mb" -gt "$required_mb" ]; then
+            return 0
+        fi
+        log_warning "Low memory (${available_mb}MB free, need ${required_mb}MB), waiting for memory to clear..."
+        sleep 5
+        waited=$((waited + 5))
+        
+        # Force cleanup
+        sync
+        echo 1 > /proc/sys/vm/drop_caches 2>/dev/null || true
+    done
+    
+    log_error "Insufficient memory after waiting ${max_wait}s (need ${required_mb}MB)"
+    return 1
+}
+
 # --- Batch Package Installation Helper (OOM Prevention) ---
 batch_install_packages() {
     local packages_list="$1"

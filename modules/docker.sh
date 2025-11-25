@@ -1,8 +1,88 @@
 #!/bin/bash
 
 # ==============================================================================
-# Docker Module - Docker Installation
+# Docker Module - Docker Installation (OOM-Resistant Version)
 # ==============================================================================
+
+# Helper: Install single package with memory management
+install_package_safe() {
+    local package_name="$1"
+    local is_critical="${2:-true}"  # true/false
+    local max_retries=3
+    local retry=1
+    
+    # Check if already installed
+    if dpkg-query -W -f='${Status}' "$package_name" 2>/dev/null | grep -q "install ok installed"; then
+        log_info "$package_name already installed, skipping..."
+        return 0
+    fi
+    
+    log_info "Installing $package_name..."
+    
+    while [ $retry -le $max_retries ]; do
+        # Wait for sufficient memory
+        wait_for_memory 400 120 || {
+            if [ "$is_critical" = "true" ]; then
+                log_error "Cannot proceed with $package_name - insufficient memory"
+                return 1
+            else
+                log_warning "Skipping optional package $package_name due to low memory"
+                return 0
+            fi
+        }
+        
+        # Ensure swap is active
+        ensure_swap_active
+        
+        # Aggressive pre-installation cleanup
+        apt-get clean -qq 2>/dev/null || true
+        rm -rf /var/cache/apt/archives/*.deb 2>/dev/null || true
+        sync
+        
+        # Try installation with memory limits
+        # Use --no-install-recommends and -o APT::Cache-Limit to reduce memory
+        if run_with_progress "Installing $package_name (attempt $retry/$max_retries)" \
+            "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
+            --no-install-recommends --no-install-suggests \
+            -o APT::Cache-Limit=50000000 \
+            -o Dir::Cache::Archives=/var/cache/apt/archives \
+            $package_name"; then
+            
+            log_success "$package_name installed successfully"
+            
+            # Post-installation cleanup
+            apt-get clean -qq 2>/dev/null || true
+            rm -rf /var/cache/apt/archives/*.deb 2>/dev/null || true
+            sync
+            sleep 3  # Let system stabilize
+            
+            return 0
+        else
+            local exit_code=$?
+            log_warning "$package_name installation failed (attempt $retry/$max_retries), exit code: $exit_code"
+            
+            # Cleanup after failed attempt
+            apt-get clean -qq 2>/dev/null || true
+            dpkg --configure -a 2>/dev/null || true
+            
+            if [ $retry -lt $max_retries ]; then
+                log_info "Retrying in 10 seconds..."
+                sleep 10
+            fi
+            
+            retry=$((retry + 1))
+        fi
+    done
+    
+    # All retries failed
+    if [ "$is_critical" = "true" ]; then
+        log_error "Failed to install critical package $package_name after $max_retries attempts"
+        return 1
+    else
+        log_warning "Skipping optional package $package_name after $max_retries failed attempts"
+        return 0
+    fi
+}
 
 setup_docker() {
     update_progress "setup_docker"
@@ -20,6 +100,17 @@ setup_docker() {
         
         log_success "Docker setup selesai"
         return 0
+    fi
+    
+    # Pre-flight memory check
+    local available_mb
+    available_mb=$(free -m | awk '/^Mem:/ {print $7}')
+    log_info "Available memory: ${available_mb}MB"
+    
+    if [ "$available_mb" -lt 200 ]; then
+        log_error "Insufficient memory for Docker installation (need at least 200MB free)"
+        log_error "Current: ${available_mb}MB. Please upgrade VPS or close other services."
+        return 1
     fi
     
     # Determine Debian codename
@@ -42,9 +133,21 @@ setup_docker() {
     # Clean GPG keys using helper function
     clean_gpg_keys "docker"
     
-    # Clean apt cache (memory optimization)
+    # AGGRESSIVE memory optimization
+    log_info "Preparing system for Docker installation..."
+    
+    # Stop all non-essential services
+    systemctl stop snapd.service snapd.socket 2>/dev/null || true
+    systemctl stop unattended-upgrades.service 2>/dev/null || true
+    systemctl stop packagekit.service 2>/dev/null || true
+    systemctl stop apt-daily.service apt-daily.timer 2>/dev/null || true
+    systemctl stop apt-daily-upgrade.service apt-daily-upgrade.timer 2>/dev/null || true
+    
+    # Clean apt cache aggressively
     run_with_progress "Cleaning apt cache" "DEBIAN_FRONTEND=noninteractive apt-get clean -qq"
-    rm -rf /var/lib/apt/lists/download.docker.com*
+    rm -rf /var/lib/apt/lists/* 2>/dev/null || true
+    rm -rf /var/cache/apt/archives/*.deb 2>/dev/null || true
+    sync
     
     # Setup Docker repo directory
     install -m 0755 -d /etc/apt/keyrings
@@ -77,126 +180,57 @@ setup_docker() {
       "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian \
       $DEBIAN_CODENAME stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
 
-    # Update apt with proper error handling (memory optimized)
-    if ! run_with_progress "Updating apt cache for Docker" "DEBIAN_FRONTEND=noninteractive apt-get update -qq"; then
-        log_error "Apt update failed. This indicates a problem with package repository configuration"
-        log_error "Cannot proceed with Docker installation with corrupted apt state"
+    # Update apt with memory optimization
+    log_info "Updating package lists..."
+    wait_for_memory 300 120 || {
+        log_error "Insufficient memory for apt update"
+        return 1
+    }
+    
+    if ! run_with_progress "Updating apt cache for Docker" \
+        "DEBIAN_FRONTEND=noninteractive apt-get update -qq -o APT::Cache-Limit=50000000"; then
+        log_error "Apt update failed"
         return 1
     fi
     
-    # Aggressive memory optimization before Docker installation
-    # Stop unnecessary services to free memory
-    log_info "Optimizing system memory before Docker installation..."
-    systemctl stop snapd.service 2>/dev/null || true
-    systemctl stop unattended-upgrades.service 2>/dev/null || true
-    
-    # Drop caches to free memory (aggressive approach)
-    sync
-    echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true
-    
-    # Clean cache after update to free memory before installation
+    # Clean immediately after update
     apt-get clean -qq 2>/dev/null || true
-    rm -rf /var/lib/apt/lists/* 2>/dev/null || true
+    rm -rf /var/cache/apt/archives/*.deb 2>/dev/null || true
+    sync
     
     # Ensure swap is active
     ensure_swap_active
     
-    # Install Docker components ONE BY ONE to minimize peak memory usage
-    # This is more memory-efficient than batch installation for large packages
-    # Stage 1: Install containerd.io (runtime dependency) - MUST BE FIRST
-    if ! dpkg-query -W -f='${Status}' containerd.io 2>/dev/null | grep -q "install ok installed"; then
-        log_info "Installing containerd.io (required runtime dependency)..."
-        sync
-        echo 1 > /proc/sys/vm/drop_caches 2>/dev/null || true
-        ensure_swap_active
-        
-        run_with_progress "Installing containerd.io" "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends --no-install-suggests containerd.io" || {
-            log_error "Failed to install containerd.io"
-            return 1
-        }
-        
-        # Clean and sync after each package
-        apt-get clean -qq 2>/dev/null || true
-        sync
-        sleep 2  # Give system time to recover memory
-    fi
+    # ============================================================================
+    # STAGED INSTALLATION - Install packages one by one with memory management
+    # ============================================================================
     
-    # Stage 2: Install docker-ce-cli FIRST (smaller, required for docker-ce)
-    if ! dpkg-query -W -f='${Status}' docker-ce-cli 2>/dev/null | grep -q "install ok installed"; then
-        log_info "Installing docker-ce-cli (required before docker-ce)..."
-        sync
-        echo 1 > /proc/sys/vm/drop_caches 2>/dev/null || true
-        ensure_swap_active
-        
-        run_with_progress "Installing docker-ce-cli" "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends --no-install-suggests docker-ce-cli" || {
-            log_warning "Failed to install docker-ce-cli with --no-install-recommends, trying without..."
-            run_with_progress "Installing docker-ce-cli (retry)" "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-suggests docker-ce-cli" || {
-                log_error "Failed to install docker-ce-cli"
-                return 1
-            }
-        }
-        
-        apt-get clean -qq 2>/dev/null || true
-        sync
-        sleep 2
-    fi
+    log_info "Beginning staged Docker installation..."
     
-    # Stage 3: Install docker-ce (main engine) - LARGEST package, install separately
-    if ! dpkg-query -W -f='${Status}' docker-ce 2>/dev/null | grep -q "install ok installed"; then
-        log_info "Installing docker-ce (Docker Engine - this may take longer)..."
-        sync
-        echo 1 > /proc/sys/vm/drop_caches 2>/dev/null || true
-        ensure_swap_active
-        
-        run_with_progress "Installing docker-ce" "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends --no-install-suggests docker-ce" || {
-            log_warning "Failed to install docker-ce with --no-install-recommends, trying without..."
-            run_with_progress "Installing docker-ce (retry)" "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-suggests docker-ce" || {
-                log_error "Failed to install docker-ce"
-                return 1
-            }
-        }
-        
-        apt-get clean -qq 2>/dev/null || true
-        sync
-        sleep 3  # Longer delay after largest package
-    fi
+    # Stage 1: containerd.io (CRITICAL - runtime dependency)
+    install_package_safe "containerd.io" "true" || return 1
     
-    # Stage 4: Install plugins (optional, can skip if memory constrained)
-    # Install one at a time to reduce memory pressure
-    if ! dpkg-query -W -f='${Status}' docker-buildx-plugin 2>/dev/null | grep -q "install ok installed"; then
-        log_info "Installing docker-buildx-plugin (optional)..."
-        sync
-        echo 1 > /proc/sys/vm/drop_caches 2>/dev/null || true
-        ensure_swap_active
-        
-        run_with_progress "Installing docker-buildx-plugin" "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends --no-install-suggests docker-buildx-plugin" || {
-            log_warning "Failed to install docker-buildx-plugin, continuing without it..."
-        }
-        
-        apt-get clean -qq 2>/dev/null || true
-        sync
-        sleep 2
-    fi
+    # Stage 2: docker-ce-cli (CRITICAL - required for docker-ce)
+    install_package_safe "docker-ce-cli" "true" || return 1
     
-    if ! dpkg-query -W -f='${Status}' docker-compose-plugin 2>/dev/null | grep -q "install ok installed"; then
-        log_info "Installing docker-compose-plugin (optional)..."
-        sync
-        echo 1 > /proc/sys/vm/drop_caches 2>/dev/null || true
-        ensure_swap_active
-        
-        run_with_progress "Installing docker-compose-plugin" "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends --no-install-suggests docker-compose-plugin" || {
-            log_warning "Failed to install docker-compose-plugin, continuing without it..."
-        }
-        
-        apt-get clean -qq 2>/dev/null || true
-        sync
-    fi
+    # Stage 3: docker-ce (CRITICAL - main engine)
+    install_package_safe "docker-ce" "true" || return 1
+    
+    # Stage 4: docker-buildx-plugin (OPTIONAL)
+    install_package_safe "docker-buildx-plugin" "false"
+    
+    # Stage 5: docker-compose-plugin (OPTIONAL)
+    install_package_safe "docker-compose-plugin" "false"
 
     # Add user to docker group
     if ! groups "$DEV_USER" | grep -q docker; then
         usermod -aG docker "$DEV_USER"
         log_success "User $DEV_USER ditambahkan ke grup docker"
     fi
+    
+    # Final cleanup
+    apt-get clean -qq 2>/dev/null || true
+    rm -rf /var/cache/apt/archives/*.deb 2>/dev/null || true
     
     # Verify installation
     if command_exists docker; then
