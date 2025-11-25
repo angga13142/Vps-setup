@@ -129,8 +129,8 @@ install_gpg_key() {
     # Ensure directory exists
     mkdir -p "$(dirname "$output_path")"
     
-    # Download and install with retry
-    if retry_command 3 5 "curl -fsSL $url | gpg --dearmor -o $output_path"; then
+    # Download and install with retry (properly quoted variables to prevent word-splitting)
+    if retry_command 3 5 "curl -fsSL \"$url\" | gpg --dearmor -o \"$output_path\""; then
         chmod a+r "$output_path"
         log_success "$key_name GPG key installed successfully"
         return 0
