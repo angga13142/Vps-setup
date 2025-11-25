@@ -11,19 +11,21 @@ Transform a fresh VPS into a production-ready development environment with GUI d
 ### One-Line Installation
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/angga13142/Vps-setup/master/setup.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/angga13142/Vps-setup/master/bootstrap.sh | sudo bash
 ```
 
 ### With Custom Settings
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/angga13142/Vps-setup/master/setup.sh | \
+curl -fsSL https://raw.githubusercontent.com/angga13142/Vps-setup/master/bootstrap.sh | \
 sudo DEV_USER="angga" \
      DEV_USER_PASSWORD="SecurePass123!" \
      CUSTOM_HOSTNAME="my-dev-server" \
      TIMEZONE="Asia/Jakarta" \
      bash
 ```
+
+> **Note**: Script akan otomatis mendownload seluruh repository ke direktori sementara sebelum menjalankan instalasi.
 
 ---
 
@@ -474,7 +476,8 @@ sudo ./setup.sh  # Will skip already installed components
 ## 🔗 Links
 
 - **Repository**: https://github.com/angga13142/Vps-setup
-- **Raw Script**: https://raw.githubusercontent.com/angga13142/Vps-setup/master/setup.sh
+- **Bootstrap Script**: https://raw.githubusercontent.com/angga13142/Vps-setup/master/bootstrap.sh
+- **Setup Script**: https://raw.githubusercontent.com/angga13142/Vps-setup/master/setup.sh
 - **Issues**: https://github.com/angga13142/Vps-setup/issues
 
 ---
