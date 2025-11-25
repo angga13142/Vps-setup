@@ -70,6 +70,8 @@ fi
 chmod +x setup.sh
 
 # Run setup.sh with all arguments passed to bootstrap
+# Note: Environment variables set before 'bash' will be available to setup.sh
+# Arguments (like --verbose) should be added after 'bash'
 echo -e "${GREEN}[3/3] Starting installation...${NC}"
 echo ""
 exec ./setup.sh "$@"

@@ -25,7 +25,23 @@ sudo DEV_USER="angga" \
      bash
 ```
 
-> **Note**: Script akan otomatis mendownload seluruh repository ke direktori sementara sebelum menjalankan instalasi.
+### With Verbose Output
+
+Untuk melihat output detail dari commands (debugging):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/angga13142/Vps-setup/master/bootstrap.sh | \
+sudo DEV_USER="racoondev" \
+     DEV_USER_PASSWORD="gg123123@" \
+     CUSTOM_HOSTNAME="testgcp" \
+     TIMEZONE="Asia/Jakarta" \
+     bash --verbose
+```
+
+> **Note**: 
+> - Script akan otomatis mendownload seluruh repository ke direktori sementara sebelum menjalankan instalasi.
+> - Tambahkan `--verbose` atau `-v` setelah `bash` untuk melihat output detail dari commands.
+> - Default mode adalah non-verbose (hanya menampilkan info/warning/error/success).
 
 ---
 
@@ -108,6 +124,9 @@ sudo ./setup.sh --skip-cursor --skip-vscode --skip-docker
 
 # Keep other users (don't auto-remove)
 sudo ./setup.sh --keep-other-users
+
+# With verbose output (for debugging)
+sudo ./setup.sh --verbose
 ```
 
 ---
