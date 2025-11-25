@@ -129,9 +129,24 @@ chmod +x setup.sh
 
 # Run setup.sh with all arguments passed to bootstrap
 # Note: Environment variables set before 'bash' will be available to setup.sh
-# Arguments (like --verbose) should be added after 'bash'
+# Arguments can be passed via:
+#   1. bash -s -- --skip-docker (recommended for curl | bash)
+#   2. Environment variables (SKIP_DOCKER=true, etc.)
 echo -e "${GREEN}[4/4] Starting installation...${NC}"
 echo ""
+
+# Check if arguments were passed via stdin (bash -s -- args)
+# If no arguments via $@, check for environment variables for skip options
+if [ $# -eq 0 ]; then
+    # Check for skip options via environment variables
+    [ "${SKIP_DOCKER:-false}" = "true" ] && export INSTALL_DOCKER=false
+    [ "${SKIP_DESKTOP:-false}" = "true" ] && export INSTALL_DESKTOP=false
+    [ "${SKIP_NODEJS:-false}" = "true" ] && export INSTALL_NODEJS=false
+    [ "${SKIP_PYTHON:-false}" = "true" ] && export INSTALL_PYTHON=false
+    [ "${SKIP_VSCODE:-false}" = "true" ] && export INSTALL_VSCODE=false
+    [ "${SKIP_CURSOR:-false}" = "true" ] && export INSTALL_CURSOR=false
+    [ "${SKIP_SHELL:-false}" = "true" ] && export INSTALL_SHELL=false
+fi
 
 # Use exec to replace current process (cleanup will still run on exit)
 exec ./setup.sh "$@"

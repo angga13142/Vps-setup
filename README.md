@@ -27,16 +27,30 @@ sudo DEV_USER="angga" \
 
 ### Skip Docker Installation
 
+**Method 1: Using bash -s (Recommended)**
 ```bash
 curl -fsSL https://raw.githubusercontent.com/angga13142/Vps-setup/master/bootstrap.sh | \
 sudo DEV_USER="racoondev" \
      DEV_USER_PASSWORD="gg123123@" \
      CUSTOM_HOSTNAME="testgcp" \
      TIMEZONE="Asia/Jakarta" \
-     bash -- --skip-docker
+     bash -s -- --skip-docker
 ```
 
-**Note:** Arguments seperti `--skip-docker` harus ditambahkan setelah `bash` dengan `--` untuk memisahkan arguments dari bash options.
+**Method 2: Using Environment Variable**
+```bash
+curl -fsSL https://raw.githubusercontent.com/angga13142/Vps-setup/master/bootstrap.sh | \
+sudo DEV_USER="racoondev" \
+     DEV_USER_PASSWORD="gg123123@" \
+     CUSTOM_HOSTNAME="testgcp" \
+     TIMEZONE="Asia/Jakarta" \
+     SKIP_DOCKER=true \
+     bash
+```
+
+**Note:** 
+- Method 1: Gunakan `bash -s --` untuk pass arguments ke script yang di-pipe
+- Method 2: Gunakan environment variable `SKIP_DOCKER=true` (lebih mudah untuk curl | bash)
 
 ### With Verbose Output
 
@@ -147,6 +161,7 @@ sudo ./setup.sh --verbose
 
 ### Via curl | bash with Skip Options
 
+**Using bash -s (Recommended)**
 ```bash
 # Skip Docker
 curl -fsSL https://raw.githubusercontent.com/angga13142/Vps-setup/master/bootstrap.sh | \
@@ -154,7 +169,7 @@ sudo DEV_USER="racoondev" \
      DEV_USER_PASSWORD="gg123123@" \
      CUSTOM_HOSTNAME="testgcp" \
      TIMEZONE="Asia/Jakarta" \
-     bash -- --skip-docker
+     bash -s -- --skip-docker
 
 # Skip multiple components
 curl -fsSL https://raw.githubusercontent.com/angga13142/Vps-setup/master/bootstrap.sh | \
@@ -162,7 +177,30 @@ sudo DEV_USER="racoondev" \
      DEV_USER_PASSWORD="gg123123@" \
      CUSTOM_HOSTNAME="testgcp" \
      TIMEZONE="Asia/Jakarta" \
-     bash -- --skip-docker --skip-cursor --skip-vscode
+     bash -s -- --skip-docker --skip-cursor --skip-vscode
+```
+
+**Using Environment Variables (Easier)**
+```bash
+# Skip Docker
+curl -fsSL https://raw.githubusercontent.com/angga13142/Vps-setup/master/bootstrap.sh | \
+sudo DEV_USER="racoondev" \
+     DEV_USER_PASSWORD="gg123123@" \
+     CUSTOM_HOSTNAME="testgcp" \
+     TIMEZONE="Asia/Jakarta" \
+     SKIP_DOCKER=true \
+     bash
+
+# Skip multiple components
+curl -fsSL https://raw.githubusercontent.com/angga13142/Vps-setup/master/bootstrap.sh | \
+sudo DEV_USER="racoondev" \
+     DEV_USER_PASSWORD="gg123123@" \
+     CUSTOM_HOSTNAME="testgcp" \
+     TIMEZONE="Asia/Jakarta" \
+     SKIP_DOCKER=true \
+     SKIP_CURSOR=true \
+     SKIP_VSCODE=true \
+     bash
 ```
 
 ---
