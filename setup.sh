@@ -218,7 +218,13 @@ EOF
 # --- 5. Code Editors (VS Code & Cursor) ---
 setup_editors() {
     log_info "Menginstal VS Code..."
-    # VS Code Repo
+    
+    # Clean up potential conflicting legacy repo/keys from previous runs
+    rm -f /etc/apt/sources.list.d/vscode.list
+    rm -f /etc/apt/keyrings/packages.microsoft.gpg
+    rm -f /usr/share/keyrings/microsoft.gpg
+
+    # VS Code Repo Setup
     wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > packages.microsoft.gpg
     install -D -o root -g root -m 644 packages.microsoft.gpg /etc/apt/keyrings/packages.microsoft.gpg
     sh -c 'echo "deb [arch=amd64,arm64,armhf signed-by=/etc/apt/keyrings/packages.microsoft.gpg] https://packages.microsoft.com/repos/code stable main" > /etc/apt/sources.list.d/vscode.list'
