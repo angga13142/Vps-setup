@@ -27,17 +27,7 @@ sudo DEV_USER="angga" \
 
 ### Skip Docker Installation
 
-**Method 1: Using bash -s (Recommended)**
-```bash
-curl -fsSL https://raw.githubusercontent.com/angga13142/Vps-setup/master/bootstrap.sh | \
-sudo DEV_USER="racoondev" \
-     DEV_USER_PASSWORD="gg123123@" \
-     CUSTOM_HOSTNAME="testgcp" \
-     TIMEZONE="Asia/Jakarta" \
-     bash -s -- --skip-docker
-```
-
-**Method 2: Using Environment Variable**
+**Method 1: Using Environment Variable (Recommended - Paling Mudah)**
 ```bash
 curl -fsSL https://raw.githubusercontent.com/angga13142/Vps-setup/master/bootstrap.sh | \
 sudo DEV_USER="racoondev" \
@@ -48,9 +38,19 @@ sudo DEV_USER="racoondev" \
      bash
 ```
 
+**Method 2: Using bash -s**
+```bash
+curl -fsSL https://raw.githubusercontent.com/angga13142/Vps-setup/master/bootstrap.sh | \
+sudo DEV_USER="racoondev" \
+     DEV_USER_PASSWORD="gg123123@" \
+     CUSTOM_HOSTNAME="testgcp" \
+     TIMEZONE="Asia/Jakarta" \
+     bash -s -- --skip-docker
+```
+
 **Note:** 
-- Method 1: Gunakan `bash -s --` untuk pass arguments ke script yang di-pipe
-- Method 2: Gunakan environment variable `SKIP_DOCKER=true` (lebih mudah untuk curl | bash)
+- **Method 1 (Recommended)**: Gunakan environment variable `SKIP_DOCKER=true` - paling mudah dan reliable
+- Method 2: Gunakan `bash -s --` untuk pass arguments ke script yang di-pipe
 
 ### With Verbose Output
 
