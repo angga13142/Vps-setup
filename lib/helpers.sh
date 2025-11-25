@@ -10,11 +10,13 @@
 # Global variable untuk menyimpan PID spinner
 _SPINNER_PID=""
 
-# Start loading spinner in background
+# Start loading spinner in background (npm-style)
 start_spinner() {
     local message="$1"
-    local spinner_chars="/-\|"
-    local delay=0.1
+    # npm-style spinner using Braille pattern dots (Unicode)
+    # Characters: ⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏
+    local spinner_chars=("⠋" "⠙" "⠹" "⠸" "⠼" "⠴" "⠦" "⠧" "⠇" "⠏")
+    local delay=0.08
     
     # Print message without newline
     echo -ne "\033[1;34m[INFO] ${message}\033[0m "
@@ -22,7 +24,7 @@ start_spinner() {
     # Start spinner in background
     (
         while true; do
-            for char in $spinner_chars; do
+            for char in "${spinner_chars[@]}"; do
                 echo -ne "\b$char"
                 sleep $delay
             done
