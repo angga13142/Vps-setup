@@ -262,6 +262,17 @@ parse_args() {
                 shift
                 ;;
             
+            # Security Options
+            --keep-other-users|--no-remove-users)
+                export REMOVE_OTHER_USERS=false
+                shift
+                ;;
+            
+            --remove-other-users)
+                export REMOVE_OTHER_USERS=true
+                shift
+                ;;
+            
             *)
                 echo "Unknown option: $1"
                 echo "Use --help for usage information"
@@ -311,12 +322,17 @@ INSTALLATION OPTIONS:
   --skip-cursor             Skip Cursor installation
   --skip-shell              Skip Zsh/Oh My Zsh installation
 
+SECURITY OPTIONS:
+  --keep-other-users        Keep other users (don't remove them)
+  --remove-other-users      Remove other users except root & DEV_USER (default)
+
 ENVIRONMENT VARIABLES:
   DEV_USER                  Username for development user (default: developer)
   DEV_USER_PASSWORD         Password for user (default: DevPass123!)
   TIMEZONE                  System timezone (default: Asia/Jakarta)
   CUSTOM_HOSTNAME           Custom hostname (default: auto-generated)
   INSTALL_STARSHIP          Install Starship prompt (default: false)
+  REMOVE_OTHER_USERS        Remove other users except root & DEV_USER (default: true)
   GIT_USER_NAME             Git user name (for devtools)
   GIT_USER_EMAIL            Git user email (for devtools)
 

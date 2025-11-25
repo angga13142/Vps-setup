@@ -48,6 +48,9 @@ export INSTALL_VSCODE="${INSTALL_VSCODE:-true}"
 export INSTALL_CURSOR="${INSTALL_CURSOR:-true}"
 export INSTALL_SHELL="${INSTALL_SHELL:-true}"
 
+# --- Security Options ---
+export REMOVE_OTHER_USERS="${REMOVE_OTHER_USERS:-true}"  # Remove other users except root and DEV_USER (security)
+
 # --- Error Handling ---
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
