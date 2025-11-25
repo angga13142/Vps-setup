@@ -59,15 +59,26 @@ setup_docker() {
       "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian \
       $DEBIAN_CODENAME stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
 
-    # Update apt with error handling
+    # Update apt with proper error handling (check apt-get exit code, not tee)
     log_info "Updating apt cache..."
-    if ! apt-get update 2>&1 | tee /tmp/apt-docker-update.log; then
+    local apt_update_output
+    apt_update_output=$(apt-get update 2>&1)
+    local apt_exit_code=$?
+    
+    # Save output for debugging
+    echo "$apt_update_output" | tee /tmp/apt-docker-update.log > /dev/null
+    
+    if [ $apt_exit_code -eq 0 ]; then
+        log_success "Apt cache updated successfully"
+    else
         log_warning "Apt update had issues, checking if we can continue..."
-        # Check if it's just warnings
-        if grep -qi "error" /tmp/apt-docker-update.log; then
+        # Check if it's just warnings or critical errors
+        if echo "$apt_update_output" | grep -qi "error"; then
             log_error "Critical apt update errors detected"
-            cat /tmp/apt-docker-update.log
+            echo "$apt_update_output"
             return 1
+        else
+            log_warning "Apt update had non-critical warnings, continuing..."
         fi
     fi
     

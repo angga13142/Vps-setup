@@ -56,4 +56,3 @@ setup_vscode() {
     
     log_success "VS Code setup selesai"
 }
-
