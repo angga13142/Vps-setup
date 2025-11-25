@@ -21,12 +21,21 @@ start_spinner() {
     # Print message without newline
     echo -ne "\033[1;34m[INFO] ${message}\033[0m "
     
-    # Start spinner in background
+    # Start spinner in background with proper error handling
     (
+        # Ignore signals in spinner process to prevent interference
+        trap '' INT TERM
+        # Redirect errors to /dev/null to prevent spinner errors from affecting main script
+        exec 2>/dev/null
+        
         while true; do
             for char in "${spinner_chars[@]}"; do
-                echo -ne "\b$char"
-                sleep $delay
+                # Check if parent process still exists
+                if ! kill -0 $$ 2>/dev/null; then
+                    exit 0
+                fi
+                echo -ne "\b$char" 2>/dev/null || exit 0
+                sleep $delay 2>/dev/null || exit 0
             done
         done
     ) &
@@ -39,11 +48,19 @@ stop_spinner() {
     if [ -n "$_SPINNER_PID" ]; then
         # Check if process still exists
         if kill -0 "$_SPINNER_PID" 2>/dev/null; then
-            kill "$_SPINNER_PID" 2>/dev/null
+            # Send TERM signal first (graceful)
+            kill -TERM "$_SPINNER_PID" 2>/dev/null
+            # Wait briefly for graceful shutdown
+            sleep 0.1 2>/dev/null
+            # If still running, force kill
+            if kill -0 "$_SPINNER_PID" 2>/dev/null; then
+                kill -KILL "$_SPINNER_PID" 2>/dev/null
+            fi
             wait "$_SPINNER_PID" 2>/dev/null
         fi
         _SPINNER_PID=""
-        echo -ne "\b \b\r"  # Clear spinner character and return to start of line
+        # Clear spinner character and return to start of line (suppress errors)
+        echo -ne "\b \b\r" 2>/dev/null || true
     fi
 }
 
@@ -61,13 +78,11 @@ run_with_progress() {
     local tmp_error=$(mktemp)
     
     # Run command, capture all output
-    if eval "$cmd" > "$tmp_output" 2> "$tmp_error"; then
-        local exit_code=0
-    else
-        local exit_code=$?
-    fi
+    # Capture exit code without stopping script execution
+    local exit_code=0
+    eval "$cmd" > "$tmp_output" 2> "$tmp_error" || exit_code=$?
     
-    # Stop spinner
+    # Always stop spinner, even if command failed or was interrupted
     stop_spinner
     
     # Show last 3 meaningful lines of output if there's any (filter out common apt noise)
