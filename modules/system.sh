@@ -16,7 +16,26 @@ setup_system() {
     fi
 
     # Update Repos & Upgrade with retry
-    run_with_progress "Updating package repositories" "retry_command 3 5 'apt-get update -qq'"
+    # Use retry logic directly in run_with_progress
+    local update_attempt=1
+    local update_success=false
+    while [ $update_attempt -le 3 ] && [ "$update_success" = false ]; do
+        if run_with_progress "Updating package repositories (attempt $update_attempt/3)" "apt-get update -qq"; then
+            update_success=true
+        else
+            if [ $update_attempt -lt 3 ]; then
+                log_warning "Apt update gagal, retry dalam 5 detik..."
+                sleep 5
+            fi
+            update_attempt=$((update_attempt + 1))
+        fi
+    done
+    
+    if [ "$update_success" = false ]; then
+        log_error "Apt update gagal setelah 3 attempts"
+        return 1
+    fi
+    
     run_with_progress "Upgrading system packages" "apt-get upgrade -y -qq" || log_warning "apt-get upgrade mengalami masalah, melanjutkan..."
 
     # Install Essential Tools
