@@ -478,31 +478,49 @@ setup_docker() {
     local apt_update_error=$(mktemp)
     local apt_update_exit=0
     
-    # Run apt-get update and capture output
+    # Run apt-get update and capture output (combine stderr to stdout for better visibility)
     DEBIAN_FRONTEND=noninteractive apt-get update \
         -o APT::Cache-Limit=25000000 \
         -o Acquire::http::Timeout=30 \
-        > "$apt_update_output" 2> "$apt_update_error" || apt_update_exit=$?
+        2>&1 | tee "$apt_update_output" > "$apt_update_error"
+    apt_update_exit=${PIPESTATUS[0]}
     
-    # Check exit code
-    if [ $apt_update_exit -ne 0 ]; then
-        log_error "Apt update failed with exit code: $apt_update_exit"
+    log_info "[DEBUG] apt-get update exit code: $apt_update_exit"
+    
+    # Check for errors in output (even if exit code is 0, there might be warnings)
+    local has_error=false
+    if grep -qiE "error|failed|unable|cannot|E:" "$apt_update_output" 2>/dev/null; then
+        has_error=true
+        log_warning "[DEBUG] Error messages detected in apt-get update output"
+    fi
+    
+    # Check if Docker repository was successfully fetched
+    local docker_repo_found=false
+    if grep -qi "download.docker.com" "$apt_update_output" 2>/dev/null; then
+        docker_repo_found=true
+        log_info "[DEBUG] Docker repository found in update output"
+    else
+        log_warning "[DEBUG] Docker repository not found in update output"
+    fi
+    
+    # Check exit code and error conditions
+    if [ $apt_update_exit -ne 0 ] || [ "$has_error" = true ]; then
+        log_error "Apt update failed or encountered errors"
         log_error "[DEBUG] === APT Update Error Details ==="
+        log_error "[DEBUG] Exit code: $apt_update_exit"
+        log_error "[DEBUG] Has error messages: $has_error"
+        log_error "[DEBUG] Docker repo found: $docker_repo_found"
         
-        # Show error output
-        if [ -s "$apt_update_error" ]; then
-            log_error "[DEBUG] Error output:"
-            while IFS= read -r line; do
-                log_error "[DEBUG]   $line"
-            done < "$apt_update_error"
-        fi
-        
-        # Show stdout if any
+        # Show relevant error output (last 50 lines to avoid too much output)
         if [ -s "$apt_update_output" ]; then
-            log_info "[DEBUG] Standard output:"
-            while IFS= read -r line; do
-                log_info "[DEBUG]   $line"
-            done < "$apt_update_output"
+            log_error "[DEBUG] Update output (last 50 lines):"
+            tail -n 50 "$apt_update_output" | while IFS= read -r line; do
+                if echo "$line" | grep -qiE "error|failed|unable|cannot|E:|W:"; then
+                    log_error "[DEBUG]   $line"
+                else
+                    log_info "[DEBUG]   $line"
+                fi
+            done
         fi
         
         # Common error diagnostics
@@ -515,8 +533,13 @@ setup_docker() {
             cat /etc/apt/sources.list.d/docker.list | sed 's/^/[DEBUG]   /'
         fi
         
-        # Check for common issues
-        if grep -q "NO_PUBKEY\|GPG error\|signatures were invalid" "$apt_update_error" 2>/dev/null; then
+        # Check for specific Docker repository errors
+        if grep -qiE "download.docker.com.*error|download.docker.com.*failed|download.docker.com.*unable" "$apt_update_output" 2>/dev/null; then
+            log_error "[DEBUG] Docker repository specific error detected!"
+        fi
+        
+        # Check for GPG key issues
+        if grep -qiE "NO_PUBKEY|GPG error|signatures were invalid|unsigned" "$apt_update_output" 2>/dev/null; then
             log_error "[DEBUG] GPG key issue detected! Attempting to fix..."
             # Try to fix GPG key
             rm -f /etc/apt/keyrings/docker.gpg
@@ -526,7 +549,7 @@ setup_docker() {
                 # Retry once
                 if DEBIAN_FRONTEND=noninteractive apt-get update -qq \
                     -o APT::Cache-Limit=25000000 \
-                    -o Acquire::http::Timeout=30 2>&1; then
+                    -o Acquire::http::Timeout=30 2>&1 | grep -qi "download.docker.com"; then
                     log_success "[DEBUG] APT update succeeded after GPG key fix"
                     rm -f "$apt_update_output" "$apt_update_error"
                     return 0
@@ -538,10 +561,22 @@ setup_docker() {
             fi
         fi
         
+        # If Docker repo was not found but no critical errors, it might be OK
+        if [ "$docker_repo_found" = false ] && [ $apt_update_exit -eq 0 ] && [ "$has_error" = false ]; then
+            log_warning "[DEBUG] Docker repo not in output but no errors detected, continuing..."
+            rm -f "$apt_update_output" "$apt_update_error"
+            return 0
+        fi
+        
         rm -f "$apt_update_output" "$apt_update_error"
         return 1
     else
         log_info "[DEBUG] APT update completed successfully"
+        if [ "$docker_repo_found" = true ]; then
+            log_info "[DEBUG] Docker repository successfully updated"
+        else
+            log_warning "[DEBUG] Docker repository not found in output, but update succeeded"
+        fi
         rm -f "$apt_update_output" "$apt_update_error"
     fi
     
