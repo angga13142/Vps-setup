@@ -49,7 +49,13 @@ setup_system() {
             log_success "Swap 4GB berhasil dikonfigurasi"
         fi
     else
-        log_info "Swap sudah ada, melewati..."
+        log_info "Swap sudah ada, memastikan swap aktif..."
+        # Ensure swap is active even if it exists in fstab
+        if ! swapon --show | grep -q swapfile; then
+            if [ -f /swapfile ]; then
+                swapon /swapfile || log_warning "Gagal mengaktifkan swap file yang sudah ada"
+            fi
+        fi
     fi
 
     # Update Repos & Upgrade with retry
@@ -76,12 +82,35 @@ setup_system() {
     run_with_progress "Upgrading system packages" "apt-get upgrade -y -qq" || log_warning "apt-get upgrade mengalami masalah, melanjutkan..."
 
     # Install Essential Tools
+    # Install all packages in one command to reduce memory overhead and prevent OOM
     local ESSENTIAL_PKGS="curl wget git htop ufw unzip build-essential apt-transport-https ca-certificates gnupg lsb-release fail2ban"
     
-    log_info "Menginstal essential packages..."
+    log_info "Menginstal essential packages (batch install untuk mengurangi memory usage)..."
+    
+    # Check which packages are already installed
+    local packages_to_install=""
     for pkg in $ESSENTIAL_PKGS; do
-        check_and_install "$pkg"
+        if ! dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q "install ok installed"; then
+            if [ -z "$packages_to_install" ]; then
+                packages_to_install="$pkg"
+            else
+                packages_to_install="$packages_to_install $pkg"
+            fi
+        fi
     done
+    
+    # Install all missing packages in one batch (more memory efficient)
+    if [ -n "$packages_to_install" ]; then
+        run_with_progress "Installing essential packages: $packages_to_install" "apt-get install -y -qq $packages_to_install" || {
+            log_warning "Batch install gagal, mencoba install satu per satu..."
+            # Fallback: install one by one if batch fails
+            for pkg in $packages_to_install; do
+                check_and_install "$pkg"
+            done
+        }
+    else
+        log_info "Semua essential packages sudah terinstal"
+    fi
 
     # Handle libfuse2 (Needed for AppImages)
     if ! dpkg-query -W -f='${Status}' libfuse2t64 2>/dev/null | grep -q "install ok installed"; then
