@@ -39,7 +39,8 @@ source "$SCRIPT_DIR/modules/monitoring.sh"
 source "$SCRIPT_DIR/modules/hostname.sh"
 
 # --- Register Cleanup Handler ---
-trap cleanup_on_error EXIT
+# Handle EXIT, SIGINT (Ctrl+C), and SIGTERM
+trap cleanup_on_error EXIT INT TERM
 
 # --- Show Banner ---
 show_banner() {

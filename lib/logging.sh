@@ -34,10 +34,29 @@ update_progress() {
     log_info "Progress: $step"
 }
 
-# --- Cleanup Function (Called on Exit/Error) ---
+# --- Cleanup Function (Called on Exit/Error/Signal) ---
 cleanup_on_error() {
     local exit_code=$?
-    if [ $exit_code -ne 0 ]; then
+    
+    # Stop spinner if running (must be done first to clean up terminal)
+    if [ -n "$_SPINNER_PID" ] && kill -0 "$_SPINNER_PID" 2>/dev/null; then
+        kill "$_SPINNER_PID" 2>/dev/null
+        wait "$_SPINNER_PID" 2>/dev/null
+        _SPINNER_PID=""
+        echo -ne "\b \b\r"  # Clear spinner and return to start of line
+    fi
+    
+    # Handle different exit codes
+    if [ $exit_code -eq 0 ]; then
+        # Normal exit - just cleanup
+        :
+    elif [ $exit_code -eq 130 ] || [ $exit_code -eq 143 ]; then
+        # SIGINT (130 = 128 + 2) or SIGTERM (143 = 128 + 15) - user interrupt
+        echo ""
+        log_warning "Script di-interrupt oleh user (exit code: $exit_code)"
+        log_info "Cleanup sedang dilakukan..."
+    else
+        # Other errors
         log_error "Script gagal dengan exit code: $exit_code"
         log_error "Lihat log lengkap di: $LOG_FILE"
         log_error "Backup config ada di: $BACKUP_DIR (jika ada)"

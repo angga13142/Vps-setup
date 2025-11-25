@@ -37,10 +37,13 @@ start_spinner() {
 # Stop loading spinner
 stop_spinner() {
     if [ -n "$_SPINNER_PID" ]; then
-        kill $_SPINNER_PID 2>/dev/null
-        wait $_SPINNER_PID 2>/dev/null
+        # Check if process still exists
+        if kill -0 "$_SPINNER_PID" 2>/dev/null; then
+            kill "$_SPINNER_PID" 2>/dev/null
+            wait "$_SPINNER_PID" 2>/dev/null
+        fi
         _SPINNER_PID=""
-        echo -ne "\b \b"  # Clear spinner character
+        echo -ne "\b \b\r"  # Clear spinner character and return to start of line
     fi
 }
 
