@@ -170,8 +170,14 @@ setup_desktop() {
     sudo -u "$DEV_USER" bash -c "echo 'xfce4-session' > /home/$DEV_USER/.xsession"
 
     # Restart XRDP to apply changes
-    systemctl enable xrdp
-    systemctl restart xrdp
+    # Wrap in conditional to prevent script exit on containerized environments without systemd
+    if systemctl list-unit-files | grep -q xrdp; then
+        log_info "Mengaktifkan service XRDP..."
+        systemctl enable xrdp || log_error "Gagal enable XRDP (Non-fatal)"
+        systemctl restart xrdp || log_error "Gagal restart XRDP (Non-fatal)"
+    else
+        log_error "Service XRDP tidak ditemukan atau Systemd tidak aktif. Melewati start service..."
+    fi
 }
 
 # --- 4. Developer Stack (Node, Python, Docker) ---
