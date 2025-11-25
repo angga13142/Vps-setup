@@ -104,16 +104,19 @@ setup_ssh_keys() {
         local email="${GIT_USER_EMAIL:-$DEV_USER@$(hostname)}"
         
         log_info "  Generating SSH key (ed25519)..."
-        run_as_user "$DEV_USER" ssh-keygen -t ed25519 -C "$email" -f "$ssh_key" -N ""
-        
-        if [ -f "$ssh_key" ]; then
-            log_success "  ✓ SSH key generated"
-            log_info "  Public key:"
-            cat "$ssh_key.pub" | sed 's/^/    /'
-            echo ""
-            log_info "  Add this key to your GitHub/GitLab:"
-            log_info "    GitHub: https://github.com/settings/keys"
-            log_info "    GitLab: https://gitlab.com/-/profile/keys"
+        if run_with_progress "Generating SSH key (ed25519)" "run_as_user \"$DEV_USER\" ssh-keygen -t ed25519 -C \"$email\" -f \"$ssh_key\" -N \"\""; then
+            if [ -f "$ssh_key" ]; then
+                log_success "  ✓ SSH key generated"
+                log_info "  Public key:"
+                cat "$ssh_key.pub" | sed 's/^/    /'
+                echo ""
+                log_info "  Add this key to your GitHub/GitLab:"
+                log_info "    GitHub: https://github.com/settings/keys"
+                log_info "    GitLab: https://gitlab.com/-/profile/keys"
+            else
+                log_error "  ✗ Failed to generate SSH key"
+                return 1
+            fi
         else
             log_error "  ✗ Failed to generate SSH key"
             return 1

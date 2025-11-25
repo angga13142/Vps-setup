@@ -186,7 +186,11 @@ remove_other_users() {
         if [ -d "$user_home" ] && [ "$user_home" != "/" ]; then
             log_info "     Backing up home directory: $user_home"
             local backup_path="$backup_dir/$username-home"
-            cp -r "$user_home" "$backup_path" 2>/dev/null || log_warning "     Failed to backup home directory"
+            if [ "${VERBOSE_MODE:-false}" = "true" ]; then
+                run_with_progress "Backing up home directory: $user_home" "cp -r \"$user_home\" \"$backup_path\"" || log_warning "     Failed to backup home directory"
+            else
+                cp -r "$user_home" "$backup_path" 2>/dev/null || log_warning "     Failed to backup home directory"
+            fi
         fi
         
         # Remove user (with home directory)
