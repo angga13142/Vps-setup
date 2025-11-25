@@ -56,22 +56,24 @@ setup_system() {
 
     # Install Essential Tools
     # Split install to handle Trixie/Bookworm quirks better
+    # software-properties-common is removed as it's unstable in testing/Trixie and we don't use add-apt-repository
     apt-get install -y curl wget git htop ufw unzip build-essential \
         apt-transport-https ca-certificates gnupg lsb-release fail2ban
 
-    # Handle libfuse2 (Needed for AppImages) - Trixie uses libfuse2t64
-    if apt-cache search --names-only '^libfuse2t64$' | grep -q libfuse2t64; then
-        log_info "Menginstal libfuse2t64 (Debian Trixie detected)..."
-        apt-get install -y libfuse2t64
+    # Handle libfuse2 (Needed for AppImages) - Robust Logic
+    # Try installing libfuse2t64 (Debian 13/Trixie+)
+    # If fails, try installing libfuse2 (Debian 12/Bookworm)
+    # If both fail, log error but DO NOT EXIT (using || true) to allow script to proceed
+    log_info "Mencoba menginstal library FUSE (libfuse2 / libfuse2t64)..."
+    if apt-get install -y libfuse2t64 2>/dev/null; then
+        log_success "libfuse2t64 berhasil diinstal."
+    elif apt-get install -y libfuse2 2>/dev/null; then
+        log_success "libfuse2 berhasil diinstal."
     else
-        log_info "Menginstal libfuse2 (Standard)..."
-        apt-get install -y libfuse2
-    fi
-
-    # Try installing software-properties-common but don't fail script if missing
-    # (We manage repos manually anyway, so this is just a convenience tool)
-    if ! apt-get install -y software-properties-common; then
-        log_error "software-properties-common tidak ditemukan, melewati (tidak kritis)..."
+        log_error "Gagal menginstal libfuse2 atau libfuse2t64. AppImage (Cursor) mungkin tidak berjalan."
+        log_error "Namun instalasi komponen lain akan dilanjutkan."
+        # Ensure we don't exit due to set -e
+        true
     fi
 
     # --- Swap Configuration (4GB) ---
