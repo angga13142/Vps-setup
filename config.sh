@@ -1,0 +1,47 @@
+#!/bin/bash
+
+# ==============================================================================
+# VPS Remote Dev Bootstrap - Configuration
+# ==============================================================================
+# Semua konfigurasi terpusat di file ini
+# Anda dapat menimpa dengan environment variables saat menjalankan
+# ==============================================================================
+
+# --- User Configuration ---
+export DEV_USER="${DEV_USER:-developer}"
+export DEV_USER_PASSWORD="${DEV_USER_PASSWORD:-DevPass123!}"
+
+# --- System Configuration ---
+export TIMEZONE="${TIMEZONE:-Asia/Jakarta}"
+
+# --- Development Stack Versions ---
+export NODE_VERSION="${NODE_VERSION:-lts/*}"
+export NVM_VERSION="${NVM_VERSION:-v0.39.7}"
+
+# --- URLs ---
+export CURSOR_INSTALLER_URL="https://cursor.com/install"
+export NVM_INSTALL_URL="https://raw.githubusercontent.com/nvm-sh/nvm/${NVM_VERSION}/install.sh"
+export NERD_FONTS_URL="https://github.com/ryanoasis/nerd-fonts/releases/download/v3.1.1/Hack.zip"
+
+# --- Internal Paths ---
+export SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export LOG_FILE="${LOG_FILE:-/var/log/vps-bootstrap-$(date +%Y%m%d-%H%M%S).log}"
+export LOCK_FILE="/var/lock/vps-bootstrap.lock"
+export BACKUP_DIR="/root/.vps-bootstrap-backups-$(date +%Y%m%d-%H%M%S)"
+export PROGRESS_FILE="/tmp/vps-bootstrap-progress.txt"
+
+# --- Installation Options (Set to 'true' or 'false') ---
+export INSTALL_SYSTEM="${INSTALL_SYSTEM:-true}"
+export INSTALL_USER="${INSTALL_USER:-true}"
+export INSTALL_DESKTOP="${INSTALL_DESKTOP:-true}"
+export INSTALL_DOCKER="${INSTALL_DOCKER:-true}"
+export INSTALL_NODEJS="${INSTALL_NODEJS:-true}"
+export INSTALL_PYTHON="${INSTALL_PYTHON:-true}"
+export INSTALL_VSCODE="${INSTALL_VSCODE:-true}"
+export INSTALL_CURSOR="${INSTALL_CURSOR:-true}"
+export INSTALL_SHELL="${INSTALL_SHELL:-true}"
+
+# --- Error Handling ---
+set -euo pipefail
+export DEBIAN_FRONTEND=noninteractive
+
