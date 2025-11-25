@@ -35,15 +35,17 @@ setup_desktop() {
         fi
     done
     
-    # Install all missing packages in one batch (more memory efficient)
+    # Install all missing packages in one batch with memory optimizations
     if [ -n "$packages_to_install" ]; then
-        run_with_progress "Installing desktop packages: $packages_to_install" "apt-get install -y -qq $packages_to_install" || {
+        run_with_progress "Installing desktop packages: $packages_to_install" "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends $packages_to_install" || {
             log_warning "Batch install gagal, mencoba install satu per satu..."
             # Fallback: install one by one if batch fails
             for pkg in $packages_to_install; do
                 check_and_install "$pkg"
             done
         }
+        # Clean cache after installation
+        apt-get clean -qq 2>/dev/null || true
     else
         log_info "Semua desktop packages sudah terinstal"
     fi

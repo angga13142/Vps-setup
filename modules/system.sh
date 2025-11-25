@@ -106,24 +106,28 @@ setup_system() {
         fi
     done
     
-    # Install all missing packages in one batch (more memory efficient)
+    # Install all missing packages in one batch with memory optimizations
     if [ -n "$packages_to_install" ]; then
-        run_with_progress "Installing essential packages: $packages_to_install" "apt-get install -y -qq $packages_to_install" || {
+        run_with_progress "Installing essential packages: $packages_to_install" "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends $packages_to_install" || {
             log_warning "Batch install gagal, mencoba install satu per satu..."
             # Fallback: install one by one if batch fails
             for pkg in $packages_to_install; do
                 check_and_install "$pkg"
             done
         }
+        # Clean cache after installation
+        apt-get clean -qq 2>/dev/null || true
     else
         log_info "Semua essential packages sudah terinstal"
     fi
 
-    # Handle libfuse2 (Needed for AppImages)
+    # Handle libfuse2 (Needed for AppImages) - with memory optimization
     if ! dpkg-query -W -f='${Status}' libfuse2t64 2>/dev/null | grep -q "install ok installed"; then
-        if ! run_with_progress "Installing libfuse2t64" "apt-get install -y -qq libfuse2t64"; then
-            run_with_progress "Installing libfuse2" "apt-get install -y -qq libfuse2" || log_warning "Gagal menginstal libfuse2. AppImage mungkin tidak berjalan."
+        ensure_swap_active
+        if ! run_with_progress "Installing libfuse2t64" "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends libfuse2t64"; then
+            run_with_progress "Installing libfuse2" "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends libfuse2" || log_warning "Gagal menginstal libfuse2. AppImage mungkin tidak berjalan."
         fi
+        apt-get clean -qq 2>/dev/null || true
     fi
 
     # --- System Limit Tweak ---
