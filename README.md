@@ -13,7 +13,7 @@ Automates provisioning of a fresh Debian 13 (Trixie/Bookworm) VPS into a lightwe
 
 ## Quick Start
 ```bash
-curl -fsSL https://paste.rs/Pwzla | sudo bash
+curl -fsSL https://raw.githubusercontent.com/angga13142/Vps-setup/master/setup.sh | sudo bash
 ```
 
 ### Customizing
@@ -33,13 +33,12 @@ Set environment variables inline before executing (defaults in parentheses):
 
 Example:
 ```bash
-curl -fsSL https://paste.rs/Pwzla | \
-  SERVER_HOSTNAME=dev-vps \
-  DEV_USER=alice \
-  DEV_USER_PASSWORD='S3cur3!' \
-  DEV_USER_SSH_KEY="$(cat ~/.ssh/id_ed25519.pub)" \
-  ENABLE_WIREGUARD=false \
-  sudo bash
+SERVER_HOSTNAME=dev-vps \
+DEV_USER=alice \
+DEV_USER_PASSWORD='S3cur3!' \
+DEV_USER_SSH_KEY="$(cat ~/.ssh/id_ed25519.pub)" \
+ENABLE_WIREGUARD=false \
+curl -fsSL https://raw.githubusercontent.com/angga13142/Vps-setup/master/setup.sh | sudo -E bash
 ```
 
 ## Post-Install Checklist
