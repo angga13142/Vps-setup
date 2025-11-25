@@ -36,6 +36,7 @@ source "$SCRIPT_DIR/modules/healthcheck.sh"
 source "$SCRIPT_DIR/modules/rollback.sh"
 source "$SCRIPT_DIR/modules/devtools.sh"
 source "$SCRIPT_DIR/modules/monitoring.sh"
+source "$SCRIPT_DIR/modules/hostname.sh"
 
 # --- Register Cleanup Handler ---
 trap cleanup_on_error EXIT
@@ -104,6 +105,9 @@ main() {
     fi
     
     [ "$INSTALL_SHELL" = "true" ] && setup_shell
+    
+    # Hostname customization (always run for better UX)
+    setup_hostname
     
     # Post-installation verification
     echo ""
@@ -219,6 +223,15 @@ parse_args() {
                 exit 0
                 ;;
             
+            # Hostname Customization
+            --hostname|--set-hostname|hostname)
+                show_banner
+                init_logging
+                change_hostname_interactive
+                show_hostname_info
+                exit 0
+                ;;
+            
             # Selective Installation Options
             --skip-desktop)
                 export INSTALL_DESKTOP=false
@@ -285,6 +298,9 @@ COMMANDS:
   
   Developer Tools:
     devtools, --devtools    Setup Git, SSH keys, aliases, etc
+  
+  Customization:
+    hostname, --hostname    Change hostname (interactive)
 
 INSTALLATION OPTIONS:
   --skip-desktop            Skip desktop environment installation
@@ -299,6 +315,8 @@ ENVIRONMENT VARIABLES:
   DEV_USER                  Username for development user (default: developer)
   DEV_USER_PASSWORD         Password for user (default: DevPass123!)
   TIMEZONE                  System timezone (default: Asia/Jakarta)
+  CUSTOM_HOSTNAME           Custom hostname (default: auto-generated)
+  INSTALL_STARSHIP          Install Starship prompt (default: false)
   GIT_USER_NAME             Git user name (for devtools)
   GIT_USER_EMAIL            Git user email (for devtools)
 
@@ -323,6 +341,15 @@ EXAMPLES:
   
   # Restore from backup
   sudo ./setup.sh --rollback
+  
+  # Change hostname (interactive)
+  sudo ./setup.sh --hostname
+  
+  # Install with custom hostname
+  sudo CUSTOM_HOSTNAME="my-dev-server" ./setup.sh
+  
+  # Install with Starship prompt
+  sudo INSTALL_STARSHIP=true ./setup.sh
   
   # Real-time resource monitoring
   sudo ./setup.sh --realtime

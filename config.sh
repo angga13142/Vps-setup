@@ -13,6 +13,8 @@ export DEV_USER_PASSWORD="${DEV_USER_PASSWORD:-DevPass123!}"
 
 # --- System Configuration ---
 export TIMEZONE="${TIMEZONE:-Asia/Jakarta}"
+export CUSTOM_HOSTNAME="${CUSTOM_HOSTNAME:-}"  # Leave empty for auto-generated
+export INSTALL_STARSHIP="${INSTALL_STARSHIP:-false}"  # Set true for fancy Starship prompt
 
 # --- Development Stack Versions ---
 export NODE_VERSION="${NODE_VERSION:-lts/*}"
