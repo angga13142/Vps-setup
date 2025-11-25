@@ -55,10 +55,24 @@ setup_system() {
     apt-get update && apt-get upgrade -y
 
     # Install Essential Tools
-    apt-get install -y \
-        curl wget git htop ufw unzip software-properties-common \
-        build-essential apt-transport-https ca-certificates gnupg \
-        lsb-release fail2ban libfuse2
+    # Split install to handle Trixie/Bookworm quirks better
+    apt-get install -y curl wget git htop ufw unzip build-essential \
+        apt-transport-https ca-certificates gnupg lsb-release fail2ban
+
+    # Handle libfuse2 (Needed for AppImages) - Trixie uses libfuse2t64
+    if apt-cache search --names-only '^libfuse2t64$' | grep -q libfuse2t64; then
+        log_info "Menginstal libfuse2t64 (Debian Trixie detected)..."
+        apt-get install -y libfuse2t64
+    else
+        log_info "Menginstal libfuse2 (Standard)..."
+        apt-get install -y libfuse2
+    fi
+
+    # Try installing software-properties-common but don't fail script if missing
+    # (We manage repos manually anyway, so this is just a convenience tool)
+    if ! apt-get install -y software-properties-common; then
+        log_error "software-properties-common tidak ditemukan, melewati (tidak kritis)..."
+    fi
 
     # --- Swap Configuration (4GB) ---
     if ! grep -q "swapfile" /etc/fstab; then
