@@ -285,11 +285,10 @@ setup_docker() {
     local DEBIAN_CODENAME
     DEBIAN_CODENAME=$(lsb_release -cs)
     
-    # Fallback for Trixie
-    if [ "$DEBIAN_CODENAME" == "trixie" ]; then
-        log_info "Debian Trixie terdeteksi, menggunakan repo Bookworm untuk kompatibilitas Docker..."
-        DEBIAN_CODENAME="bookworm"
-    fi
+    log_info "[DEBUG] Detected Debian codename: $DEBIAN_CODENAME"
+    
+    # Use Trixie directly (Docker now supports Debian 13 Trixie)
+    # No fallback needed as Docker officially supports Trixie
 
     # Backup existing configs
     [ -f /etc/apt/sources.list.d/docker.list ] && backup_file "/etc/apt/sources.list.d/docker.list"
@@ -488,8 +487,9 @@ setup_docker() {
     log_info "[DEBUG] apt-get update exit code: $apt_update_exit"
     
     # Check for errors in output (even if exit code is 0, there might be warnings)
+    # Exclude false positives like "Reading package lists..." which contains "error" but is not an error
     local has_error=false
-    if grep -qiE "error|failed|unable|cannot|E:" "$apt_update_output" 2>/dev/null; then
+    if grep -qiE "^E:|error:|failed|unable to|cannot|W:.*error" "$apt_update_output" 2>/dev/null | grep -vqiE "reading|fetched|get:"; then
         has_error=true
         log_warning "[DEBUG] Error messages detected in apt-get update output"
     fi
@@ -504,8 +504,9 @@ setup_docker() {
     fi
     
     # Check exit code and error conditions
-    if [ $apt_update_exit -ne 0 ] || [ "$has_error" = true ]; then
-        log_error "Apt update failed or encountered errors"
+    # Only treat as error if exit code is non-zero OR there are actual error messages (not warnings)
+    if [ $apt_update_exit -ne 0 ]; then
+        log_error "Apt update failed with exit code: $apt_update_exit"
         log_error "[DEBUG] === APT Update Error Details ==="
         log_error "[DEBUG] Exit code: $apt_update_exit"
         log_error "[DEBUG] Has error messages: $has_error"
@@ -515,7 +516,7 @@ setup_docker() {
         if [ -s "$apt_update_output" ]; then
             log_error "[DEBUG] Update output (last 50 lines):"
             tail -n 50 "$apt_update_output" | while IFS= read -r line; do
-                if echo "$line" | grep -qiE "error|failed|unable|cannot|E:|W:"; then
+                if echo "$line" | grep -qiE "^E:|error:|failed|unable to|cannot"; then
                     log_error "[DEBUG]   $line"
                 else
                     log_info "[DEBUG]   $line"
@@ -561,21 +562,38 @@ setup_docker() {
             fi
         fi
         
-        # If Docker repo was not found but no critical errors, it might be OK
-        if [ "$docker_repo_found" = false ] && [ $apt_update_exit -eq 0 ] && [ "$has_error" = false ]; then
-            log_warning "[DEBUG] Docker repo not in output but no errors detected, continuing..."
-            rm -f "$apt_update_output" "$apt_update_error"
-            return 0
-        fi
-        
         rm -f "$apt_update_output" "$apt_update_error"
         return 1
+    elif [ "$has_error" = true ] && [ $apt_update_exit -eq 0 ]; then
+        # Exit code is 0 but there are error messages - check if they're critical
+        log_warning "[DEBUG] APT update completed but warnings detected"
+        log_warning "[DEBUG] Checking if warnings are critical..."
+        
+        # Check if there are actual critical errors (not just warnings)
+        local critical_error=false
+        if grep -qiE "^E:|error:" "$apt_update_output" 2>/dev/null; then
+            critical_error=true
+        fi
+        
+        if [ "$critical_error" = true ]; then
+            log_error "[DEBUG] Critical errors found in output"
+            # Show error lines
+            grep -iE "^E:|error:" "$apt_update_output" 2>/dev/null | while IFS= read -r line; do
+                log_error "[DEBUG]   $line"
+            done
+            rm -f "$apt_update_output" "$apt_update_error"
+            return 1
+        else
+            log_warning "[DEBUG] Only warnings detected, continuing..."
+            rm -f "$apt_update_output" "$apt_update_error"
+            # Continue - warnings are not critical
+        fi
     else
         log_info "[DEBUG] APT update completed successfully"
         if [ "$docker_repo_found" = true ]; then
             log_info "[DEBUG] Docker repository successfully updated"
         else
-            log_warning "[DEBUG] Docker repository not found in output, but update succeeded"
+            log_warning "[DEBUG] Docker repository not found in output, but update succeeded (may be cached)"
         fi
         rm -f "$apt_update_output" "$apt_update_error"
     fi
