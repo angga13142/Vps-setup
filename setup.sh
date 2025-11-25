@@ -207,16 +207,32 @@ setup_editors() {
     mkdir -p /opt/cursor
     
     # Download AppImage
-    log_info "Downloading Cursor AppImage (ini mungkin memakan waktu)..."
-    curl -L "$CURSOR_URL" -o /opt/cursor/cursor.AppImage
-    chmod +x /opt/cursor/cursor.AppImage
+    log_info "Downloading Cursor AppImage..."
+    
+    # Retry logic for download (5 attempts)
+    local RETRY_COUNT=0
+    local MAX_RETRIES=5
+    local DOWNLOAD_SUCCESS=false
 
-    # Download Icon (Generic placeholder logic or try to fetch one)
-    # Using a generic code icon if specific one isn't available easily, but let's try to be clean.
-    # We will skip downloading an icon to keep script robust, system will use default executable icon.
+    while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+        if curl -L "$CURSOR_URL" -o /opt/cursor/cursor.AppImage; then
+            DOWNLOAD_SUCCESS=true
+            break
+        else
+            log_error "Download gagal, mencoba lagi dalam 5 detik... ($((RETRY_COUNT+1))/$MAX_RETRIES)"
+            sleep 5
+            RETRY_COUNT=$((RETRY_COUNT+1))
+        fi
+    done
 
-    # Create Desktop Entry
-    cat > /usr/share/applications/cursor.desktop <<EOF
+    if [ "$DOWNLOAD_SUCCESS" = false ]; then
+        log_error "Gagal mengunduh Cursor setelah $MAX_RETRIES percobaan."
+        log_error "Melewati instalasi Cursor. Anda dapat mengunduhnya manual nanti."
+    else
+        chmod +x /opt/cursor/cursor.AppImage
+        
+        # Create Desktop Entry
+        cat > /usr/share/applications/cursor.desktop <<EOF
 [Desktop Entry]
 Name=Cursor
 Comment=AI-first Code Editor
@@ -227,11 +243,10 @@ Type=Application
 Categories=Development;IDE;
 StartupNotify=true
 EOF
-    
-    # Fix ownership for the directory so user *could* update it if needed (optional)
-    chown -R "$DEV_USER:$DEV_USER" /opt/cursor
-    
-    log_success "Cursor terinstal di /opt/cursor/cursor.AppImage"
+        # Fix ownership
+        chown -R "$DEV_USER:$DEV_USER" /opt/cursor
+        log_success "Cursor terinstal di /opt/cursor/cursor.AppImage"
+    fi
 }
 
 # --- 6. Shell & Polish (Zsh, Oh My Zsh, Nerd Fonts) ---
