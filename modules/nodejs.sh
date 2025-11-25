@@ -8,7 +8,10 @@ setup_nodejs() {
     update_progress "setup_nodejs"
     log_info "Menginstal Node.js via NVM (sebagai user $DEV_USER)..."
     
-    if ! run_as_user "$DEV_USER" bash <<'EOF'
+    # Create temporary script for NVM installation
+    local nvm_script="/tmp/install-nvm-$$.sh"
+    cat > "$nvm_script" <<'NVMEOF'
+#!/bin/bash
 set -e
 
 # Download and install NVM
@@ -44,12 +47,18 @@ echo "NPM version: $(npm --version)"
 
 # Install global packages
 npm install -g yarn pnpm typescript ts-node || echo "WARNING: Beberapa npm global packages gagal diinstal"
-EOF
-    then
+NVMEOF
+    
+    chmod +x "$nvm_script"
+    
+    # Use run_with_progress to respect VERBOSE_MODE
+    if ! run_with_progress "Installing Node.js via NVM" "run_as_user \"$DEV_USER\" bash \"$nvm_script\""; then
+        rm -f "$nvm_script"
         log_error "Gagal menginstal Node.js via NVM"
         return 1
     fi
     
+    rm -f "$nvm_script"
     log_success "Node.js setup selesai"
 }
 

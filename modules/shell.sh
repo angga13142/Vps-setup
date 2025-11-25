@@ -20,12 +20,24 @@ setup_shell() {
     local font_success=false
     while [ $font_attempt -le 3 ] && [ "$font_success" = false ]; do
         if run_with_progress "Downloading Nerd Fonts (Hack) (attempt $font_attempt/3)" "wget -q -O '$FONT_ZIP' '$NERD_FONTS_URL'"; then
-            if unzip -o "$FONT_ZIP" -d /usr/local/share/fonts/ &>/dev/null; then
-                fc-cache -fv &>/dev/null
-                font_success=true
-                log_success "Nerd Fonts (Hack) berhasil diinstal"
+            # Extract and install fonts with progress if verbose mode
+            if [ "${VERBOSE_MODE:-false}" = "true" ]; then
+                if run_with_progress "Extracting Nerd Fonts" "unzip -o '$FONT_ZIP' -d /usr/local/share/fonts/"; then
+                    run_with_progress "Updating font cache" "fc-cache -fv"
+                    font_success=true
+                    log_success "Nerd Fonts (Hack) berhasil diinstal"
+                else
+                    log_warning "Gagal extract font"
+                fi
             else
-                log_warning "Gagal extract font"
+                # Non-verbose: silent extract
+                if unzip -o "$FONT_ZIP" -d /usr/local/share/fonts/ &>/dev/null; then
+                    fc-cache -fv &>/dev/null
+                    font_success=true
+                    log_success "Nerd Fonts (Hack) berhasil diinstal"
+                else
+                    log_warning "Gagal extract font"
+                fi
             fi
             rm -f "$FONT_ZIP"
         else
