@@ -43,6 +43,32 @@ wait_for_memory() {
     return 1
 }
 
+# Helper: Safe apt-get clean (memory-aware)
+safe_apt_clean() {
+    local min_memory=${1:-100}  # Minimum memory required (default 100MB)
+    
+    log_info "[DEBUG] safe_apt_clean: Checking memory before cleanup..."
+    local available_mb=$(free -m | awk '/^Mem:/ {print $7}')
+    log_info "[DEBUG] Available memory: ${available_mb}MB (required: ${min_memory}MB)"
+    
+    if [ "$available_mb" -lt "$min_memory" ]; then
+        log_warning "[DEBUG] Memory too low (${available_mb}MB < ${min_memory}MB), skipping apt-get clean"
+        log_info "[DEBUG] Using direct file removal instead..."
+        # Use direct rm instead of apt-get clean (lighter weight)
+        rm -rf /var/cache/apt/archives/*.deb 2>/dev/null || true
+        rm -rf /var/cache/apt/archives/partial/*.deb 2>/dev/null || true
+        return 0
+    fi
+    
+    # Memory is sufficient, use apt-get clean but with timeout
+    log_info "[DEBUG] Memory sufficient, running apt-get clean with timeout..."
+    timeout 30 apt-get clean -qq 2>/dev/null || {
+        log_warning "[DEBUG] apt-get clean failed or timed out, using direct removal..."
+        rm -rf /var/cache/apt/archives/*.deb 2>/dev/null || true
+        rm -rf /var/cache/apt/archives/partial/*.deb 2>/dev/null || true
+    }
+}
+
 # Helper: Force garbage collection and memory release
 force_memory_release() {
     log_info "[DEBUG] force_memory_release: Starting aggressive cleanup..."
@@ -61,13 +87,11 @@ force_memory_release() {
         sleep 1
     fi
     
-    # Clean apt thoroughly
-    log_info "[DEBUG] Cleaning apt cache..."
-    apt-get clean -qq 2>/dev/null || true
+    # Clean apt thoroughly using safe method
+    log_info "[DEBUG] Cleaning apt cache (safe method)..."
+    safe_apt_clean 100
     local cache_size=$(du -sh /var/cache/apt/archives 2>/dev/null | cut -f1 || echo "unknown")
-    log_info "[DEBUG] APT cache size before removal: ${cache_size}"
-    rm -rf /var/cache/apt/archives/*.deb 2>/dev/null || true
-    rm -rf /var/cache/apt/archives/partial/*.deb 2>/dev/null || true
+    log_info "[DEBUG] APT cache size after cleanup: ${cache_size}"
     
     # Drop all caches
     log_info "[DEBUG] Dropping system caches..."
@@ -129,9 +153,9 @@ install_package_safe() {
         log_info "[DEBUG] Ensuring swap is active..."
         ensure_swap_active
         
-        # Aggressive pre-installation cleanup
+        # Aggressive pre-installation cleanup (using safe method)
         log_info "[DEBUG] Pre-installation cleanup for $package_name..."
-        apt-get clean -qq 2>/dev/null || true
+        safe_apt_clean 100
         rm -rf /var/cache/apt/archives/*.deb 2>/dev/null || true
         sync
         
@@ -299,23 +323,51 @@ setup_docker() {
     
     log_info "[DEBUG] Service stop operations completed"
     
-    # Clean apt cache aggressively
+    # Clean apt cache aggressively (using safe method)
     log_info "[DEBUG] === Aggressive APT Cache Cleanup ==="
-    log_info "[DEBUG] Running apt-get clean..."
-    run_with_progress "Cleaning apt cache" "DEBIAN_FRONTEND=noninteractive apt-get clean -qq"
+    
+    # Check memory before cleanup
+    local mem_before_cleanup=$(free -m | awk '/^Mem:/ {print $7}')
+    log_info "[DEBUG] Memory before cleanup: ${mem_before_cleanup}MB"
+    
+    # Use safe apt clean (memory-aware)
+    log_info "[DEBUG] Running safe apt-get clean..."
+    safe_apt_clean 150 || {
+        log_warning "[DEBUG] apt-get clean failed, using direct file removal..."
+        rm -rf /var/cache/apt/archives/*.deb 2>/dev/null || true
+        rm -rf /var/cache/apt/archives/partial/*.deb 2>/dev/null || true
+    }
     
     log_info "[DEBUG] Removing apt lists..."
     local lists_size=$(du -sh /var/lib/apt/lists 2>/dev/null | cut -f1 || echo "unknown")
     log_info "[DEBUG] APT lists size before removal: ${lists_size}"
-    rm -rf /var/lib/apt/lists/* 2>/dev/null || true
     
-    log_info "[DEBUG] Removing apt archives..."
+    # Remove lists in smaller chunks to avoid OOM
+    if [ -d /var/lib/apt/lists ]; then
+        find /var/lib/apt/lists -type f -name "*.gz" -delete 2>/dev/null || true
+        find /var/lib/apt/lists -type f -name "*_Packages" -delete 2>/dev/null || true
+        find /var/lib/apt/lists -type f -name "*_Sources" -delete 2>/dev/null || true
+        # Only remove all if memory is sufficient
+        if [ "$mem_before_cleanup" -gt 200 ]; then
+            rm -rf /var/lib/apt/lists/* 2>/dev/null || true
+        else
+            log_info "[DEBUG] Memory low, keeping some apt lists for stability"
+        fi
+    fi
+    
+    log_info "[DEBUG] Removing apt archives (direct removal)..."
     local archives_size=$(du -sh /var/cache/apt/archives 2>/dev/null | cut -f1 || echo "unknown")
     log_info "[DEBUG] APT archives size before removal: ${archives_size}"
+    # Direct removal is safer than apt-get clean
     rm -rf /var/cache/apt/archives/*.deb 2>/dev/null || true
+    rm -rf /var/cache/apt/archives/partial/*.deb 2>/dev/null || true
     
     log_info "[DEBUG] Syncing filesystem..."
     sync
+    
+    local mem_after_cleanup=$(free -m | awk '/^Mem:/ {print $7}')
+    local mem_freed_cleanup=$((mem_after_cleanup - mem_before_cleanup))
+    log_info "[DEBUG] Memory after cleanup: ${mem_after_cleanup}MB (freed: ${mem_freed_cleanup}MB)"
     log_info "[DEBUG] APT cache cleanup completed"
     
     # Setup Docker repo directory
