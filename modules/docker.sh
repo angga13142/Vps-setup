@@ -43,33 +43,8 @@ wait_for_memory() {
     return 1
 }
 
-# Helper: Safe apt-get clean (memory-aware)
-safe_apt_clean() {
-    local min_memory=${1:-100}  # Minimum memory required (default 100MB)
-    
-    log_info "[DEBUG] safe_apt_clean: Checking memory before cleanup..."
-    local available_mb=$(free -m | awk '/^Mem:/ {print $7}')
-    log_info "[DEBUG] Available memory: ${available_mb}MB (required: ${min_memory}MB)"
-    
-    if [ "$available_mb" -lt "$min_memory" ]; then
-        log_warning "[DEBUG] Memory too low (${available_mb}MB < ${min_memory}MB), skipping apt-get clean"
-        log_info "[DEBUG] Using direct file removal instead..."
-        # Use direct rm instead of apt-get clean (lighter weight)
-        rm -rf /var/cache/apt/archives/*.deb 2>/dev/null || true
-        rm -rf /var/cache/apt/archives/partial/*.deb 2>/dev/null || true
-        return 0
-    fi
-    
-    # Memory is sufficient, use apt-get clean but with timeout
-    log_info "[DEBUG] Memory sufficient, running apt-get clean with timeout..."
-    timeout 30 apt-get clean -qq 2>/dev/null || {
-        log_warning "[DEBUG] apt-get clean failed or timed out, using direct removal..."
-        rm -rf /var/cache/apt/archives/*.deb 2>/dev/null || true
-        rm -rf /var/cache/apt/archives/partial/*.deb 2>/dev/null || true
-    }
-}
-
 # Helper: Force garbage collection and memory release
+# Note: safe_apt_clean() is now in lib/helpers.sh and available to all modules
 force_memory_release() {
     log_info "[DEBUG] force_memory_release: Starting aggressive cleanup..."
     
