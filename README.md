@@ -25,6 +25,19 @@ sudo DEV_USER="angga" \
      bash
 ```
 
+### Skip Docker Installation
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/angga13142/Vps-setup/master/bootstrap.sh | \
+sudo DEV_USER="racoondev" \
+     DEV_USER_PASSWORD="gg123123@" \
+     CUSTOM_HOSTNAME="testgcp" \
+     TIMEZONE="Asia/Jakarta" \
+     bash -- --skip-docker
+```
+
+**Note:** Arguments seperti `--skip-docker` harus ditambahkan setelah `bash` dengan `--` untuk memisahkan arguments dari bash options.
+
 ### With Verbose Output
 
 Untuk melihat output detail dari commands (debugging):
@@ -122,11 +135,34 @@ sudo ./setup.sh --skip-desktop
 # Skip specific components
 sudo ./setup.sh --skip-cursor --skip-vscode --skip-docker
 
+# Skip Docker only
+sudo ./setup.sh --skip-docker
+
 # Keep other users (don't auto-remove)
 sudo ./setup.sh --keep-other-users
 
 # With verbose output (for debugging)
 sudo ./setup.sh --verbose
+```
+
+### Via curl | bash with Skip Options
+
+```bash
+# Skip Docker
+curl -fsSL https://raw.githubusercontent.com/angga13142/Vps-setup/master/bootstrap.sh | \
+sudo DEV_USER="racoondev" \
+     DEV_USER_PASSWORD="gg123123@" \
+     CUSTOM_HOSTNAME="testgcp" \
+     TIMEZONE="Asia/Jakarta" \
+     bash -- --skip-docker
+
+# Skip multiple components
+curl -fsSL https://raw.githubusercontent.com/angga13142/Vps-setup/master/bootstrap.sh | \
+sudo DEV_USER="racoondev" \
+     DEV_USER_PASSWORD="gg123123@" \
+     CUSTOM_HOSTNAME="testgcp" \
+     TIMEZONE="Asia/Jakarta" \
+     bash -- --skip-docker --skip-cursor --skip-vscode
 ```
 
 ---
