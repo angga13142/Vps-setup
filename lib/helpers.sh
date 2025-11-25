@@ -71,6 +71,14 @@ run_with_progress() {
     shift
     local cmd="$@"
     
+    # Dry-run mode: just show what would be executed
+    if [ "${DRY_RUN_MODE:-false}" = "true" ]; then
+        echo ""
+        echo -e "\033[1;33m[DRY-RUN] ${message}\033[0m"
+        echo -e "\033[0;33m  Would execute: ${cmd}\033[0m"
+        return 0
+    fi
+    
     # Start spinner
     start_spinner "$message"
     
@@ -131,6 +139,17 @@ run_with_progress() {
 # --- Package Management Helper ---
 check_and_install() {
     local pkg="$1"
+    
+    # Dry-run mode: just check and report
+    if [ "${DRY_RUN_MODE:-false}" = "true" ]; then
+        if dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q "install ok installed"; then
+            echo -e "\033[1;34m[DRY-RUN] Paket '$pkg' sudah terinstal. Melewati...\033[0m"
+        else
+            echo -e "\033[1;33m[DRY-RUN] Would install package: $pkg\033[0m"
+        fi
+        return 0
+    fi
+    
     # Check if package is installed (status 'ii' means installed correctly)
     if dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q "install ok installed"; then
         echo -e "\033[1;34m[INFO] Paket '$pkg' sudah terinstal. Melewati...\033[0m"
@@ -196,6 +215,16 @@ retry_command() {
 enable_and_start_service() {
     local service="$1"
     
+    # Dry-run mode: just report
+    if [ "${DRY_RUN_MODE:-false}" = "true" ]; then
+        if systemctl list-unit-files 2>/dev/null | grep -q "$service"; then
+            echo -e "\033[1;33m[DRY-RUN] Would enable and start service: $service\033[0m"
+        else
+            echo -e "\033[1;34m[DRY-RUN] Service $service not found\033[0m"
+        fi
+        return 0
+    fi
+    
     if ! command_exists systemctl; then
         log_warning "Systemd tidak tersedia, skip service management"
         return 0
@@ -219,6 +248,14 @@ enable_and_start_service() {
 run_as_user() {
     local user="$1"
     shift
+    local cmd="$@"
+    
+    # Dry-run mode: just report
+    if [ "${DRY_RUN_MODE:-false}" = "true" ]; then
+        echo -e "\033[1;33m[DRY-RUN] Would run as user '$user': ${cmd}\033[0m"
+        return 0
+    fi
+    
     sudo -H -u "$user" "$@"
 }
 
@@ -286,8 +323,21 @@ ensure_swap_active() {
 wait_for_memory() {
     local required_mb=${1:-300}  # Default 300MB required
     local max_wait=${2:-60}       # Max wait 60 seconds
-    local waited=0
     
+    # Dry-run mode: just check and report
+    if [ "${DRY_RUN_MODE:-false}" = "true" ]; then
+        local available_mb
+        available_mb=$(free -m | awk '/^Mem:/ {print $7}')
+        if [ "$available_mb" -gt "$required_mb" ]; then
+            echo -e "\033[1;34m[DRY-RUN] Memory check: ${available_mb}MB available (need ${required_mb}MB) ✓\033[0m"
+            return 0
+        else
+            echo -e "\033[1;33m[DRY-RUN] Memory check: ${available_mb}MB available (need ${required_mb}MB) - would wait\033[0m"
+            return 0
+        fi
+    fi
+    
+    local waited=0
     while [ $waited -lt $max_wait ]; do
         local available_mb
         available_mb=$(free -m | awk '/^Mem:/ {print $7}')
@@ -311,6 +361,27 @@ wait_for_memory() {
 batch_install_packages() {
     local packages_list="$1"
     local description="${2:-packages}"
+    
+    # Dry-run mode: just check and report
+    if [ "${DRY_RUN_MODE:-false}" = "true" ]; then
+        local packages_to_install=""
+        for pkg in $packages_list; do
+            if ! dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q "install ok installed"; then
+                if [ -z "$packages_to_install" ]; then
+                    packages_to_install="$pkg"
+                else
+                    packages_to_install="$packages_to_install $pkg"
+                fi
+            fi
+        done
+        
+        if [ -n "$packages_to_install" ]; then
+            echo -e "\033[1;33m[DRY-RUN] Would install $description: $packages_to_install\033[0m"
+        else
+            echo -e "\033[1;34m[DRY-RUN] Semua $description sudah terinstal\033[0m"
+        fi
+        return 0
+    fi
     
     # Ensure swap is active before installing packages
     ensure_swap_active

@@ -53,6 +53,7 @@ export REMOVE_OTHER_USERS="${REMOVE_OTHER_USERS:-true}"  # Remove other users ex
 
 # --- Output Options ---
 export VERBOSE_MODE="${VERBOSE_MODE:-false}"  # Enable verbose output (default: false, only show info/warning/error/success)
+export DRY_RUN_MODE="${DRY_RUN_MODE:-false}"   # Dry-run mode: show what would be done without actually executing (default: false)
 
 # --- Error Handling ---
 set -euo pipefail

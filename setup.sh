@@ -280,6 +280,14 @@ parse_args() {
                 shift
                 ;;
             
+            --dry-run|--test)
+                export DRY_RUN_MODE=true
+                export VERBOSE_MODE=true  # Enable verbose in dry-run to see all commands
+                log_warning "DRY-RUN MODE ENABLED - No system changes will be made"
+                log_warning "This will only show what would be executed"
+                shift
+                ;;
+            
             *)
                 echo "Unknown option: $1"
                 echo "Use --help for usage information"
@@ -332,6 +340,10 @@ INSTALLATION OPTIONS:
 OUTPUT OPTIONS:
   --verbose, -v             Enable verbose output (show command output details)
                            Default: non-verbose (only info/warning/error/success)
+  
+  --dry-run, --test         Dry-run mode: show what would be executed without
+                           actually making any system changes (safe for debugging)
+                           Automatically enables --verbose mode
 
 SECURITY OPTIONS:
   --keep-other-users        Keep other users (don't remove them)

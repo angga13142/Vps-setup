@@ -62,6 +62,20 @@ force_memory_release() {
 install_package_safe() {
     local package_name="$1"
     local is_critical="${2:-true}"  # true/false
+    
+    # Dry-run mode: just check and report
+    if [ "${DRY_RUN_MODE:-false}" = "true" ]; then
+        if dpkg-query -W -f='${Status}' "$package_name" 2>/dev/null | grep -q "install ok installed"; then
+            echo -e "\033[1;34m[DRY-RUN] $package_name already installed, skipping...\033[0m"
+        else
+            local critical_label=""
+            [ "$is_critical" = "true" ] && critical_label=" (CRITICAL)" || critical_label=" (OPTIONAL)"
+            echo -e "\033[1;33m[DRY-RUN] Would install package: $package_name$critical_label\033[0m"
+            wait_for_memory 400 120  # Check memory in dry-run mode
+        fi
+        return 0
+    fi
+    
     local max_retries=3
     local retry=1
     
