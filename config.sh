@@ -51,6 +51,9 @@ export INSTALL_SHELL="${INSTALL_SHELL:-true}"
 # --- Security Options ---
 export REMOVE_OTHER_USERS="${REMOVE_OTHER_USERS:-true}"  # Remove other users except root and DEV_USER (security)
 
+# --- Output Options ---
+export VERBOSE_MODE="${VERBOSE_MODE:-false}"  # Enable verbose output (default: false, only show info/warning/error/success)
+
 # --- Error Handling ---
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive

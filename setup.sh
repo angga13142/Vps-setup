@@ -274,6 +274,12 @@ parse_args() {
                 shift
                 ;;
             
+            # Output Options
+            --verbose|-v)
+                export VERBOSE_MODE=true
+                shift
+                ;;
+            
             *)
                 echo "Unknown option: $1"
                 echo "Use --help for usage information"
@@ -322,6 +328,10 @@ INSTALLATION OPTIONS:
   --skip-vscode             Skip VS Code installation
   --skip-cursor             Skip Cursor installation
   --skip-shell              Skip Zsh/Oh My Zsh installation
+
+OUTPUT OPTIONS:
+  --verbose, -v             Enable verbose output (show command output details)
+                           Default: non-verbose (only info/warning/error/success)
 
 SECURITY OPTIONS:
   --keep-other-users        Keep other users (don't remove them)

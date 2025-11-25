@@ -86,33 +86,44 @@ run_with_progress() {
     # Always stop spinner, even if command failed or was interrupted
     stop_spinner
     
-    # Show last 3 meaningful lines of output if there's any (filter out common apt noise)
-    if [ -s "$tmp_output" ] || [ -s "$tmp_error" ]; then
-        # Combine stdout and stderr, filter out common apt messages, show last 3 lines
-        {
-            [ -s "$tmp_output" ] && cat "$tmp_output"
-            [ -s "$tmp_error" ] && cat "$tmp_error"
-        } | grep -vE "^(Reading|Preparing|Unpacking|Setting up|Processing triggers|Get:|Fetched|Selecting|Building|Need to get|After this|Do you want|WARNING: apt does not)" | \
-          grep -vE "^$" | \
-          tail -n 3 | \
-          while IFS= read -r line; do
-              if [ -n "$line" ]; then
-                  echo -e "  \033[0;36m${line}\033[0m"
-              fi
-          done
+    # Show verbose output only if VERBOSE_MODE is enabled
+    if [ "${VERBOSE_MODE:-false}" = "true" ]; then
+        # Show last 3 meaningful lines of output if there's any (filter out common apt noise)
+        if [ -s "$tmp_output" ] || [ -s "$tmp_error" ]; then
+            # Combine stdout and stderr, filter out common apt messages, show last 3 lines
+            {
+                [ -s "$tmp_output" ] && cat "$tmp_output"
+                [ -s "$tmp_error" ] && cat "$tmp_error"
+            } | grep -vE "^(Reading|Preparing|Unpacking|Setting up|Processing triggers|Get:|Fetched|Selecting|Building|Need to get|After this|Do you want|WARNING: apt does not)" | \
+              grep -vE "^$" | \
+              tail -n 3 | \
+              while IFS= read -r line; do
+                  if [ -n "$line" ]; then
+                      echo -e "  \033[0;36m${line}\033[0m"
+                  fi
+              done
+        fi
     fi
-    
-    # Cleanup
-    rm -f "$tmp_output" "$tmp_error"
     
     # Show result (on new line after spinner)
     if [ $exit_code -eq 0 ]; then
         echo ""
         echo -e "\033[1;32m[SUCCESS] ${message}\033[0m"
+        # Cleanup
+        rm -f "$tmp_output" "$tmp_error"
         return 0
     else
         echo ""
         echo -e "\033[1;31m[ERROR] ${message} (exit code: $exit_code)\033[0m"
+        # In verbose mode, show error output even on failure
+        if [ "${VERBOSE_MODE:-false}" = "true" ] && [ -s "$tmp_error" ]; then
+            echo -e "\033[0;31mError details:\033[0m"
+            cat "$tmp_error" | head -n 10 | while IFS= read -r line; do
+                echo -e "  \033[0;31m${line}\033[0m"
+            done
+        fi
+        # Cleanup
+        rm -f "$tmp_output" "$tmp_error"
         return $exit_code
     fi
 }
