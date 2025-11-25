@@ -87,8 +87,66 @@ setup_docker() {
     # Clean cache after update to free memory before installation
     apt-get clean -qq 2>/dev/null || true
     
-    # Install Docker components (batch install to prevent OOM)
-    batch_install_packages "docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin" "Docker components"
+    # Install Docker components in stages to reduce memory pressure
+    # Best practice: Install core components first, then plugins
+    # Stage 1: Install containerd.io (runtime dependency)
+    if ! dpkg-query -W -f='${Status}' containerd.io 2>/dev/null | grep -q "install ok installed"; then
+        ensure_swap_active
+        run_with_progress "Installing containerd.io (Docker runtime)" "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends containerd.io" || {
+            log_error "Failed to install containerd.io"
+            return 1
+        }
+        apt-get clean -qq 2>/dev/null || true
+    fi
+    
+    # Stage 2: Install docker-ce and docker-ce-cli together (core components)
+    local docker_core=""
+    if ! dpkg-query -W -f='${Status}' docker-ce 2>/dev/null | grep -q "install ok installed"; then
+        docker_core="docker-ce"
+    fi
+    if ! dpkg-query -W -f='${Status}' docker-ce-cli 2>/dev/null | grep -q "install ok installed"; then
+        if [ -z "$docker_core" ]; then
+            docker_core="docker-ce-cli"
+        else
+            docker_core="$docker_core docker-ce-cli"
+        fi
+    fi
+    
+    if [ -n "$docker_core" ]; then
+        ensure_swap_active
+        run_with_progress "Installing Docker Engine core: $docker_core" "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends $docker_core" || {
+            log_warning "Failed to install Docker core with --no-install-recommends, trying without..."
+            run_with_progress "Installing Docker Engine core (retry): $docker_core" "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq $docker_core" || {
+                log_error "Failed to install Docker Engine core"
+                return 1
+            }
+        }
+        apt-get clean -qq 2>/dev/null || true
+    fi
+    
+    # Stage 3: Install plugins (less critical, can be installed separately)
+    local docker_plugins=""
+    if ! dpkg-query -W -f='${Status}' docker-buildx-plugin 2>/dev/null | grep -q "install ok installed"; then
+        docker_plugins="docker-buildx-plugin"
+    fi
+    if ! dpkg-query -W -f='${Status}' docker-compose-plugin 2>/dev/null | grep -q "install ok installed"; then
+        if [ -z "$docker_plugins" ]; then
+            docker_plugins="docker-compose-plugin"
+        else
+            docker_plugins="$docker_plugins docker-compose-plugin"
+        fi
+    fi
+    
+    if [ -n "$docker_plugins" ]; then
+        ensure_swap_active
+        run_with_progress "Installing Docker plugins: $docker_plugins" "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends $docker_plugins" || {
+            log_warning "Failed to install Docker plugins with --no-install-recommends, trying without..."
+            run_with_progress "Installing Docker plugins (retry): $docker_plugins" "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq $docker_plugins" || {
+                log_warning "Failed to install Docker plugins, continuing without them..."
+            }
+        }
+        apt-get clean -qq 2>/dev/null || true
+    fi
 
     # Add user to docker group
     if ! groups "$DEV_USER" | grep -q docker; then
