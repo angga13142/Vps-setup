@@ -513,9 +513,9 @@ setup_docker() {
         log_info "[DEBUG] User $DEV_USER already in docker group"
     fi
     
-    # Final cleanup
+    # Final cleanup (using safe method)
     log_info "[DEBUG] === Final Cleanup ==="
-    apt-get clean -qq 2>/dev/null || true
+    safe_apt_clean 100
     rm -rf /var/cache/apt/archives/*.deb 2>/dev/null || true
     log_info "[DEBUG] Final cleanup completed"
     
