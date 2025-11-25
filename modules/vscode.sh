@@ -26,8 +26,8 @@ setup_vscode() {
     clean_gpg_keys "microsoft"
     clean_gpg_keys "packages.microsoft"
     
-    # Clean apt cache to avoid conflicts
-    run_with_progress "Cleaning apt cache for VS Code" "apt-get clean -qq"
+    # Clean apt cache to avoid conflicts (memory optimization)
+    run_with_progress "Cleaning apt cache for VS Code" "DEBIAN_FRONTEND=noninteractive apt-get clean -qq"
     rm -rf /var/lib/apt/lists/packages.microsoft.com*
 
     # VS Code Repo Setup - Install GPG key with progress
@@ -51,12 +51,15 @@ setup_vscode() {
     if [ "$gpg_success" = true ]; then
         sh -c 'echo "deb [arch=amd64,arm64,armhf signed-by=/etc/apt/keyrings/packages.microsoft.gpg] https://packages.microsoft.com/repos/code stable main" > /etc/apt/sources.list.d/vscode.list'
         
-        # Update apt with proper error handling
-        if ! run_with_progress "Updating apt cache for VS Code" "apt-get update -qq"; then
+        # Update apt with proper error handling (memory optimized)
+        if ! run_with_progress "Updating apt cache for VS Code" "DEBIAN_FRONTEND=noninteractive apt-get update -qq"; then
             log_error "Apt update failed. This indicates a problem with VS Code repository configuration"
             log_warning "VS Code installation may fail due to apt update errors"
             # Continue anyway for VS Code (non-critical), but log the error
         fi
+        
+        # Clean cache after update to free memory before installation
+        apt-get clean -qq 2>/dev/null || true
         
         # Ensure swap is active before installing VS Code
         ensure_swap_active

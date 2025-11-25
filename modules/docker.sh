@@ -42,8 +42,8 @@ setup_docker() {
     # Clean GPG keys using helper function
     clean_gpg_keys "docker"
     
-    # Clean apt cache
-    run_with_progress "Cleaning apt cache" "apt-get clean -qq"
+    # Clean apt cache (memory optimization)
+    run_with_progress "Cleaning apt cache" "DEBIAN_FRONTEND=noninteractive apt-get clean -qq"
     rm -rf /var/lib/apt/lists/download.docker.com*
     
     # Setup Docker repo directory
@@ -77,12 +77,15 @@ setup_docker() {
       "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian \
       $DEBIAN_CODENAME stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
 
-    # Update apt with proper error handling
-    if ! run_with_progress "Updating apt cache for Docker" "apt-get update -qq"; then
+    # Update apt with proper error handling (memory optimized)
+    if ! run_with_progress "Updating apt cache for Docker" "DEBIAN_FRONTEND=noninteractive apt-get update -qq"; then
         log_error "Apt update failed. This indicates a problem with package repository configuration"
         log_error "Cannot proceed with Docker installation with corrupted apt state"
         return 1
     fi
+    
+    # Clean cache after update to free memory before installation
+    apt-get clean -qq 2>/dev/null || true
     
     # Install Docker components (batch install to prevent OOM)
     batch_install_packages "docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin" "Docker components"

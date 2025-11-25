@@ -18,8 +18,9 @@ start_spinner() {
     local spinner_chars=("⠋" "⠙" "⠹" "⠸" "⠼" "⠴" "⠦" "⠧" "⠇" "⠏")
     local delay=0.08
     
-    # Print message without newline
-    echo -ne "\033[1;34m[INFO] ${message}\033[0m "
+    # Print message on new line, then spinner on same line with space
+    echo -e "\033[1;34m[INFO] ${message}\033[0m"
+    echo -ne "  "
     
     # Start spinner in background with proper error handling
     (
@@ -34,7 +35,7 @@ start_spinner() {
                 if ! kill -0 $$ 2>/dev/null; then
                     exit 0
                 fi
-                echo -ne "\b$char" 2>/dev/null || exit 0
+                echo -ne "\b\b $char" 2>/dev/null || exit 0
                 sleep $delay 2>/dev/null || exit 0
             done
         done
@@ -59,8 +60,8 @@ stop_spinner() {
             wait "$_SPINNER_PID" 2>/dev/null
         fi
         _SPINNER_PID=""
-        # Clear spinner character and return to start of line (suppress errors)
-        echo -ne "\b \b\r" 2>/dev/null || true
+        # Clear spinner character (2 chars: space + spinner) and return to start of line
+        echo -ne "\b\b  \r" 2>/dev/null || true
     fi
 }
 
@@ -121,7 +122,16 @@ check_and_install() {
     if dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q "install ok installed"; then
         echo -e "\033[1;34m[INFO] Paket '$pkg' sudah terinstal. Melewati...\033[0m"
     else
-        run_with_progress "Menginstal paket: $pkg" "apt-get install -y --reinstall '$pkg'"
+        # Ensure swap is active and clean cache before installation
+        ensure_swap_active
+        apt-get clean -qq 2>/dev/null || true
+        # Use memory-optimized installation flags
+        run_with_progress "Menginstal paket: $pkg" "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends --reinstall '$pkg'" || {
+            # Fallback: try without --no-install-recommends if it fails
+            run_with_progress "Menginstal paket: $pkg (retry)" "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --reinstall '$pkg'"
+        }
+        # Clean cache after installation
+        apt-get clean -qq 2>/dev/null || true
     fi
 }
 
@@ -266,6 +276,9 @@ batch_install_packages() {
     # Ensure swap is active before installing packages
     ensure_swap_active
     
+    # Clean apt cache to free memory before installation
+    apt-get clean -qq 2>/dev/null || true
+    
     # Check which packages are already installed
     local packages_to_install=""
     for pkg in $packages_list; do
@@ -278,15 +291,25 @@ batch_install_packages() {
         fi
     done
     
-    # Install all missing packages in one batch (more memory efficient)
+    # Install all missing packages in one batch with memory optimizations
     if [ -n "$packages_to_install" ]; then
-        run_with_progress "Installing $description: $packages_to_install" "apt-get install -y -qq $packages_to_install" || {
+        # Use DEBIAN_FRONTEND=noninteractive and --no-install-recommends to reduce memory usage
+        # --no-install-recommends: Don't install recommended packages (reduces dependencies)
+        # DEBIAN_FRONTEND=noninteractive: Reduces overhead from interactive prompts
+        run_with_progress "Installing $description: $packages_to_install" "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends $packages_to_install" || {
             log_warning "Batch install gagal, mencoba install satu per satu..."
             # Fallback: install one by one if batch fails
             for pkg in $packages_to_install; do
-                check_and_install "$pkg"
+                ensure_swap_active
+                run_with_progress "Installing $pkg" "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends $pkg" || {
+                    log_warning "Gagal install $pkg dengan --no-install-recommends, mencoba tanpa flag..."
+                    check_and_install "$pkg"
+                }
             done
         }
+        
+        # Clean apt cache after installation to free memory
+        apt-get clean -qq 2>/dev/null || true
     else
         log_info "Semua $description sudah terinstal"
     fi

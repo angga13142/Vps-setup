@@ -58,12 +58,15 @@ setup_system() {
         fi
     fi
 
-    # Update Repos & Upgrade with retry
+    # Update Repos & Upgrade with retry (memory optimized)
+    # Clean cache before update to free memory
+    apt-get clean -qq 2>/dev/null || true
+    
     # Use retry logic directly in run_with_progress
     local update_attempt=1
     local update_success=false
     while [ $update_attempt -le 3 ] && [ "$update_success" = false ]; do
-        if run_with_progress "Updating package repositories (attempt $update_attempt/3)" "apt-get update -qq"; then
+        if run_with_progress "Updating package repositories (attempt $update_attempt/3)" "DEBIAN_FRONTEND=noninteractive apt-get update -qq"; then
             update_success=true
         else
             if [ $update_attempt -lt 3 ]; then
@@ -79,7 +82,11 @@ setup_system() {
         return 1
     fi
     
-    run_with_progress "Upgrading system packages" "apt-get upgrade -y -qq" || log_warning "apt-get upgrade mengalami masalah, melanjutkan..."
+    # Upgrade with memory optimization
+    run_with_progress "Upgrading system packages" "DEBIAN_FRONTEND=noninteractive apt-get upgrade -y -qq --no-install-recommends" || log_warning "apt-get upgrade mengalami masalah, melanjutkan..."
+    
+    # Clean cache after upgrade to free memory
+    apt-get clean -qq 2>/dev/null || true
 
     # Install Essential Tools
     # Install all packages in one command to reduce memory overhead and prevent OOM
