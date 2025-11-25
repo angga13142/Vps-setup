@@ -432,6 +432,35 @@ setup_docker() {
         return 1
     fi
 
+    # Verify GPG key and repository before update
+    log_info "[DEBUG] === Verifying Docker Repository Configuration ==="
+    if [ ! -f /etc/apt/keyrings/docker.gpg ]; then
+        log_error "[DEBUG] GPG key file not found: /etc/apt/keyrings/docker.gpg"
+        return 1
+    fi
+    
+    if [ ! -f /etc/apt/sources.list.d/docker.list ]; then
+        log_error "[DEBUG] Repository file not found: /etc/apt/sources.list.d/docker.list"
+        return 1
+    fi
+    
+    # Verify GPG key is valid
+    log_info "[DEBUG] Verifying GPG key validity..."
+    if ! gpg --no-default-keyring --keyring /etc/apt/keyrings/docker.gpg --list-keys >/dev/null 2>&1; then
+        log_error "[DEBUG] GPG key is invalid or corrupted!"
+        log_error "[DEBUG] Attempting to re-download GPG key..."
+        rm -f /etc/apt/keyrings/docker.gpg
+        # Re-download GPG key
+        if ! curl -fsSL 'https://download.docker.com/linux/debian/gpg' | gpg --dearmor -o '/etc/apt/keyrings/docker.gpg' 2>/dev/null; then
+            log_error "[DEBUG] Failed to re-download GPG key"
+            return 1
+        fi
+        chmod a+r /etc/apt/keyrings/docker.gpg
+        log_info "[DEBUG] GPG key re-downloaded successfully"
+    else
+        log_info "[DEBUG] GPG key is valid"
+    fi
+    
     # Update apt with memory optimization
     log_info "Updating package lists (this may take a moment)..."
     log_info "[DEBUG] === APT Update ==="
@@ -441,17 +470,79 @@ setup_docker() {
         return 1
     }
     
-    # Use minimal cache limit for apt update
+    # Use minimal cache limit for apt update with better error capture
     log_info "[DEBUG] Running apt-get update with cache limit 25MB..."
-    if ! run_with_progress "Updating apt cache for Docker" \
-        "DEBIAN_FRONTEND=noninteractive apt-get update -qq \
+    
+    # Capture error output for debugging
+    local apt_update_output=$(mktemp)
+    local apt_update_error=$(mktemp)
+    local apt_update_exit=0
+    
+    # Run apt-get update and capture output
+    DEBIAN_FRONTEND=noninteractive apt-get update \
         -o APT::Cache-Limit=25000000 \
-        -o Acquire::http::Timeout=30"; then
-        log_error "Apt update failed"
-        log_error "[DEBUG] APT update failed, checking for errors..."
+        -o Acquire::http::Timeout=30 \
+        > "$apt_update_output" 2> "$apt_update_error" || apt_update_exit=$?
+    
+    # Check exit code
+    if [ $apt_update_exit -ne 0 ]; then
+        log_error "Apt update failed with exit code: $apt_update_exit"
+        log_error "[DEBUG] === APT Update Error Details ==="
+        
+        # Show error output
+        if [ -s "$apt_update_error" ]; then
+            log_error "[DEBUG] Error output:"
+            while IFS= read -r line; do
+                log_error "[DEBUG]   $line"
+            done < "$apt_update_error"
+        fi
+        
+        # Show stdout if any
+        if [ -s "$apt_update_output" ]; then
+            log_info "[DEBUG] Standard output:"
+            while IFS= read -r line; do
+                log_info "[DEBUG]   $line"
+            done < "$apt_update_output"
+        fi
+        
+        # Common error diagnostics
+        log_error "[DEBUG] === Diagnostic Information ==="
+        log_info "[DEBUG] GPG key file exists: $([ -f /etc/apt/keyrings/docker.gpg ] && echo 'YES' || echo 'NO')"
+        log_info "[DEBUG] GPG key file size: $(stat -c%s /etc/apt/keyrings/docker.gpg 2>/dev/null || echo 'unknown') bytes"
+        log_info "[DEBUG] Repository file exists: $([ -f /etc/apt/sources.list.d/docker.list ] && echo 'YES' || echo 'NO')"
+        if [ -f /etc/apt/sources.list.d/docker.list ]; then
+            log_info "[DEBUG] Repository file contents:"
+            cat /etc/apt/sources.list.d/docker.list | sed 's/^/[DEBUG]   /'
+        fi
+        
+        # Check for common issues
+        if grep -q "NO_PUBKEY\|GPG error\|signatures were invalid" "$apt_update_error" 2>/dev/null; then
+            log_error "[DEBUG] GPG key issue detected! Attempting to fix..."
+            # Try to fix GPG key
+            rm -f /etc/apt/keyrings/docker.gpg
+            if curl -fsSL 'https://download.docker.com/linux/debian/gpg' | gpg --dearmor -o '/etc/apt/keyrings/docker.gpg' 2>/dev/null; then
+                chmod a+r /etc/apt/keyrings/docker.gpg
+                log_info "[DEBUG] GPG key re-downloaded, retrying apt update..."
+                # Retry once
+                if DEBIAN_FRONTEND=noninteractive apt-get update -qq \
+                    -o APT::Cache-Limit=25000000 \
+                    -o Acquire::http::Timeout=30 2>&1; then
+                    log_success "[DEBUG] APT update succeeded after GPG key fix"
+                    rm -f "$apt_update_output" "$apt_update_error"
+                    return 0
+                else
+                    log_error "[DEBUG] APT update still failed after GPG key fix"
+                fi
+            else
+                log_error "[DEBUG] Failed to re-download GPG key"
+            fi
+        fi
+        
+        rm -f "$apt_update_output" "$apt_update_error"
         return 1
     else
         log_info "[DEBUG] APT update completed successfully"
+        rm -f "$apt_update_output" "$apt_update_error"
     fi
     
     # Aggressive cleanup immediately after update
