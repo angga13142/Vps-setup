@@ -36,25 +36,9 @@ setup_vscode() {
         
         sh -c 'echo "deb [arch=amd64,arm64,armhf signed-by=/etc/apt/keyrings/packages.microsoft.gpg] https://packages.microsoft.com/repos/code stable main" > /etc/apt/sources.list.d/vscode.list'
         
-        # Update apt with proper error handling (check apt-get exit code)
-        log_info "Updating apt cache..."
-        local apt_update_output
-        apt_update_output=$(apt-get update 2>&1)
-        local apt_exit_code=$?
-        
-        # Save output for debugging
-        echo "$apt_update_output" | tee /tmp/apt-update.log > /dev/null
-        
-        if [ $apt_exit_code -eq 0 ]; then
-            log_success "Apt cache updated successfully"
-        else
-            # Non-zero exit code means apt-get update FAILED
-            log_error "Apt update failed with exit code: $apt_exit_code"
-            log_error "This indicates a problem with VS Code repository configuration"
-            echo ""
-            log_error "Apt update output:"
-            echo "$apt_update_output" | sed 's/^/  /'
-            echo ""
+        # Update apt with proper error handling
+        if ! run_with_progress "Updating apt cache for VS Code" "apt-get update -qq"; then
+            log_error "Apt update failed. This indicates a problem with VS Code repository configuration"
             
             # Check for common error patterns
             if echo "$apt_update_output" | grep -qiE "(error|failed|unable|cannot|404|403|timeout)"; then

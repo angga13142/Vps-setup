@@ -6,16 +6,104 @@
 # Utility functions yang digunakan di berbagai module
 # ==============================================================================
 
+# --- Loading Animation Helper ---
+# Global variable untuk menyimpan PID spinner
+_SPINNER_PID=""
+
+# Start loading spinner in background
+start_spinner() {
+    local message="$1"
+    local spinner_chars="/-\|"
+    local delay=0.1
+    
+    # Print message without newline
+    echo -ne "\033[1;34m[INFO] ${message}\033[0m "
+    
+    # Start spinner in background
+    (
+        while true; do
+            for char in $spinner_chars; do
+                echo -ne "\b$char"
+                sleep $delay
+            done
+        done
+    ) &
+    
+    _SPINNER_PID=$!
+}
+
+# Stop loading spinner
+stop_spinner() {
+    if [ -n "$_SPINNER_PID" ]; then
+        kill $_SPINNER_PID 2>/dev/null
+        wait $_SPINNER_PID 2>/dev/null
+        _SPINNER_PID=""
+        echo -ne "\b \b"  # Clear spinner character
+    fi
+}
+
+# Run command with progress indicator and limited verbose output
+run_with_progress() {
+    local message="$1"
+    shift
+    local cmd="$@"
+    
+    # Start spinner
+    start_spinner "$message"
+    
+    # Create temporary file for command output
+    local tmp_output=$(mktemp)
+    local tmp_error=$(mktemp)
+    
+    # Run command, capture all output
+    if eval "$cmd" > "$tmp_output" 2> "$tmp_error"; then
+        local exit_code=0
+    else
+        local exit_code=$?
+    fi
+    
+    # Stop spinner
+    stop_spinner
+    
+    # Show last 3 lines of output if there's any (filter out common apt noise)
+    local verbose_lines=0
+    if [ -s "$tmp_output" ] || [ -s "$tmp_error" ]; then
+        # Combine stdout and stderr, filter and show last 3 meaningful lines
+        {
+            [ -s "$tmp_output" ] && cat "$tmp_output"
+            [ -s "$tmp_error" ] && cat "$tmp_error"
+        } | grep -vE "^(Reading|Preparing|Unpacking|Setting up|Processing triggers|Get:|Fetched|Selecting|Building|Need to get|After this|Do you want|WARNING: apt does not)" | \
+          grep -vE "^$" | \
+          tail -n 3 | \
+          while IFS= read -r line; do
+              if [ -n "$line" ] && [ $verbose_lines -lt 3 ]; then
+                  echo -e "  \033[0;36m${line}\033[0m"
+                  verbose_lines=$((verbose_lines + 1))
+              fi
+          done
+    fi
+    
+    # Cleanup
+    rm -f "$tmp_output" "$tmp_error"
+    
+    # Show result
+    if [ $exit_code -eq 0 ]; then
+        echo -e "\r\033[1;32m[SUCCESS] ${message}\033[0m"
+        return 0
+    else
+        echo -e "\r\033[1;31m[ERROR] ${message} (exit code: $exit_code)\033[0m"
+        return $exit_code
+    fi
+}
+
 # --- Package Management Helper ---
 check_and_install() {
     local pkg="$1"
     # Check if package is installed (status 'ii' means installed correctly)
     if dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q "install ok installed"; then
-        log_info "Paket '$pkg' sudah terinstal dengan benar. Melewati..."
+        echo -e "\033[1;34m[INFO] Paket '$pkg' sudah terinstal. Melewati...\033[0m"
     else
-        log_info "Menginstal/Memperbaiki paket: '$pkg'..."
-        # Force reinstall if broken, or install if missing
-        apt-get install -y --reinstall "$pkg"
+        run_with_progress "Menginstal paket: $pkg" "apt-get install -y --reinstall '$pkg'"
     fi
 }
 

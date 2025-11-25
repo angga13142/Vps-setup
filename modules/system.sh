@@ -16,9 +16,8 @@ setup_system() {
     fi
 
     # Update Repos & Upgrade with retry
-    log_info "Updating package repositories..."
-    retry_command 3 5 "apt-get update"
-    apt-get upgrade -y || log_warning "apt-get upgrade mengalami masalah, melanjutkan..."
+    run_with_progress "Updating package repositories" "retry_command 3 5 'apt-get update -qq'"
+    run_with_progress "Upgrading system packages" "apt-get upgrade -y -qq" || log_warning "apt-get upgrade mengalami masalah, melanjutkan..."
 
     # Install Essential Tools
     local ESSENTIAL_PKGS="curl wget git htop ufw unzip build-essential apt-transport-https ca-certificates gnupg lsb-release fail2ban"
@@ -29,14 +28,10 @@ setup_system() {
     done
 
     # Handle libfuse2 (Needed for AppImages)
-    log_info "Mencoba menginstal library FUSE (libfuse2 / libfuse2t64)..."
-    if apt-get install -y libfuse2t64 2>/dev/null; then
-        log_success "libfuse2t64 berhasil diinstal."
-    elif apt-get install -y libfuse2 2>/dev/null; then
-        log_success "libfuse2 berhasil diinstal."
-    else
-        log_warning "Gagal menginstal libfuse2 atau libfuse2t64. AppImage mungkin tidak berjalan."
-        true
+    if ! dpkg-query -W -f='${Status}' libfuse2t64 2>/dev/null | grep -q "install ok installed"; then
+        if ! run_with_progress "Installing libfuse2t64" "apt-get install -y -qq libfuse2t64"; then
+            run_with_progress "Installing libfuse2" "apt-get install -y -qq libfuse2" || log_warning "Gagal menginstal libfuse2. AppImage mungkin tidak berjalan."
+        fi
     fi
 
     # --- Swap Configuration (4GB) ---
@@ -50,9 +45,9 @@ setup_system() {
         else
             backup_file "/etc/fstab"
             
-            fallocate -l 4G /swapfile || {
+            run_with_progress "Creating 4GB swap file" "fallocate -l 4G /swapfile" || {
                 log_warning "fallocate gagal, mencoba dd..."
-                dd if=/dev/zero of=/swapfile bs=1M count=4096 status=progress || {
+                run_with_progress "Creating swap file with dd" "dd if=/dev/zero of=/swapfile bs=1M count=4096" || {
                     log_error "Gagal membuat swap file"
                     return 1
                 }
