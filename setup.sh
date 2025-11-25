@@ -32,6 +32,10 @@ source "$SCRIPT_DIR/modules/python.sh"
 source "$SCRIPT_DIR/modules/vscode.sh"
 source "$SCRIPT_DIR/modules/cursor.sh"
 source "$SCRIPT_DIR/modules/shell.sh"
+source "$SCRIPT_DIR/modules/healthcheck.sh"
+source "$SCRIPT_DIR/modules/rollback.sh"
+source "$SCRIPT_DIR/modules/devtools.sh"
+source "$SCRIPT_DIR/modules/monitoring.sh"
 
 # --- Register Cleanup Handler ---
 trap cleanup_on_error EXIT
@@ -134,32 +138,88 @@ main() {
     echo ""
 }
 
-# --- Parse Arguments (Optional: untuk future enhancement) ---
+# --- Parse Arguments & Command Routing ---
 parse_args() {
+    # No arguments = run main installation
+    if [ $# -eq 0 ]; then
+        main
+        exit 0
+    fi
+    
     while [[ $# -gt 0 ]]; do
         case $1 in
-            --help|-h)
-                echo "Usage: sudo ./setup.sh [OPTIONS]"
-                echo ""
-                echo "Options:"
-                echo "  --help, -h              Show this help message"
-                echo "  --skip-desktop          Skip desktop environment installation"
-                echo "  --skip-docker           Skip Docker installation"
-                echo "  --skip-nodejs           Skip Node.js installation"
-                echo "  --skip-vscode           Skip VS Code installation"
-                echo "  --skip-cursor           Skip Cursor installation"
-                echo ""
-                echo "Environment Variables:"
-                echo "  DEV_USER                Username for development user (default: developer)"
-                echo "  DEV_USER_PASSWORD       Password for development user (default: DevPass123!)"
-                echo "  TIMEZONE                System timezone (default: Asia/Jakarta)"
-                echo ""
-                echo "Examples:"
-                echo "  sudo ./setup.sh"
-                echo "  sudo DEV_USER='angga' DEV_USER_PASSWORD='Secret123!' ./setup.sh"
-                echo "  sudo ./setup.sh --skip-cursor --skip-vscode"
+            # Help
+            --help|-h|help)
+                show_help
                 exit 0
                 ;;
+            
+            # Health Check & Monitoring
+            --check|--healthcheck|check|healthcheck)
+                show_banner
+                init_logging
+                run_healthcheck
+                exit 0
+                ;;
+            
+            --stats|stats)
+                quick_status
+                exit 0
+                ;;
+            
+            --monitor|--monitoring|monitor)
+                show_banner
+                init_logging
+                setup_monitoring
+                show_monitoring_info
+                exit 0
+                ;;
+            
+            --realtime|realtime)
+                realtime_monitor
+                exit 0
+                ;;
+            
+            --report|report)
+                /opt/vps-monitor/performance-report.sh 2>/dev/null || {
+                    echo "Performance monitoring not installed"
+                    echo "Run: sudo ./setup.sh --monitor"
+                    exit 1
+                }
+                exit 0
+                ;;
+            
+            # Rollback & Backup
+            --rollback|rollback)
+                show_banner
+                init_logging
+                interactive_restore
+                exit 0
+                ;;
+            
+            --list-backups|list-backups)
+                list_backups
+                exit 0
+                ;;
+            
+            --cleanup-backups|cleanup-backups)
+                show_banner
+                init_logging
+                cleanup_old_backups 5
+                exit 0
+                ;;
+            
+            # Developer Tools
+            --devtools|devtools)
+                show_banner
+                init_logging
+                run_preflight_checks
+                setup_devtools
+                show_devtools_info
+                exit 0
+                ;;
+            
+            # Selective Installation Options
             --skip-desktop)
                 export INSTALL_DESKTOP=false
                 shift
@@ -172,6 +232,10 @@ parse_args() {
                 export INSTALL_NODEJS=false
                 shift
                 ;;
+            --skip-python)
+                export INSTALL_PYTHON=false
+                shift
+                ;;
             --skip-vscode)
                 export INSTALL_VSCODE=false
                 shift
@@ -180,6 +244,11 @@ parse_args() {
                 export INSTALL_CURSOR=false
                 shift
                 ;;
+            --skip-shell)
+                export INSTALL_SHELL=false
+                shift
+                ;;
+            
             *)
                 echo "Unknown option: $1"
                 echo "Use --help for usage information"
@@ -187,9 +256,89 @@ parse_args() {
                 ;;
         esac
     done
+    
+    # If only --skip flags were provided, run main installation
+    main
+}
+
+show_help() {
+    cat <<'HELP'
+VPS Remote Dev Bootstrap - Modular Edition v2.1
+
+Usage: sudo ./setup.sh [COMMAND] [OPTIONS]
+
+COMMANDS:
+  (no command)              Run full installation
+  help, --help, -h          Show this help message
+  
+  Health & Monitoring:
+    check, --check          Run full health check
+    stats, --stats          Quick system stats
+    monitor, --monitor      Setup performance monitoring
+    realtime, --realtime    Real-time resource monitor
+    report, --report        Generate performance report
+  
+  Maintenance:
+    rollback, --rollback    Restore from backup (interactive)
+    list-backups            List available backups
+    cleanup-backups         Remove old backups (keep last 5)
+  
+  Developer Tools:
+    devtools, --devtools    Setup Git, SSH keys, aliases, etc
+
+INSTALLATION OPTIONS:
+  --skip-desktop            Skip desktop environment installation
+  --skip-docker             Skip Docker installation
+  --skip-nodejs             Skip Node.js installation
+  --skip-python             Skip Python installation
+  --skip-vscode             Skip VS Code installation
+  --skip-cursor             Skip Cursor installation
+  --skip-shell              Skip Zsh/Oh My Zsh installation
+
+ENVIRONMENT VARIABLES:
+  DEV_USER                  Username for development user (default: developer)
+  DEV_USER_PASSWORD         Password for user (default: DevPass123!)
+  TIMEZONE                  System timezone (default: Asia/Jakarta)
+  GIT_USER_NAME             Git user name (for devtools)
+  GIT_USER_EMAIL            Git user email (for devtools)
+
+EXAMPLES:
+  # Full installation (default)
+  sudo ./setup.sh
+  
+  # Full installation with custom user
+  sudo DEV_USER='angga' DEV_USER_PASSWORD='Secret123!' ./setup.sh
+  
+  # Selective installation (skip some components)
+  sudo ./setup.sh --skip-cursor --skip-vscode --skip-desktop
+  
+  # Run health check
+  sudo ./setup.sh --check
+  
+  # Setup developer tools only
+  sudo GIT_USER_NAME="John Doe" GIT_USER_EMAIL="john@example.com" ./setup.sh --devtools
+  
+  # Setup monitoring
+  sudo ./setup.sh --monitor
+  
+  # Restore from backup
+  sudo ./setup.sh --rollback
+  
+  # Real-time resource monitoring
+  sudo ./setup.sh --realtime
+  
+  # Quick status
+  ./setup.sh --stats
+
+AFTER INSTALLATION:
+  - Monitoring: vps-stats, vps-report, vps-monitor
+  - Health Check: ./setup.sh --check
+  - Rollback: ./setup.sh --rollback
+
+For more information, see: MODULAR.md
+HELP
 }
 
 # --- Entry Point ---
 parse_args "$@"
-main
 

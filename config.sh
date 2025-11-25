@@ -18,6 +18,10 @@ export TIMEZONE="${TIMEZONE:-Asia/Jakarta}"
 export NODE_VERSION="${NODE_VERSION:-lts/*}"
 export NVM_VERSION="${NVM_VERSION:-v0.39.7}"
 
+# --- Git Configuration (for devtools) ---
+export GIT_USER_NAME="${GIT_USER_NAME:-}"
+export GIT_USER_EMAIL="${GIT_USER_EMAIL:-}"
+
 # --- URLs ---
 export CURSOR_INSTALLER_URL="https://cursor.com/install"
 export NVM_INSTALL_URL="https://raw.githubusercontent.com/nvm-sh/nvm/${NVM_VERSION}/install.sh"
