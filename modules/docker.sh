@@ -43,14 +43,32 @@ setup_docker() {
     clean_gpg_keys "docker"
     
     # Clean apt cache
-    apt-get clean
+    run_with_progress "Cleaning apt cache" "apt-get clean -qq"
     rm -rf /var/lib/apt/lists/download.docker.com*
-
+    
     # Setup Docker repo directory
     install -m 0755 -d /etc/apt/keyrings
     
-    # Install Docker GPG key using helper function
-    if ! install_gpg_key "https://download.docker.com/linux/debian/gpg" "/etc/apt/keyrings/docker.gpg" "Docker"; then
+    # Install Docker GPG key using helper function with progress
+    log_info "Installing Docker GPG key..."
+    local gpg_attempt=1
+    local gpg_success=false
+    while [ $gpg_attempt -le 3 ] && [ "$gpg_success" = false ]; do
+        if run_with_progress "Downloading Docker GPG key (attempt $gpg_attempt/3)" "curl -fsSL 'https://download.docker.com/linux/debian/gpg' | gpg --dearmor -o '/etc/apt/keyrings/docker.gpg'"; then
+            chmod a+r /etc/apt/keyrings/docker.gpg
+            gpg_success=true
+            log_success "Docker GPG key installed successfully"
+        else
+            if [ $gpg_attempt -lt 3 ]; then
+                log_warning "GPG key download gagal, retry dalam 5 detik..."
+                sleep 5
+            fi
+            gpg_attempt=$((gpg_attempt + 1))
+        fi
+    done
+    
+    if [ "$gpg_success" = false ]; then
+        log_error "Failed to install Docker GPG key after 3 attempts"
         return 1
     fi
 
