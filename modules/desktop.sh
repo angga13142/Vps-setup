@@ -8,11 +8,45 @@ setup_desktop() {
     update_progress "setup_desktop"
     log_info "Menginstal XFCE4 dan XRDP..."
     
+    # Ensure swap is active before installing large desktop packages
+    if grep -q "swapfile" /etc/fstab; then
+        if ! swapon --show | grep -q swapfile; then
+            if [ -f /swapfile ]; then
+                swapon /swapfile || log_warning "Gagal mengaktifkan swap file"
+            fi
+        fi
+    fi
+    
     # Install XFCE4 & XRDP
+    # Install all packages in one batch to reduce memory overhead and prevent OOM
     local DESKTOP_PKGS="xfce4 xfce4-goodies xorg dbus-x11 x11-xserver-utils xrdp xfce4-settings"
+    
+    log_info "Menginstal desktop packages (batch install untuk mengurangi memory usage)..."
+    
+    # Check which packages are already installed
+    local packages_to_install=""
     for pkg in $DESKTOP_PKGS; do
-        check_and_install "$pkg"
+        if ! dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q "install ok installed"; then
+            if [ -z "$packages_to_install" ]; then
+                packages_to_install="$pkg"
+            else
+                packages_to_install="$packages_to_install $pkg"
+            fi
+        fi
     done
+    
+    # Install all missing packages in one batch (more memory efficient)
+    if [ -n "$packages_to_install" ]; then
+        run_with_progress "Installing desktop packages: $packages_to_install" "apt-get install -y -qq $packages_to_install" || {
+            log_warning "Batch install gagal, mencoba install satu per satu..."
+            # Fallback: install one by one if batch fails
+            for pkg in $packages_to_install; do
+                check_and_install "$pkg"
+            done
+        }
+    else
+        log_info "Semua desktop packages sudah terinstal"
+    fi
 
     # Add xrdp user to ssl-cert group
     if getent group ssl-cert > /dev/null; then
