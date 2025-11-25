@@ -53,70 +53,98 @@ optimize_xfce_for_rdp() {
     local xfce_config_dir="$user_home/.config/xfce4"
     
     # Ensure XFCE config directory exists
-    mkdir -p "$xfce_config_dir"
+    mkdir -p "$xfce_config_dir/xfconf/xfce-perchannel-xml"
     chown -R "$DEV_USER:$DEV_USER" "$xfce_config_dir"
     
-    # 1. Disable Screen Lock & Screensaver
+    # 1. Create Screensaver Configuration (via XML file)
     log_info "  Configuring screen lock & screensaver..."
-    run_as_user "$DEV_USER" bash <<'XFCE_CONFIG'
-# Disable screensaver
-xfconf-query -c xfce4-screensaver -p /saver/enabled -s false 2>/dev/null || true
-xfconf-query -c xfce4-screensaver -p /saver/idle-activation/enabled -s false 2>/dev/null || true
-xfconf-query -c xfce4-screensaver -p /lock/enabled -s false 2>/dev/null || true
-
-# Disable power management (prevent suspend/lock)
-xfconf-query -c xfce4-power-manager -p /xfce4-power-manager/dpms-enabled -s false 2>/dev/null || true
-xfconf-query -c xfce4-power-manager -p /xfce4-power-manager/sleep-display-ac -s 0 2>/dev/null || true
-xfconf-query -c xfce4-power-manager -p /xfce4-power-manager/sleep-display-battery -s 0 2>/dev/null || true
-XFCE_CONFIG
+    cat > "$xfce_config_dir/xfconf/xfce-perchannel-xml/xfce4-screensaver.xml" <<'SCREENSAVER_XML'
+<?xml version="1.0" encoding="UTF-8"?>
+<channel name="xfce4-screensaver" version="1.0">
+  <property name="saver" type="empty">
+    <property name="enabled" type="bool" value="false"/>
+    <property name="idle-activation" type="empty">
+      <property name="enabled" type="bool" value="false"/>
+    </property>
+  </property>
+  <property name="lock" type="empty">
+    <property name="enabled" type="bool" value="false"/>
+  </property>
+</channel>
+SCREENSAVER_XML
+    chown "$DEV_USER:$DEV_USER" "$xfce_config_dir/xfconf/xfce-perchannel-xml/xfce4-screensaver.xml"
     
-    # 2. Configure Panel for Workspace
-    log_info "  Configuring XFCE panel..."
-    run_as_user "$DEV_USER" bash <<'XFCE_CONFIG'
-# Panel configuration (if xfconf-query available)
-if command -v xfconf-query &>/dev/null; then
-    # Set panel to auto-hide (optional, can be customized)
-    # xfconf-query -c xfce4-panel -p /panels/panel-1/autohide -s false 2>/dev/null || true
+    # 2. Create Power Manager Configuration (via XML file)
+    log_info "  Configuring power management..."
+    cat > "$xfce_config_dir/xfconf/xfce-perchannel-xml/xfce4-power-manager.xml" <<'POWER_XML'
+<?xml version="1.0" encoding="UTF-8"?>
+<channel name="xfce4-power-manager" version="1.0">
+  <property name="xfce4-power-manager" type="empty">
+    <property name="dpms-enabled" type="bool" value="false"/>
+    <property name="sleep-display-ac" type="int" value="0"/>
+    <property name="sleep-display-battery" type="int" value="0"/>
+  </property>
+</channel>
+POWER_XML
+    chown "$DEV_USER:$DEV_USER" "$xfce_config_dir/xfconf/xfce-perchannel-xml/xfce4-power-manager.xml"
     
-    # Enable panel icons
-    xfconf-query -c xfce4-panel -p /panels/panel-1/size -s 24 2>/dev/null || true
-fi
-XFCE_CONFIG
-    
-    # 3. Window Manager Settings
+    # 3. Create Window Manager Configuration (via XML file)
     log_info "  Configuring window manager..."
-    run_as_user "$DEV_USER" bash <<'XFCE_CONFIG'
-if command -v xfconf-query &>/dev/null; then
-    # Window snapping
-    xfconf-query -c xfwm4 -p /general/snap_to_border -s true 2>/dev/null || true
-    xfconf-query -c xfwm4 -p /general/snap_to_windows -s true 2>/dev/null || true
+    cat > "$xfce_config_dir/xfconf/xfce-perchannel-xml/xfwm4.xml" <<'XWM4_XML'
+<?xml version="1.0" encoding="UTF-8"?>
+<channel name="xfwm4" version="1.0">
+  <property name="general" type="empty">
+    <property name="workspace_count" type="int" value="4"/>
+    <property name="wrap_workspaces" type="bool" value="true"/>
+    <property name="use_compositing" type="bool" value="false"/>
+    <property name="snap_to_border" type="bool" value="true"/>
+    <property name="snap_to_windows" type="bool" value="true"/>
+    <property name="click_to_focus" type="bool" value="false"/>
+    <property name="raise_on_focus" type="bool" value="true"/>
+    <property name="vblank_mode" type="string" value="xpresent"/>
+  </property>
+</channel>
+XWM4_XML
+    chown "$DEV_USER:$DEV_USER" "$xfce_config_dir/xfconf/xfce-perchannel-xml/xfwm4.xml"
     
-    # Window focus
-    xfconf-query -c xfwm4 -p /general/click_to_focus -s false 2>/dev/null || true
-    xfconf-query -c xfwm4 -p /general/raise_on_focus -s true 2>/dev/null || true
+    # 4. Create Panel Configuration (via XML file)
+    log_info "  Configuring XFCE panel..."
+    cat > "$xfce_config_dir/xfconf/xfce-perchannel-xml/xfce4-panel.xml" <<'PANEL_XML'
+<?xml version="1.0" encoding="UTF-8"?>
+<channel name="xfce4-panel" version="1.0">
+  <property name="panels" type="empty">
+    <property name="panel-1" type="empty">
+      <property name="size" type="int" value="24"/>
+      <property name="autohide" type="bool" value="false"/>
+    </property>
+  </property>
+</channel>
+PANEL_XML
+    chown "$DEV_USER:$DEV_USER" "$xfce_config_dir/xfconf/xfce-perchannel-xml/xfce4-panel.xml"
     
-    # Compositing (for better RDP performance, can disable)
-    xfconf-query -c xfwm4 -p /general/use_compositing -s false 2>/dev/null || true
-fi
-XFCE_CONFIG
-    
-    # 4. Desktop Settings
+    # 5. Create Desktop Configuration (via XML file)
     log_info "  Configuring desktop settings..."
-    run_as_user "$DEV_USER" bash <<'XFCE_CONFIG'
-if command -v xfconf-query &>/dev/null; then
-    # Desktop icons
-    xfconf-query -c xfce4-desktop -p /desktop-icons/style -s 0 2>/dev/null || true
+    cat > "$xfce_config_dir/xfconf/xfce-perchannel-xml/xfce4-desktop.xml" <<'DESKTOP_XML'
+<?xml version="1.0" encoding="UTF-8"?>
+<channel name="xfce4-desktop" version="1.0">
+  <property name="desktop-icons" type="empty">
+    <property name="style" type="int" value="0"/>
+  </property>
+  <property name="backdrop" type="empty">
+    <property name="screen0" type="empty">
+      <property name="monitor0" type="empty">
+        <property name="workspace0" type="empty">
+          <property name="last-image" type="string" value=""/>
+        </property>
+      </property>
+    </property>
+  </property>
+</channel>
+DESKTOP_XML
+    chown "$DEV_USER:$DEV_USER" "$xfce_config_dir/xfconf/xfce-perchannel-xml/xfce4-desktop.xml"
     
-    # Background (optional - set to solid color for performance)
-    xfconf-query -c xfce4-desktop -p /backdrop/screen0/monitor0/workspace0/last-image -s "" 2>/dev/null || true
-fi
-XFCE_CONFIG
-    
-    # 5. Create XFCE4 Configuration Files
-    log_info "  Creating XFCE4 configuration files..."
-    
-    # Keyboard settings (disable key repeat delay for RDP)
-    mkdir -p "$xfce_config_dir/xfconf/xfce-perchannel-xml"
+    # 6. Create Keyboard Shortcuts Configuration
+    log_info "  Creating keyboard shortcuts..."
     cat > "$xfce_config_dir/xfconf/xfce-perchannel-xml/xfce4-keyboard-shortcuts.xml" <<'KEYBOARD_XML'
 <?xml version="1.0" encoding="UTF-8"?>
 <channel name="xfce4-keyboard-shortcuts" version="1.0">
@@ -131,7 +159,7 @@ XFCE_CONFIG
 KEYBOARD_XML
     chown "$DEV_USER:$DEV_USER" "$xfce_config_dir/xfconf/xfce-perchannel-xml/xfce4-keyboard-shortcuts.xml"
     
-    # 6. Disable Screen Lock via LightDM (if available)
+    # 7. Disable Screen Lock via LightDM (if available)
     log_info "  Configuring display manager..."
     if [ -f /etc/lightdm/lightdm.conf ]; then
         backup_file "/etc/lightdm/lightdm.conf"
@@ -154,7 +182,7 @@ KEYBOARD_XML
         fi
     fi
     
-    # 7. Create RDP-optimized startup script
+    # 8. Create RDP-optimized startup script
     log_info "  Creating RDP startup configuration..."
     mkdir -p "$user_home/.config/autostart"
     mkdir -p "$xfce_config_dir/xfconf/xfce-perchannel-xml"
@@ -171,35 +199,46 @@ X-GNOME-Autostart-enabled=true
 AUTOSTART
     chown "$DEV_USER:$DEV_USER" "$user_home/.config/autostart/rdp-optimize.desktop"
     
-    # 8. Create optimization script
+    # 9. Create optimization script (runs when XFCE session starts)
     log_info "  Creating RDP optimization script..."
     cat > /usr/local/bin/xfce-rdp-optimize.sh <<'OPTIMIZE_SCRIPT'
 #!/bin/bash
 # XFCE RDP Workspace Optimizer
 # Runs on XFCE startup to ensure optimal RDP experience
 
-# Wait for XFCE to fully load
-sleep 3
+# Wait for XFCE to fully load and xfconfd to be ready
+sleep 5
 
-# Disable screensaver and lock
-xfconf-query -c xfce4-screensaver -p /saver/enabled -s false 2>/dev/null || true
-xfconf-query -c xfce4-screensaver -p /lock/enabled -s false 2>/dev/null || true
+# Check if xfconf-query is available and XFCE session is running
+if ! command -v xfconf-query &>/dev/null; then
+    exit 0
+fi
 
-# Disable power management
-xfconf-query -c xfce4-power-manager -p /xfce4-power-manager/dpms-enabled -s false 2>/dev/null || true
+# Ensure DISPLAY is set (for RDP sessions)
+if [ -z "$DISPLAY" ]; then
+    export DISPLAY=:10.0
+fi
 
-# Set compositing off for better RDP performance
-xfconf-query -c xfwm4 -p /general/use_compositing -s false 2>/dev/null || true
+# Reload xfconfd to apply XML configurations
+if pgrep -x xfconfd > /dev/null; then
+    # Apply settings via xfconf-query (as backup, XML files should already be loaded)
+    xfconf-query -c xfce4-screensaver -p /saver/enabled -s false 2>/dev/null || true
+    xfconf-query -c xfce4-screensaver -p /lock/enabled -s false 2>/dev/null || true
+    xfconf-query -c xfce4-power-manager -p /xfce4-power-manager/dpms-enabled -s false 2>/dev/null || true
+    xfconf-query -c xfwm4 -p /general/use_compositing -s false 2>/dev/null || true
+    xfconf-query -c xfwm4 -p /general/vblank_mode -s xpresent 2>/dev/null || true
+fi
 
-# Disable desktop effects
-xfconf-query -c xfwm4 -p /general/vblank_mode -s xpresent 2>/dev/null || true
-
-# Set window manager to performance mode
-xfconf-query -c xfwm4 -p /general/use_compositing -s false 2>/dev/null || true
+# Disable screen lock via xset (additional safety)
+if command -v xset &>/dev/null; then
+    xset s off 2>/dev/null || true
+    xset -dpms 2>/dev/null || true
+    xset s noblank 2>/dev/null || true
+fi
 OPTIMIZE_SCRIPT
     chmod +x /usr/local/bin/xfce-rdp-optimize.sh
     
-    # 9. Configure XRDP session settings
+    # 10. Configure XRDP session settings
     log_info "  Configuring XRDP session settings..."
     if [ -f /etc/xrdp/xrdp.ini ]; then
         backup_file "/etc/xrdp/xrdp.ini"
@@ -220,50 +259,28 @@ XRDP_CONFIG
         fi
     fi
     
-    # 10. Set default XFCE session for user
+    # 11. Set default XFCE session for user
     log_info "  Setting default XFCE session..."
-    run_as_user "$DEV_USER" bash <<'XFCE_CONFIG'
-# Ensure .xsessionrc exists
-cat > ~/.xsessionrc <<'XSESSIONRC'
+    local xsessionrc_file="$user_home/.xsessionrc"
+    cat > "$xsessionrc_file" <<'XSESSIONRC'
 #!/bin/bash
 # XFCE RDP Workspace Configuration
 
 # Disable screen lock
-xset s off
-xset -dpms
-xset s noblank
+if command -v xset &>/dev/null; then
+    xset s off 2>/dev/null || true
+    xset -dpms 2>/dev/null || true
+    xset s noblank 2>/dev/null || true
+    xset s 0 0 2>/dev/null || true
+fi
 
-# Disable screensaver
-xset s 0 0
-
-# Export display for RDP
-export DISPLAY=:10.0
-
-# XFCE4 session
-exec startxfce4
+# Export display for RDP (will be set by XRDP automatically)
+if [ -z "$DISPLAY" ]; then
+    export DISPLAY=:10.0
+fi
 XSESSIONRC
-chmod +x ~/.xsessionrc
-XFCE_CONFIG
-    
-    # 11. Create XFCE4 panel workspace switcher (optional)
-    log_info "  Configuring workspace switcher..."
-    run_as_user "$DEV_USER" bash <<'XFCE_CONFIG'
-# Create workspace configuration
-mkdir -p ~/.config/xfce4/xfconf/xfce-perchannel-xml
-cat > ~/.config/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml <<'XWM4_XML'
-<?xml version="1.0" encoding="UTF-8"?>
-<channel name="xfwm4" version="1.0">
-  <property name="general" type="empty">
-    <property name="workspace_count" type="int" value="4"/>
-    <property name="wrap_workspaces" type="bool" value="true"/>
-    <property name="use_compositing" type="bool" value="false"/>
-    <property name="snap_to_border" type="bool" value="true"/>
-    <property name="snap_to_windows" type="bool" value="true"/>
-    <property name="raise_on_focus" type="bool" value="true"/>
-  </property>
-</channel>
-XWM4_XML
-XFCE_CONFIG
+    chmod +x "$xsessionrc_file"
+    chown "$DEV_USER:$DEV_USER" "$xsessionrc_file"
     
     # 12. Set proper permissions
     chown -R "$DEV_USER:$DEV_USER" "$user_home/.config"
@@ -271,12 +288,15 @@ XFCE_CONFIG
     
     log_success "  ✓ XFCE optimized for RDP workspace"
     log_info "  Optimizations applied:"
-    log_info "    - Screen lock & screensaver disabled"
-    log_info "    - Power management disabled (no suspend)"
-    log_info "    - Compositing disabled (better RDP performance)"
-    log_info "    - Window manager optimized"
-    log_info "    - Workspace switcher configured (4 workspaces)"
-    log_info "    - Auto-start optimization script created"
-    log_info "  Note: Some settings require XFCE session restart to take effect"
+    log_info "    - Screen lock & screensaver disabled (via XML config)"
+    log_info "    - Power management disabled (no suspend, via XML config)"
+    log_info "    - Compositing disabled (better RDP performance, via XML config)"
+    log_info "    - Window manager optimized (4 workspaces, snap enabled, via XML config)"
+    log_info "    - Panel configured (via XML config)"
+    log_info "    - Desktop settings optimized (via XML config)"
+    log_info "    - Keyboard shortcuts configured (Super+E, Super+T, Alt+F2)"
+    log_info "    - Auto-start optimization script created (/usr/local/bin/xfce-rdp-optimize.sh)"
+    log_info "  Note: XML configurations will be loaded automatically when XFCE session starts"
+    log_info "        Optimization script will run on each XFCE login to ensure settings persist"
 }
 
