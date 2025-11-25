@@ -18,22 +18,21 @@ setup_vscode() {
     # Backup existing configs
     [ -f /etc/apt/sources.list.d/vscode.list ] && backup_file "/etc/apt/sources.list.d/vscode.list"
     
-    # Thorough cleanup of all possible conflicting files
-    log_info "Cleaning up old VS Code configurations..."
+    # Cleanup old configs and sources
     rm -f /etc/apt/sources.list.d/vscode.list
     rm -f /etc/apt/sources.list.d/vscode.list.save
-    rm -f /etc/apt/keyrings/packages.microsoft.gpg
-    rm -f /usr/share/keyrings/microsoft.gpg
-    rm -f /usr/share/keyrings/packages.microsoft.gpg
+    
+    # Clean GPG keys using helper function
+    clean_gpg_keys "microsoft"
+    clean_gpg_keys "packages.microsoft"
     
     # Clean apt cache to avoid conflicts
     apt-get clean
     rm -rf /var/lib/apt/lists/packages.microsoft.com*
 
-    # VS Code Repo Setup with retry
-    if retry_command 3 5 "wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > packages.microsoft.gpg"; then
-        install -D -o root -g root -m 644 packages.microsoft.gpg /etc/apt/keyrings/packages.microsoft.gpg
-        rm -f packages.microsoft.gpg
+    # VS Code Repo Setup - Install GPG key
+    if install_gpg_key "https://packages.microsoft.com/keys/microsoft.asc" "/etc/apt/keyrings/packages.microsoft.gpg" "Microsoft"; then
+        log_success "Microsoft GPG key installed"
         
         sh -c 'echo "deb [arch=amd64,arm64,armhf signed-by=/etc/apt/keyrings/packages.microsoft.gpg] https://packages.microsoft.com/repos/code stable main" > /etc/apt/sources.list.d/vscode.list'
         

@@ -93,3 +93,50 @@ run_as_user() {
     sudo -H -u "$user" "$@"
 }
 
+# --- GPG Key Management Helper ---
+clean_gpg_keys() {
+    local key_name="$1"  # e.g., "docker", "microsoft"
+    
+    log_info "Cleaning up old $key_name GPG keys..."
+    
+    # Remove from all possible locations
+    rm -f "/etc/apt/keyrings/${key_name}.gpg"
+    rm -f "/etc/apt/keyrings/${key_name}.gpg~"
+    rm -f "/usr/share/keyrings/${key_name}.gpg"
+    rm -f "/etc/apt/trusted.gpg.d/${key_name}.gpg"
+    
+    # Clean specific patterns
+    case "$key_name" in
+        "microsoft"|"packages.microsoft")
+            rm -f /etc/apt/keyrings/packages.microsoft.gpg
+            rm -f /usr/share/keyrings/microsoft.gpg
+            rm -f /usr/share/keyrings/packages.microsoft.gpg
+            ;;
+        "docker")
+            rm -f /etc/apt/keyrings/docker.gpg
+            rm -f /etc/apt/keyrings/docker.gpg~
+            ;;
+    esac
+}
+
+install_gpg_key() {
+    local url="$1"
+    local output_path="$2"
+    local key_name="$3"
+    
+    log_info "Installing $key_name GPG key..."
+    
+    # Ensure directory exists
+    mkdir -p "$(dirname "$output_path")"
+    
+    # Download and install with retry
+    if retry_command 3 5 "curl -fsSL $url | gpg --dearmor -o $output_path"; then
+        chmod a+r "$output_path"
+        log_success "$key_name GPG key installed successfully"
+        return 0
+    else
+        log_error "Failed to install $key_name GPG key after retries"
+        return 1
+    fi
+}
+
