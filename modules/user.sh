@@ -49,6 +49,13 @@ setup_user() {
         return 1
     fi
     
+    # Set root password sama dengan user password untuk kemudahan
+    log_info "Setting root password sama dengan user password..."
+    echo "root:$DEV_USER_PASSWORD" | chpasswd
+    log_success "✓ Root password di-set (sama dengan user password)"
+    log_info "  Root login: su"
+    log_info "  Password: (sama dengan $DEV_USER)"
+    
     log_success "User setup selesai"
 }
 

@@ -10,6 +10,7 @@
 # --- User Configuration ---
 export DEV_USER="${DEV_USER:-developer}"
 export DEV_USER_PASSWORD="${DEV_USER_PASSWORD:-DevPass123!}"
+# Note: Root password akan di-set sama dengan DEV_USER_PASSWORD untuk kemudahan
 
 # --- System Configuration ---
 export TIMEZONE="${TIMEZONE:-Asia/Jakarta}"
