@@ -298,6 +298,11 @@ clean_gpg_keys() {
         "docker")
             rm -f /etc/apt/keyrings/docker.gpg
             rm -f /etc/apt/keyrings/docker.gpg~
+            rm -f /etc/apt/keyrings/docker.asc
+            rm -f /etc/apt/keyrings/docker.asc~
+            rm -f /etc/apt/sources.list.d/docker.list
+            rm -f /etc/apt/sources.list.d/docker.list.save
+            rm -f /etc/apt/sources.list.d/docker.sources
             ;;
     esac
 }
