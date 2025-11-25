@@ -294,8 +294,21 @@ setup_shell() {
     chsh -s "$(which zsh)" "$DEV_USER"
 
     log_info "Menginstal Oh My Zsh (Unattended)..."
-    # Install OMZ as user
-    sudo -u "$DEV_USER" sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+    
+    # Ensure user home exists and ownership is correct
+    if [ ! -d "/home/$DEV_USER" ]; then
+        log_error "Home directory /home/$DEV_USER tidak ditemukan!"
+        return 1
+    fi
+    
+    # Install OMZ as user with explicit HOME set
+    # We use 'sudo -u user -H' to ensure HOME env var is set correctly
+    # We also use a checking logic to avoid reinstalling if already exists
+    if [ -d "/home/$DEV_USER/.oh-my-zsh" ]; then
+        log_info "Oh My Zsh sudah terinstal di /home/$DEV_USER/.oh-my-zsh. Melewati..."
+    else
+        sudo -H -u "$DEV_USER" bash -c 'RUNZSH=no sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended'
+    fi
 
     # Set Theme (robbyrussell is default, let's ensure it's set or use something nicer if desired)
     # Default setup is usually fine for stability.
