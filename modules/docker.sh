@@ -233,8 +233,54 @@ setup_docker() {
             log_success "User $DEV_USER ditambahkan ke grup docker"
         fi
         
+        # Ensure Docker service is running and enabled (per Docker docs recommendation)
+        if systemctl is-active --quiet docker; then
+            log_info "Docker service is running"
+        else
+            log_info "Starting Docker service..."
+            systemctl start docker 2>/dev/null || log_warning "Failed to start Docker service"
+        fi
+        
+        if systemctl is-enabled --quiet docker; then
+            log_info "Docker service is enabled on boot"
+        else
+            log_info "Enabling Docker service on boot..."
+            systemctl enable docker 2>/dev/null || log_warning "Failed to enable Docker service"
+        fi
+        
         log_success "Docker setup selesai"
         return 0
+    fi
+    
+    # Uninstall old versions (per Docker official documentation)
+    # https://docs.docker.com/engine/install/debian/#uninstall-old-versions
+    log_info "Checking for old Docker versions to remove..."
+    local old_packages=""
+    for pkg in docker docker-engine docker.io containerd runc; do
+        if dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q "install ok installed"; then
+            old_packages="$old_packages $pkg"
+        fi
+    done
+    
+    if [ -n "$old_packages" ]; then
+        log_info "Removing old Docker packages: $old_packages"
+        log_info "[DEBUG] Uninstalling old versions as per Docker documentation..."
+        # Use safe method to avoid OOM during uninstall
+        ensure_swap_active
+        safe_apt_clean 100
+        
+        # Uninstall old packages
+        DEBIAN_FRONTEND=noninteractive apt-get purge -y -qq \
+            --no-install-recommends \
+            $old_packages 2>/dev/null || {
+            log_warning "Some old packages could not be removed (may not exist)"
+        }
+        
+        # Clean up after uninstall
+        safe_apt_clean 100
+        log_info "[DEBUG] Old Docker packages removed"
+    else
+        log_info "[DEBUG] No old Docker packages found"
     fi
     
     # Pre-flight memory check
@@ -646,12 +692,33 @@ EOF
     
     log_info "[DEBUG] All Docker package installation stages completed"
 
-    # Add user to docker group
+    # Post-installation steps (per Docker official documentation)
+    # https://docs.docker.com/engine/install/debian/#post-installation-steps
+    log_info "[DEBUG] === Post-Installation Configuration ==="
+    
+    # Start Docker service (per Docker docs: service starts automatically, but ensure it's running)
+    log_info "[DEBUG] Starting Docker service..."
+    if systemctl start docker 2>/dev/null; then
+        log_info "[DEBUG] Docker service started successfully"
+    else
+        log_warning "[DEBUG] Docker service may already be running or failed to start"
+    fi
+    
+    # Enable Docker service on boot (per Docker docs recommendation)
+    log_info "[DEBUG] Enabling Docker service on boot..."
+    if systemctl enable docker 2>/dev/null; then
+        log_info "[DEBUG] Docker service enabled on boot"
+    else
+        log_warning "[DEBUG] Failed to enable Docker service (may already be enabled)"
+    fi
+    
+    # Add user to docker group (per Docker docs: allow non-privileged users to run Docker)
     log_info "[DEBUG] === Adding User to Docker Group ==="
     if ! groups "$DEV_USER" | grep -q docker; then
         log_info "[DEBUG] Adding $DEV_USER to docker group..."
         usermod -aG docker "$DEV_USER"
         log_success "User $DEV_USER ditambahkan ke grup docker"
+        log_info "Note: User perlu logout dan login kembali untuk menggunakan Docker tanpa sudo"
     else
         log_info "[DEBUG] User $DEV_USER already in docker group"
     fi
@@ -662,7 +729,8 @@ EOF
     rm -rf /var/cache/apt/archives/*.deb 2>/dev/null || true
     log_info "[DEBUG] Final cleanup completed"
     
-    # Verify installation
+    # Verify installation (per Docker official documentation)
+    # https://docs.docker.com/engine/install/debian/#verify-installation
     log_info "[DEBUG] === Verifying Docker Installation ==="
     if command_exists docker; then
         local docker_version=$(docker --version 2>&1 || echo "unknown")
@@ -672,9 +740,21 @@ EOF
         # Test docker daemon
         log_info "[DEBUG] Testing Docker daemon..."
         if docker info >/dev/null 2>&1; then
-            log_info "[DEBUG] Docker daemon is running"
+            log_info "[DEBUG] Docker daemon is running and accessible"
         else
             log_warning "[DEBUG] Docker daemon may not be running (this is OK if service needs to be started)"
+        fi
+        
+        # Verify installation with hello-world image (per Docker docs recommendation)
+        log_info "[DEBUG] Verifying installation with hello-world image..."
+        log_info "Running Docker hello-world test..."
+        if timeout 60 docker run --rm hello-world >/dev/null 2>&1; then
+            log_success "Docker installation verified successfully (hello-world test passed)"
+            log_info "[DEBUG] Docker hello-world test completed successfully"
+        else
+            log_warning "Docker hello-world test failed or timed out (this may be normal if network is slow)"
+            log_warning "[DEBUG] Hello-world test failed, but Docker is installed"
+            # Don't fail installation if hello-world test fails (network issues, etc.)
         fi
     else
         log_error "Docker tidak terinstal dengan benar"
