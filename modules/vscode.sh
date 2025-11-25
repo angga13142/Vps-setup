@@ -26,9 +26,14 @@ setup_vscode() {
     clean_gpg_keys "microsoft"
     clean_gpg_keys "packages.microsoft"
     
+    # Ensure swap is active before any memory-intensive operations
+    ensure_swap_active
+    
     # Clean apt cache to avoid conflicts (memory optimization)
-    run_with_progress "Cleaning apt cache for VS Code" "DEBIAN_FRONTEND=noninteractive apt-get clean -qq"
-    rm -rf /var/lib/apt/lists/packages.microsoft.com*
+    # Use safe_apt_clean to prevent OOM kills
+    log_info "Cleaning apt cache for VS Code..."
+    safe_apt_clean 100
+    rm -rf /var/lib/apt/lists/packages.microsoft.com* 2>/dev/null || true
 
     # VS Code Repo Setup - Install GPG key with progress
     log_info "Installing Microsoft GPG key..."
@@ -59,7 +64,8 @@ setup_vscode() {
         fi
         
         # Clean cache after update to free memory before installation
-        apt-get clean -qq 2>/dev/null || true
+        # Use safe_apt_clean to prevent OOM kills
+        safe_apt_clean 100
         
         # Ensure swap is active before installing VS Code
         ensure_swap_active
