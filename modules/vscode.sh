@@ -58,6 +58,9 @@ setup_vscode() {
             # Continue anyway for VS Code (non-critical), but log the error
         fi
         
+        # Ensure swap is active before installing VS Code
+        ensure_swap_active
+        
         # Try to install
         check_and_install "code"
         

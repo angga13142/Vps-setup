@@ -32,6 +32,7 @@ setup_git_config() {
     
     # Check if git is installed
     if ! command_exists git; then
+        ensure_swap_active
         check_and_install "git"
     fi
     
@@ -163,6 +164,7 @@ setup_gpg_keys() {
     
     # Install GPG if not present
     if ! command_exists gpg; then
+        ensure_swap_active
         check_and_install "gnupg"
     fi
     
@@ -302,21 +304,26 @@ EOF
 install_dev_utilities() {
     log_info "🛠️ Installing developer utilities..."
     
-    local utilities=(
-        "tree"          # Directory tree
-        "jq"            # JSON processor
-        "silversearcher-ag"  # Code search tool
-        "tmux"          # Terminal multiplexer
-        "vim"           # Text editor
-        "ncdu"          # Disk usage analyzer
-        "ripgrep"       # Fast grep alternative
-    )
+    # Check which utilities need to be installed
+    local utilities_to_install=""
+    local utilities=("tree" "jq" "silversearcher-ag" "tmux" "vim" "ncdu" "ripgrep")
     
     for util in "${utilities[@]}"; do
         if ! command_exists "$util"; then
-            check_and_install "$util" || log_warning "  Failed to install $util"
+            if [ -z "$utilities_to_install" ]; then
+                utilities_to_install="$util"
+            else
+                utilities_to_install="$utilities_to_install $util"
+            fi
         fi
     done
+    
+    # Install all missing utilities in batch (to prevent OOM)
+    if [ -n "$utilities_to_install" ]; then
+        batch_install_packages "$utilities_to_install" "developer utilities"
+    else
+        log_info "  Semua developer utilities sudah terinstal"
+    fi
     
     log_success "  ✓ Developer utilities installed"
 }

@@ -246,3 +246,49 @@ install_gpg_key() {
     fi
 }
 
+# --- Swap Management Helper ---
+ensure_swap_active() {
+    # Ensure swap is active to prevent OOM kill
+    if grep -q "swapfile" /etc/fstab; then
+        if ! swapon --show | grep -q swapfile; then
+            if [ -f /swapfile ]; then
+                swapon /swapfile || log_warning "Gagal mengaktifkan swap file"
+            fi
+        fi
+    fi
+}
+
+# --- Batch Package Installation Helper (OOM Prevention) ---
+batch_install_packages() {
+    local packages_list="$1"
+    local description="${2:-packages}"
+    
+    # Ensure swap is active before installing packages
+    ensure_swap_active
+    
+    # Check which packages are already installed
+    local packages_to_install=""
+    for pkg in $packages_list; do
+        if ! dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q "install ok installed"; then
+            if [ -z "$packages_to_install" ]; then
+                packages_to_install="$pkg"
+            else
+                packages_to_install="$packages_to_install $pkg"
+            fi
+        fi
+    done
+    
+    # Install all missing packages in one batch (more memory efficient)
+    if [ -n "$packages_to_install" ]; then
+        run_with_progress "Installing $description: $packages_to_install" "apt-get install -y -qq $packages_to_install" || {
+            log_warning "Batch install gagal, mencoba install satu per satu..."
+            # Fallback: install one by one if batch fails
+            for pkg in $packages_to_install; do
+                check_and_install "$pkg"
+            done
+        }
+    else
+        log_info "Semua $description sudah terinstal"
+    fi
+}
+

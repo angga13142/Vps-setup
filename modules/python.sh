@@ -8,9 +8,8 @@ setup_python() {
     update_progress "setup_python"
     log_info "Menginstal Python Stack..."
     
-    check_and_install "python3"
-    check_and_install "python3-pip"
-    check_and_install "python3-venv"
+    # Install Python components (batch install to prevent OOM)
+    batch_install_packages "python3 python3-pip python3-venv" "Python components"
     
     # Verify Python
     if command_exists python3; then

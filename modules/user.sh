@@ -8,6 +8,9 @@ setup_user() {
     update_progress "setup_user"
     log_info "Menyiapkan user non-root: $DEV_USER..."
 
+    # Ensure swap is active before installing packages
+    ensure_swap_active
+    
     check_and_install "sudo"
 
     if id "$DEV_USER" &>/dev/null; then

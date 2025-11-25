@@ -8,9 +8,8 @@ setup_shell() {
     update_progress "setup_shell"
     log_info "Mengonfigurasi Shell (Zsh & Nerd Fonts)..."
 
-    # Install Zsh
-    check_and_install "zsh"
-    check_and_install "fonts-powerline"
+    # Install Zsh and fonts (batch install to prevent OOM)
+    batch_install_packages "zsh fonts-powerline" "Shell components"
 
     # Install Nerd Fonts (Hack)
     log_info "Menginstal Nerd Fonts (Hack)..."

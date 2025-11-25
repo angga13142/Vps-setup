@@ -24,18 +24,8 @@ setup_monitoring() {
 install_monitoring_tools() {
     log_info "Installing monitoring tools..."
     
-    local tools=(
-        "htop"          # Interactive process viewer
-        "iotop"         # I/O monitoring
-        "nethogs"       # Network bandwidth monitor
-        "sysstat"       # Performance monitoring tools (sar, iostat)
-        "vnstat"        # Network traffic monitor
-        "ncdu"          # Disk usage analyzer
-    )
-    
-    for tool in "${tools[@]}"; do
-        check_and_install "$tool" || log_warning "Failed to install $tool"
-    done
+    # Install monitoring tools (batch install to prevent OOM)
+    batch_install_packages "htop iotop nethogs sysstat vnstat ncdu" "monitoring tools"
     
     log_success "  ✓ Monitoring tools installed"
 }

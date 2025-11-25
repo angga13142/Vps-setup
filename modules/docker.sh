@@ -84,12 +84,8 @@ setup_docker() {
         return 1
     fi
     
-    # Install Docker components
-    check_and_install "docker-ce"
-    check_and_install "docker-ce-cli"
-    check_and_install "containerd.io"
-    check_and_install "docker-buildx-plugin"
-    check_and_install "docker-compose-plugin"
+    # Install Docker components (batch install to prevent OOM)
+    batch_install_packages "docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin" "Docker components"
 
     # Add user to docker group
     if ! groups "$DEV_USER" | grep -q docker; then
