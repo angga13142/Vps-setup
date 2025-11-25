@@ -126,6 +126,9 @@ setup_system() {
 setup_user() {
     log_info "Menyiapkan user non-root: $DEV_USER..."
 
+    # Install sudo if missing (some minimal images don't have it)
+    check_and_install "sudo"
+
     if id "$DEV_USER" &>/dev/null; then
         log_info "User $DEV_USER sudah ada."
     else
@@ -134,8 +137,19 @@ setup_user() {
         log_success "User $DEV_USER dibuat."
     fi
     
-    # Enable sudo without password for convenience (Optional, remove if strict security needed)
+    # Enable sudo without password for convenience
     echo "$DEV_USER ALL=(ALL) NOPASSWD:ALL" > "/etc/sudoers.d/$DEV_USER"
+    
+    # Crucial: Fix permissions for sudoers file (must be 0440)
+    chmod 0440 "/etc/sudoers.d/$DEV_USER"
+    
+    # Validate sudoers configuration to prevent locking out
+    if visudo -c -f "/etc/sudoers.d/$DEV_USER"; then
+        log_success "Konfigurasi sudo untuk $DEV_USER valid."
+    else
+        log_error "Konfigurasi sudo tidak valid! Menghapus file untuk keamanan."
+        rm -f "/etc/sudoers.d/$DEV_USER"
+    fi
 }
 
 # --- 3. Desktop Environment (XFCE & XRDP) ---
