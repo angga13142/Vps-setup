@@ -36,6 +36,19 @@ log_error() {
     echo -e "\033[1;31m[ERROR]\033[0m $1" >&2
 }
 
+# --- Package Management Helper ---
+check_and_install() {
+    local pkg="$1"
+    # Check if package is installed (status 'ii' means installed correctly)
+    if dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q "install ok installed"; then
+        log_info "Paket '$pkg' sudah terinstal dengan benar. Melewati..."
+    else
+        log_info "Menginstal/Memperbaiki paket: '$pkg'..."
+        # Force reinstall if broken, or install if missing
+        apt-get install -y --reinstall "$pkg"
+    fi
+}
+
 # --- Pre-flight Checks ---
 check_root() {
     if [[ $EUID -ne 0 ]]; then
@@ -57,8 +70,11 @@ setup_system() {
     # Install Essential Tools
     # Split install to handle Trixie/Bookworm quirks better
     # software-properties-common is removed as it's unstable in testing/Trixie and we don't use add-apt-repository
-    apt-get install -y curl wget git htop ufw unzip build-essential \
-        apt-transport-https ca-certificates gnupg lsb-release fail2ban
+    local ESSENTIAL_PKGS="curl wget git htop ufw unzip build-essential apt-transport-https ca-certificates gnupg lsb-release fail2ban"
+    
+    for pkg in $ESSENTIAL_PKGS; do
+        check_and_install "$pkg"
+    done
 
     # Handle libfuse2 (Needed for AppImages) - Robust Logic
     # Try installing libfuse2t64 (Debian 13/Trixie+)
@@ -127,7 +143,10 @@ setup_desktop() {
     log_info "Menginstal XFCE4 dan XRDP..."
     
     # Install XFCE4 (lightweight) & XRDP
-    apt-get install -y xfce4 xfce4-goodies xorg dbus-x11 x11-xserver-utils xrdp
+    local DESKTOP_PKGS="xfce4 xfce4-goodies xorg dbus-x11 x11-xserver-utils xrdp"
+    for pkg in $DESKTOP_PKGS; do
+        check_and_install "$pkg"
+    done
 
     # Add xrdp user to ssl-cert group (Fixes permission issues)
     adduser xrdp ssl-cert
@@ -166,13 +185,19 @@ setup_dev_stack() {
       $DEBIAN_CODENAME stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
 
     apt-get update
-    apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+    check_and_install "docker-ce"
+    check_and_install "docker-ce-cli"
+    check_and_install "containerd.io"
+    check_and_install "docker-buildx-plugin"
+    check_and_install "docker-compose-plugin"
 
     # Add user to docker group
     usermod -aG docker "$DEV_USER"
 
     log_info "Menginstal Python Stack..."
-    apt-get install -y python3 python3-pip python3-venv
+    check_and_install "python3"
+    check_and_install "python3-pip"
+    check_and_install "python3-venv"
 
     log_info "Menginstal Node.js via NVM (sebagai user $DEV_USER)..."
     # Install NVM & Node as the user to avoid permission hell
@@ -200,7 +225,7 @@ setup_editors() {
     rm -f packages.microsoft.gpg
     
     apt-get update
-    apt-get install -y code
+    check_and_install "code"
 
     log_info "Menginstal Cursor AI Editor..."
     # Setup directory
@@ -254,7 +279,8 @@ setup_shell() {
     log_info "Mengonfigurasi Shell (Zsh & Nerd Fonts)..."
 
     # Install Zsh
-    apt-get install -y zsh fonts-powerline
+    check_and_install "zsh"
+    check_and_install "fonts-powerline"
 
     # Install Nerd Fonts (Hack)
     mkdir -p /usr/local/share/fonts
