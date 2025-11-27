@@ -288,6 +288,11 @@ parse_args() {
                 shift
                 ;;
             
+            --force-lock)
+                export FORCE_LOCK=true
+                shift
+                ;;
+            
             *)
                 echo "Unknown option: $1"
                 echo "Use --help for usage information"

@@ -17,11 +17,50 @@ check_lock() {
     if [ -f "$LOCK_FILE" ]; then
         local pid
         pid=$(cat "$LOCK_FILE" 2>/dev/null || echo "unknown")
-        log_error "Script sudah berjalan (PID: $pid) atau lock file tersisa."
-        log_error "Jika yakin tidak ada instance lain, hapus: rm $LOCK_FILE"
-        exit 1
+        
+        # Check if --force-lock option is set
+        if [ "${FORCE_LOCK:-false}" = "true" ]; then
+            log_warning "Force removing lock file (--force-lock option enabled)..."
+            rm -f "$LOCK_FILE"
+            log_info "Lock file removed. Continuing..."
+        else
+            # Check if PID is still running
+            if [ "$pid" != "unknown" ] && [ -n "$pid" ]; then
+                # Check if process exists and is actually our script
+                if kill -0 "$pid" 2>/dev/null; then
+                    # Process is running - check if it's actually our script
+                    local proc_cmd
+                    proc_cmd=$(ps -p "$pid" -o cmd= 2>/dev/null || echo "")
+                    if echo "$proc_cmd" | grep -q "setup.sh\|bootstrap.sh"; then
+                        log_error "Script sudah berjalan (PID: $pid)"
+                        log_error "Command: $proc_cmd"
+                        log_error "Jika yakin tidak ada instance lain, gunakan: --force-lock"
+                        exit 1
+                    else
+                        # PID exists but not our script - stale lock file
+                        log_warning "Lock file ditemukan dengan PID $pid, tapi bukan script ini"
+                        log_warning "PID $pid adalah: $proc_cmd"
+                        log_warning "Menghapus stale lock file..."
+                        rm -f "$LOCK_FILE"
+                    fi
+                else
+                    # PID not running - stale lock file
+                    log_warning "Lock file ditemukan dengan PID $pid, tapi process tidak berjalan (stale lock)"
+                    log_warning "Menghapus stale lock file..."
+                    rm -f "$LOCK_FILE"
+                fi
+            else
+                # Invalid PID in lock file - stale lock file
+                log_warning "Lock file ditemukan tapi berisi PID yang tidak valid: '$pid'"
+                log_warning "Menghapus stale lock file..."
+                rm -f "$LOCK_FILE"
+            fi
+        fi
     fi
+    
+    # Create new lock file
     echo $$ > "$LOCK_FILE"
+    log_info "[DEBUG] Lock file created: $LOCK_FILE (PID: $$)"
 }
 
 check_disk_space() {
