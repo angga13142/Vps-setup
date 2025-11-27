@@ -23,11 +23,11 @@
 
 **Purpose**: Project initialization and basic script structure
 
-- [ ] T001 Create scripts directory structure at scripts/ in repository root
-- [ ] T002 [P] Initialize setup-workstation.sh with shebang `#!/usr/bin/env bash` in scripts/setup-workstation.sh
-- [ ] T003 [P] Add error handling setup (`set -euo pipefail`) at top of scripts/setup-workstation.sh
-- [ ] T004 [P] Define color variables (GREEN, RED, YELLOW, NC) in scripts/setup-workstation.sh
-- [ ] T005 [P] Add script header comments (name, description, author, date) in scripts/setup-workstation.sh
+- [x] T001 Create scripts directory structure at scripts/ in repository root
+- [x] T002 [P] Initialize setup-workstation.sh with shebang `#!/usr/bin/env bash` in scripts/setup-workstation.sh
+- [x] T003 [P] Add error handling setup (`set -euo pipefail`) at top of scripts/setup-workstation.sh
+- [x] T004 [P] Define color variables (GREEN, RED, YELLOW, NC) in scripts/setup-workstation.sh
+- [x] T005 [P] Add script header comments (name, description, author, date) in scripts/setup-workstation.sh
 
 ---
 
@@ -37,9 +37,9 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T006 Implement check_debian_version() function to validate Debian 13 (Trixie) in scripts/setup-workstation.sh
-- [ ] T007 Add main script entry point that calls check_debian_version() first in scripts/setup-workstation.sh
-- [ ] T008 Add root/sudo privilege check at script start in scripts/setup-workstation.sh
+- [x] T006 Implement check_debian_version() function to validate Debian 13 (Trixie) in scripts/setup-workstation.sh
+- [x] T007 Add main script entry point that calls check_debian_version() first in scripts/setup-workstation.sh
+- [x] T008 Add root/sudo privilege check at script start in scripts/setup-workstation.sh
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
