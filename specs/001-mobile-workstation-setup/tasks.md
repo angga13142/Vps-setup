@@ -53,20 +53,20 @@
 
 ### Implementation for User Story 1
 
-- [ ] T009 [US1] Implement welcome banner display with ASCII art in get_user_inputs() function in scripts/setup-workstation.sh
-- [ ] T010 [US1] Implement username prompt with default value 'coder' in get_user_inputs() function in scripts/setup-workstation.sh
-- [ ] T011 [US1] Implement password prompt with hidden input (read -s) in get_user_inputs() function in scripts/setup-workstation.sh
-- [ ] T012 [US1] Implement hostname prompt in get_user_inputs() function in scripts/setup-workstation.sh
-- [ ] T013 [US1] Add input validation (non-empty password, valid hostname format) in get_user_inputs() function in scripts/setup-workstation.sh
-- [ ] T014 [US1] Implement confirmation prompt before proceeding in get_user_inputs() function in scripts/setup-workstation.sh
-- [ ] T015 [US1] Implement system_prep() function with hostname setting via hostnamectl in scripts/setup-workstation.sh
-- [ ] T016 [US1] Add idempotency check for hostname (check current hostname before setting) in system_prep() function in scripts/setup-workstation.sh
-- [ ] T017 [US1] Implement APT repository update in system_prep() function in scripts/setup-workstation.sh
-- [ ] T018 [US1] Add installation of essential packages (curl, git, htop, vim, build-essential) with idempotency checks in system_prep() function in scripts/setup-workstation.sh
-- [ ] T019 [US1] Implement create_user_and_shell() function stub with user creation logic in scripts/setup-workstation.sh
-- [ ] T020 [US1] Add idempotency check for user existence before creation in create_user_and_shell() function in scripts/setup-workstation.sh
-- [ ] T021 [US1] Implement useradd command with password setting in create_user_and_shell() function in scripts/setup-workstation.sh
-- [ ] T022 [US1] Update main script entry point to call get_user_inputs(), system_prep(), and create_user_and_shell() in sequence in scripts/setup-workstation.sh
+- [x] T009 [US1] Implement welcome banner display with ASCII art in get_user_inputs() function in scripts/setup-workstation.sh
+- [x] T010 [US1] Implement username prompt with default value 'coder' in get_user_inputs() function in scripts/setup-workstation.sh
+- [x] T011 [US1] Implement password prompt with hidden input (read -s) in get_user_inputs() function in scripts/setup-workstation.sh
+- [x] T012 [US1] Implement hostname prompt in get_user_inputs() function in scripts/setup-workstation.sh
+- [x] T013 [US1] Add input validation (non-empty password, valid hostname format) in get_user_inputs() function in scripts/setup-workstation.sh
+- [x] T014 [US1] Implement confirmation prompt before proceeding in get_user_inputs() function in scripts/setup-workstation.sh
+- [x] T015 [US1] Implement system_prep() function with hostname setting via hostnamectl in scripts/setup-workstation.sh
+- [x] T016 [US1] Add idempotency check for hostname (check current hostname before setting) in system_prep() function in scripts/setup-workstation.sh
+- [x] T017 [US1] Implement APT repository update in system_prep() function in scripts/setup-workstation.sh
+- [x] T018 [US1] Add installation of essential packages (curl, git, htop, vim, build-essential) with idempotency checks in system_prep() function in scripts/setup-workstation.sh
+- [x] T019 [US1] Implement create_user_and_shell() function stub with user creation logic in scripts/setup-workstation.sh
+- [x] T020 [US1] Add idempotency check for user existence before creation in create_user_and_shell() function in scripts/setup-workstation.sh
+- [x] T021 [US1] Implement useradd command with password setting in create_user_and_shell() function in scripts/setup-workstation.sh
+- [x] T022 [US1] Update main script entry point to call get_user_inputs(), system_prep(), and create_user_and_shell() in sequence in scripts/setup-workstation.sh
 
 **Checkpoint**: At this point, User Story 1 should be fully functional and testable independently. The script can collect user input, set hostname, update packages, and create a user account.
 
@@ -80,16 +80,16 @@
 
 ### Implementation for User Story 2
 
-- [ ] T023 [US2] Implement parse_git_branch() helper function for Git branch detection in scripts/setup-workstation.sh
-- [ ] T024 [US2] Add custom PS1 prompt with format `[User@Hostname] [CurrentDir] [GitBranch] $` in create_user_and_shell() function in scripts/setup-workstation.sh
-- [ ] T025 [US2] Add color codes (neon green for user/host, blue for directory, yellow for Git branch) to PS1 prompt in create_user_and_shell() function in scripts/setup-workstation.sh
-- [ ] T026 [US2] Integrate parse_git_branch() function call into PS1 prompt in create_user_and_shell() function in scripts/setup-workstation.sh
-- [ ] T027 [US2] Add alias `ll` that executes `ls -alFh --color=auto` to .bashrc generation in create_user_and_shell() function in scripts/setup-workstation.sh
-- [ ] T028 [US2] Add alias `update` that executes `sudo apt update && sudo apt upgrade -y` to .bashrc generation in create_user_and_shell() function in scripts/setup-workstation.sh
-- [ ] T029 [US2] Add alias `docker-clean` that removes unused Docker containers and images to .bashrc generation in create_user_and_shell() function in scripts/setup-workstation.sh
-- [ ] T030 [US2] Implement .bashrc file generation logic that writes to /home/$CUSTOM_USER/.bashrc in create_user_and_shell() function in scripts/setup-workstation.sh
-- [ ] T031 [US2] Add idempotency check for .bashrc existence before writing in create_user_and_shell() function in scripts/setup-workstation.sh
-- [ ] T032 [US2] Ensure .bashrc is owned by the created user with correct permissions in create_user_and_shell() function in scripts/setup-workstation.sh
+- [x] T023 [US2] Implement parse_git_branch() helper function for Git branch detection in scripts/setup-workstation.sh
+- [x] T024 [US2] Add custom PS1 prompt with format `[User@Hostname] [CurrentDir] [GitBranch] $` in create_user_and_shell() function in scripts/setup-workstation.sh
+- [x] T025 [US2] Add color codes (neon green for user/host, blue for directory, yellow for Git branch) to PS1 prompt in create_user_and_shell() function in scripts/setup-workstation.sh
+- [x] T026 [US2] Integrate parse_git_branch() function call into PS1 prompt in create_user_and_shell() function in scripts/setup-workstation.sh
+- [x] T027 [US2] Add alias `ll` that executes `ls -alFh --color=auto` to .bashrc generation in create_user_and_shell() function in scripts/setup-workstation.sh
+- [x] T028 [US2] Add alias `update` that executes `sudo apt update && sudo apt upgrade -y` to .bashrc generation in create_user_and_shell() function in scripts/setup-workstation.sh
+- [x] T029 [US2] Add alias `docker-clean` that removes unused Docker containers and images to .bashrc generation in create_user_and_shell() function in scripts/setup-workstation.sh
+- [x] T030 [US2] Implement .bashrc file generation logic that writes to /home/$CUSTOM_USER/.bashrc in create_user_and_shell() function in scripts/setup-workstation.sh
+- [x] T031 [US2] Add idempotency check for .bashrc existence before writing in create_user_and_shell() function in scripts/setup-workstation.sh
+- [x] T032 [US2] Ensure .bashrc is owned by the created user with correct permissions in create_user_and_shell() function in scripts/setup-workstation.sh
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently. The user account has a fully configured terminal with Git awareness and helpful aliases.
 
@@ -103,18 +103,18 @@
 
 ### Implementation for User Story 3
 
-- [ ] T033 [US3] Implement setup_desktop_mobile() function stub in scripts/setup-workstation.sh
-- [ ] T034 [US3] Add idempotency check for xfce4 package before installation in setup_desktop_mobile() function in scripts/setup-workstation.sh
-- [ ] T035 [US3] Implement XFCE4 desktop environment installation via apt in setup_desktop_mobile() function in scripts/setup-workstation.sh
-- [ ] T036 [US3] Add idempotency check for xrdp package before installation in setup_desktop_mobile() function in scripts/setup-workstation.sh
-- [ ] T037 [US3] Implement XRDP remote desktop server installation via apt in setup_desktop_mobile() function in scripts/setup-workstation.sh
-- [ ] T038 [US3] Implement XRDP service enablement (systemctl enable xrdp) in setup_desktop_mobile() function in scripts/setup-workstation.sh
-- [ ] T039 [US3] Implement XRDP service start (systemctl start xrdp) with idempotency check in setup_desktop_mobile() function in scripts/setup-workstation.sh
-- [ ] T040 [US3] Implement XFCE font size configuration (12-13pt) using xfconf-query as target user in setup_desktop_mobile() function in scripts/setup-workstation.sh
-- [ ] T041 [US3] Implement XFCE desktop icon size configuration (48px) using xfconf-query as target user in setup_desktop_mobile() function in scripts/setup-workstation.sh
-- [ ] T042 [US3] Implement XFCE panel size configuration (48px height) using xfconf-query as target user in setup_desktop_mobile() function in scripts/setup-workstation.sh
-- [ ] T043 [US3] Add error handling for XFCE configuration (xfconf-query may fail if XFCE not running) in setup_desktop_mobile() function in scripts/setup-workstation.sh
-- [ ] T044 [US3] Update main script entry point to call setup_desktop_mobile() after create_user_and_shell() in scripts/setup-workstation.sh
+- [x] T033 [US3] Implement setup_desktop_mobile() function stub in scripts/setup-workstation.sh
+- [x] T034 [US3] Add idempotency check for xfce4 package before installation in setup_desktop_mobile() function in scripts/setup-workstation.sh
+- [x] T035 [US3] Implement XFCE4 desktop environment installation via apt in setup_desktop_mobile() function in scripts/setup-workstation.sh
+- [x] T036 [US3] Add idempotency check for xrdp package before installation in setup_desktop_mobile() function in scripts/setup-workstation.sh
+- [x] T037 [US3] Implement XRDP remote desktop server installation via apt in setup_desktop_mobile() function in scripts/setup-workstation.sh
+- [x] T038 [US3] Implement XRDP service enablement (systemctl enable xrdp) in setup_desktop_mobile() function in scripts/setup-workstation.sh
+- [x] T039 [US3] Implement XRDP service start (systemctl start xrdp) with idempotency check in setup_desktop_mobile() function in scripts/setup-workstation.sh
+- [x] T040 [US3] Implement XFCE font size configuration (12-13pt) using xfconf-query as target user in setup_desktop_mobile() function in scripts/setup-workstation.sh
+- [x] T041 [US3] Implement XFCE desktop icon size configuration (48px) using xfconf-query as target user in setup_desktop_mobile() function in scripts/setup-workstation.sh
+- [x] T042 [US3] Implement XFCE panel size configuration (48px height) using xfconf-query as target user in setup_desktop_mobile() function in scripts/setup-workstation.sh
+- [x] T043 [US3] Add error handling for XFCE configuration (xfconf-query may fail if XFCE not running) in setup_desktop_mobile() function in scripts/setup-workstation.sh
+- [x] T044 [US3] Update main script entry point to call setup_desktop_mobile() after create_user_and_shell() in scripts/setup-workstation.sh
 
 **Checkpoint**: At this point, User Stories 1, 2, AND 3 should all work independently. The workstation has a mobile-optimized desktop environment accessible via RDP.
 
@@ -128,24 +128,24 @@
 
 ### Implementation for User Story 4
 
-- [ ] T045 [US4] Implement setup_dev_stack() function stub in scripts/setup-workstation.sh
-- [ ] T046 [US4] Add Docker APT repository prerequisites installation (ca-certificates, curl) in setup_dev_stack() function in scripts/setup-workstation.sh
-- [ ] T047 [US4] Implement Docker GPG key installation to /etc/apt/keyrings/docker.asc in setup_dev_stack() function in scripts/setup-workstation.sh
-- [ ] T048 [US4] Add idempotency check for Docker repository before adding in setup_dev_stack() function in scripts/setup-workstation.sh
-- [ ] T049 [US4] Implement Docker APT repository configuration in /etc/apt/sources.list.d/docker.sources in setup_dev_stack() function in scripts/setup-workstation.sh
-- [ ] T050 [US4] Implement APT update after Docker repository addition in setup_dev_stack() function in scripts/setup-workstation.sh
-- [ ] T051 [US4] Add idempotency checks for Docker packages before installation in setup_dev_stack() function in scripts/setup-workstation.sh
-- [ ] T052 [US4] Implement Docker and Docker Compose installation (docker-ce, docker-ce-cli, containerd.io, docker-buildx-plugin, docker-compose-plugin) in setup_dev_stack() function in scripts/setup-workstation.sh
-- [ ] T053 [US4] Add user to docker group with idempotency check in setup_dev_stack() function in scripts/setup-workstation.sh
-- [ ] T054 [US4] Add idempotency checks for browsers before installation in setup_dev_stack() function in scripts/setup-workstation.sh
-- [ ] T055 [US4] Implement Firefox ESR browser installation via apt in setup_dev_stack() function in scripts/setup-workstation.sh
-- [ ] T056 [US4] Implement Chromium browser installation via apt in setup_dev_stack() function in scripts/setup-workstation.sh
-- [ ] T057 [US4] Implement NVM installation script download and execution as target user in setup_dev_stack() function in scripts/setup-workstation.sh
-- [ ] T058 [US4] Add NVM configuration to user's .bashrc (export NVM_DIR, source nvm.sh) in setup_dev_stack() function in scripts/setup-workstation.sh
-- [ ] T059 [US4] Implement Node.js LTS installation via NVM as target user in setup_dev_stack() function in scripts/setup-workstation.sh
-- [ ] T060 [US4] Set Node.js LTS as default version via NVM as target user in setup_dev_stack() function in scripts/setup-workstation.sh
-- [ ] T061 [US4] Add Python 3 availability verification in setup_dev_stack() function in scripts/setup-workstation.sh
-- [ ] T062 [US4] Update main script entry point to call setup_dev_stack() after setup_desktop_mobile() in scripts/setup-workstation.sh
+- [x] T045 [US4] Implement setup_dev_stack() function stub in scripts/setup-workstation.sh
+- [x] T046 [US4] Add Docker APT repository prerequisites installation (ca-certificates, curl) in setup_dev_stack() function in scripts/setup-workstation.sh
+- [x] T047 [US4] Implement Docker GPG key installation to /etc/apt/keyrings/docker.asc in setup_dev_stack() function in scripts/setup-workstation.sh
+- [x] T048 [US4] Add idempotency check for Docker repository before adding in setup_dev_stack() function in scripts/setup-workstation.sh
+- [x] T049 [US4] Implement Docker APT repository configuration in /etc/apt/sources.list.d/docker.sources in setup_dev_stack() function in scripts/setup-workstation.sh
+- [x] T050 [US4] Implement APT update after Docker repository addition in setup_dev_stack() function in scripts/setup-workstation.sh
+- [x] T051 [US4] Add idempotency checks for Docker packages before installation in setup_dev_stack() function in scripts/setup-workstation.sh
+- [x] T052 [US4] Implement Docker and Docker Compose installation (docker-ce, docker-ce-cli, containerd.io, docker-buildx-plugin, docker-compose-plugin) in setup_dev_stack() function in scripts/setup-workstation.sh
+- [x] T053 [US4] Add user to docker group with idempotency check in setup_dev_stack() function in scripts/setup-workstation.sh
+- [x] T054 [US4] Add idempotency checks for browsers before installation in setup_dev_stack() function in scripts/setup-workstation.sh
+- [x] T055 [US4] Implement Firefox ESR browser installation via apt in setup_dev_stack() function in scripts/setup-workstation.sh
+- [x] T056 [US4] Implement Chromium browser installation via apt in setup_dev_stack() function in scripts/setup-workstation.sh
+- [x] T057 [US4] Implement NVM installation script download and execution as target user in setup_dev_stack() function in scripts/setup-workstation.sh
+- [x] T058 [US4] Add NVM configuration to user's .bashrc (export NVM_DIR, source nvm.sh) in setup_dev_stack() function in scripts/setup-workstation.sh
+- [x] T059 [US4] Implement Node.js LTS installation via NVM as target user in setup_dev_stack() function in scripts/setup-workstation.sh
+- [x] T060 [US4] Set Node.js LTS as default version via NVM as target user in setup_dev_stack() function in scripts/setup-workstation.sh
+- [x] T061 [US4] Add Python 3 availability verification in setup_dev_stack() function in scripts/setup-workstation.sh
+- [x] T062 [US4] Update main script entry point to call setup_dev_stack() after setup_desktop_mobile() in scripts/setup-workstation.sh
 
 **Checkpoint**: All user stories should now be independently functional. The workstation has a complete development stack ready for coding.
 
@@ -155,14 +155,14 @@
 
 **Purpose**: Finalization, cleanup, and improvements that affect the entire script
 
-- [ ] T063 Implement finalize() function with APT cache cleanup in scripts/setup-workstation.sh
-- [ ] T064 Add IP address detection logic (hostname -I or ip command) in finalize() function in scripts/setup-workstation.sh
-- [ ] T065 Implement summary box display with IP address, username, and "Reboot Required" message in finalize() function in scripts/setup-workstation.sh
-- [ ] T066 Update main script entry point to call finalize() at the end in scripts/setup-workstation.sh
-- [ ] T067 [P] Add comprehensive error messages throughout all functions in scripts/setup-workstation.sh
-- [ ] T068 [P] Add logging/output messages for each major step in scripts/setup-workstation.sh
-- [ ] T069 Verify all functions have proper idempotency checks in scripts/setup-workstation.sh
-- [ ] T070 Add script execution permissions check and guidance message in scripts/setup-workstation.sh
+- [x] T063 Implement finalize() function with APT cache cleanup in scripts/setup-workstation.sh
+- [x] T064 Add IP address detection logic (hostname -I or ip command) in finalize() function in scripts/setup-workstation.sh
+- [x] T065 Implement summary box display with IP address, username, and "Reboot Required" message in finalize() function in scripts/setup-workstation.sh
+- [x] T066 Update main script entry point to call finalize() at the end in scripts/setup-workstation.sh
+- [x] T067 [P] Add comprehensive error messages throughout all functions in scripts/setup-workstation.sh
+- [x] T068 [P] Add logging/output messages for each major step in scripts/setup-workstation.sh
+- [x] T069 Verify all functions have proper idempotency checks in scripts/setup-workstation.sh
+- [x] T070 Add script execution permissions check and guidance message in scripts/setup-workstation.sh
 - [ ] T071 Test script on fresh Debian 13 installation following quickstart.md validation steps
 - [ ] T072 Verify script can be safely re-run (idempotency test) on already-configured system
 
