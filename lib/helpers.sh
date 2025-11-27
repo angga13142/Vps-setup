@@ -443,11 +443,55 @@ batch_install_packages() {
     
     # Install all missing packages in one batch with memory optimizations
     if [ -n "$packages_to_install" ]; then
+        # Fix any existing broken packages before installation (prevent segmentation fault)
+        log_info "[DEBUG] Checking for broken packages before installation..."
+        dpkg --configure -a 2>/dev/null || true
+        apt-get install -f -y -qq 2>/dev/null || true
+        
         # Use DEBIAN_FRONTEND=noninteractive and --no-install-recommends to reduce memory usage
         # --no-install-recommends: Don't install recommended packages (reduces dependencies)
         # DEBIAN_FRONTEND=noninteractive: Reduces overhead from interactive prompts
-        run_with_progress "Installing $description: $packages_to_install" "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends $packages_to_install" || {
+        if run_with_progress "Installing $description: $packages_to_install" "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends $packages_to_install"; then
+            # Fix any broken packages after installation (prevent segmentation fault)
+            log_info "[DEBUG] Fixing any broken packages after installation..."
+            dpkg --configure -a 2>/dev/null || true
+            apt-get install -f -y -qq 2>/dev/null || true
+            
+            # Verify installation - check each package was installed correctly
+            log_info "[DEBUG] Verifying package installation..."
+            local failed_packages=""
+            for pkg in $packages_to_install; do
+                if ! dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q "install ok installed"; then
+                    failed_packages="$failed_packages $pkg"
+                fi
+            done
+            
+            if [ -n "$failed_packages" ]; then
+                log_warning "Some packages failed to install: $failed_packages"
+                log_warning "Attempting to fix and reinstall failed packages..."
+                # Try to fix broken packages
+                dpkg --configure -a 2>/dev/null || true
+                apt-get install -f -y -qq 2>/dev/null || true
+                
+                # Retry failed packages one by one
+                for pkg in $failed_packages; do
+                    ensure_swap_active
+                    log_info "Retrying installation of $pkg..."
+                    run_with_progress "Installing $pkg (retry)" "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends $pkg" || {
+                        log_warning "Gagal install $pkg dengan --no-install-recommends, mencoba tanpa flag..."
+                        check_and_install "$pkg"
+                    }
+                done
+            else
+                log_info "[DEBUG] All packages verified successfully"
+            fi
+        else
             log_warning "Batch install gagal, mencoba install satu per satu..."
+            # Fix broken packages before retry
+            log_info "[DEBUG] Fixing broken packages before retry..."
+            dpkg --configure -a 2>/dev/null || true
+            apt-get install -f -y -qq 2>/dev/null || true
+            
             # Fallback: install one by one if batch fails
             for pkg in $packages_to_install; do
                 ensure_swap_active
@@ -455,11 +499,22 @@ batch_install_packages() {
                     log_warning "Gagal install $pkg dengan --no-install-recommends, mencoba tanpa flag..."
                     check_and_install "$pkg"
                 }
+                
+                # Verify each package after install
+                if ! dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q "install ok installed"; then
+                    log_warning "Package $pkg verification failed, attempting fix..."
+                    dpkg --configure -a 2>/dev/null || true
+                    apt-get install -f -y -qq 2>/dev/null || true
+                fi
             done
-        }
+        fi
         
-        # Clean apt cache after installation to free memory
-        apt-get clean -qq 2>/dev/null || true
+        # Final verification and cleanup
+        log_info "[DEBUG] Final package verification..."
+        dpkg --configure -a 2>/dev/null || true
+        
+        # Clean apt cache after installation to free memory (using safe method)
+        safe_apt_clean 100
     else
         log_info "Semua $description sudah terinstal"
     fi
