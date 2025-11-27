@@ -349,6 +349,9 @@ OUTPUT OPTIONS:
   --dry-run, --test         Dry-run mode: show what would be executed without
                            actually making any system changes (safe for debugging)
                            Automatically enables --verbose mode
+  
+  --force-lock              Force remove stale lock file and continue
+                           Use this if script was interrupted and lock file remains
 
 SECURITY OPTIONS:
   --keep-other-users        Keep other users (don't remove them)
