@@ -529,6 +529,17 @@ setup_docker_repository() {
     # Check for both .list and .sources files (legacy support)
     if [ -f /etc/apt/sources.list.d/docker.list ] || [ -f /etc/apt/sources.list.d/docker.sources ]; then
         echo -e "${GREEN}✓ Docker repository already configured${NC}"
+        # Always refresh GPG key to ensure it's up to date
+        echo -e "${YELLOW}Refreshing Docker GPG key...${NC}"
+        if [ -f /etc/apt/keyrings/docker.asc ]; then
+            rm -f /etc/apt/keyrings/docker.asc
+        fi
+        if [ -f /etc/apt/keyrings/docker.gpg ]; then
+            rm -f /etc/apt/keyrings/docker.gpg
+        fi
+        curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
+        chmod a+r /etc/apt/keyrings/docker.asc
+        
         # If old .list file exists, remove it and use .sources format
         if [ -f /etc/apt/sources.list.d/docker.list ]; then
             echo -e "${YELLOW}Migrating to DEB822 format (.sources)...${NC}"
@@ -555,6 +566,17 @@ EOF
 
     # Create keyring directory
     install -m 0755 -d /etc/apt/keyrings
+
+    # Remove old Docker GPG key if exists (for clean reinstall)
+    if [ -f /etc/apt/keyrings/docker.asc ]; then
+        echo -e "${YELLOW}Removing old Docker GPG key...${NC}"
+        rm -f /etc/apt/keyrings/docker.asc
+    fi
+    # Also check for .gpg extension (alternative format)
+    if [ -f /etc/apt/keyrings/docker.gpg ]; then
+        echo -e "${YELLOW}Removing old Docker GPG key (.gpg)...${NC}"
+        rm -f /etc/apt/keyrings/docker.gpg
+    fi
 
     # Add Docker GPG key
     echo -e "${YELLOW}Adding Docker GPG key...${NC}"
