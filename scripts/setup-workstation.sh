@@ -526,8 +526,14 @@ setup_docker_repository() {
     echo -e "${GREEN}Setting up Docker repository...${NC}"
 
     # Check if repository already configured
-    if [ -f /etc/apt/sources.list.d/docker.sources ]; then
+    # Check for both .list and .sources files (legacy support)
+    if [ -f /etc/apt/sources.list.d/docker.list ] || [ -f /etc/apt/sources.list.d/docker.sources ]; then
         echo -e "${GREEN}✓ Docker repository already configured${NC}"
+        # Clean up malformed .sources file if it exists
+        if [ -f /etc/apt/sources.list.d/docker.sources ]; then
+            echo -e "${YELLOW}Cleaning up old Docker repository configuration...${NC}"
+            rm -f /etc/apt/sources.list.d/docker.sources
+        fi
         return 0
     fi
 
@@ -548,8 +554,12 @@ setup_docker_repository() {
     # Add Docker repository
     echo -e "${YELLOW}Adding Docker repository...${NC}"
     . /etc/os-release
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian ${VERSION_CODENAME} stable" | \
-        tee /etc/apt/sources.list.d/docker.sources > /dev/null
+    
+    # Use .list format instead of .sources for compatibility
+    # Format: deb [arch=ARCH signed-by=KEYRING] URL SUITE COMPONENT
+    cat > /etc/apt/sources.list.d/docker.list <<EOF
+deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian ${VERSION_CODENAME} stable
+EOF
 
     # Update APT
     echo -e "${YELLOW}Updating package list...${NC}"
