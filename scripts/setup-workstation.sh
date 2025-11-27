@@ -147,7 +147,15 @@ get_user_inputs() {
     # Initialize CUSTOM_PASS to empty string to avoid unbound variable error
     CUSTOM_PASS=""
     while [[ -z "$CUSTOM_PASS" ]]; do
-        read -sp "Password: " CUSTOM_PASS
+        # Use /dev/tty to ensure we read from the terminal, not from stdin (important for piped scripts)
+        # This is necessary when script is run via: curl ... | bash
+        if [ -t 0 ] && [ -t 1 ]; then
+            # Interactive terminal - use standard read
+            read -sp "Password: " CUSTOM_PASS
+        else
+            # Non-interactive or piped - force reading from terminal
+            read -sp "Password: " CUSTOM_PASS < /dev/tty
+        fi
         echo ""  # Newline after hidden input
         if [[ -z "$CUSTOM_PASS" ]]; then
             echo -e "${RED}Password cannot be empty. Please enter a password.${NC}"
@@ -155,8 +163,12 @@ get_user_inputs() {
     done
 
     # Confirm password
-    local pass_confirm
-    read -sp "Confirm password: " pass_confirm
+    local pass_confirm=""
+    if [ -t 0 ] && [ -t 1 ]; then
+        read -sp "Confirm password: " pass_confirm
+    else
+        read -sp "Confirm password: " pass_confirm < /dev/tty
+    fi
     echo ""
     if [[ "$CUSTOM_PASS" != "$pass_confirm" ]]; then
         echo -e "${RED}Passwords do not match. Please try again.${NC}"
