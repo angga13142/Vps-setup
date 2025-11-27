@@ -1,91 +1,53 @@
-# Implementation Plan: Mobile-Ready Coding Workstation Installation Script
+# Implementation Plan: [FEATURE]
 
-**Branch**: `001-mobile-workstation-setup` | **Date**: 2025-01-27 | **Spec**: [spec.md](./spec.md)
-**Input**: Feature specification from `/specs/001-mobile-workstation-setup/spec.md`
+**Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
+**Input**: Feature specification from `/specs/[###-feature-name]/spec.md`
 
 **Note**: This template is filled in by the `/speckit.plan` command. See `.specify/templates/commands/plan.md` for the execution workflow.
 
 ## Summary
 
-A comprehensive, idempotent Bash installation script that automates the setup of a mobile-ready coding workstation on Debian 13 (Trixie). The script follows DevOps best practices with modular functions, interactive user input, enhanced terminal aesthetics, mobile-optimized desktop environment, and a complete development stack. The implementation uses proven patterns for error handling, idempotency checks, and user environment configuration.
+[Extract from feature spec: primary requirement + technical approach from research]
 
 ## Technical Context
 
-**Language/Version**: Bash 5.2+ (Debian 13 default)  
-**Primary Dependencies**: 
-- System packages: `curl`, `git`, `htop`, `vim`, `build-essential`, `xfce4`, `xrdp`, `docker-ce`, `docker-compose-plugin`, `firefox-esr`, `chromium`
-- User-space tools: NVM (Node Version Manager) for Node.js LTS, Python 3 (system default)
-- Configuration tools: `xfconf-query` for XFCE settings, `hostnamectl` for hostname management
+<!--
+  ACTION REQUIRED: Replace the content in this section with the technical details
+  for the project. The structure here is presented in advisory capacity to guide
+  the iteration process.
+-->
 
-**Storage**: File-based configuration:
-- User home directory: `/home/$CUSTOM_USER/.bashrc` (shell configuration)
-- System configuration: `/etc/hostname` (hostname), `/etc/apt/sources.list.d/` (Docker repository)
-- XFCE user settings: `~/.config/xfce4/` (desktop configuration)
-
-**Testing**: Manual testing on fresh Debian 13 installations; validation through acceptance scenarios from spec
-
-**Target Platform**: Debian 13 (Trixie) - 64-bit amd64 architecture  
-**Project Type**: Single standalone installation script (bash automation)  
-**Performance Goals**: Complete installation in under 15 minutes on standard VPS hardware  
-**Constraints**: 
-- Must be idempotent (safe to re-run)
-- Requires root/sudo privileges for system-level changes
-- Network connectivity required for package downloads
-- Minimum 2GB RAM, 10GB disk space recommended
-
-**Scale/Scope**: Single-server installation script targeting one user account per execution
+**Language/Version**: [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION]  
+**Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]  
+**Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]  
+**Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIFICATION]  
+**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
+**Project Type**: [single/web/mobile - determines source structure]  
+**Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]  
+**Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]  
+**Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
 
 ## Constitution Check
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-✅ **Idempotency & Safety**: 
-- Script uses `set -e` for error safety
-- All functions check for existing packages/configurations before acting
-- Idempotency verified through existence checks (e.g., `command -v`, `dpkg -l`, file existence)
+Verify compliance with all constitution principles:
+- **Idempotency & Safety**: Scripts must be re-runnable; use `set -e`; check before acting
+- **Interactive UX**: No hardcoded credentials; prompt for Username, Password, Hostname
+- **Aesthetic Excellence**: Enhanced shell prompt with colors, structure, Git awareness
+- **Mobile-First Optimization**: GUI (XFCE) must have large fonts (DPI scaling) and large icons
+- **Clean Architecture**: Use Docker for services; use version managers (NVM) for languages
+- **Modularity**: Code separated into distinct functions (e.g., `get_user_inputs`, `setup_shell_aesthetics`)
+- **Target Platform**: Debian 13 (Trixie) compatibility verified
 
-✅ **Interactive UX**: 
-- No hardcoded credentials
-- Interactive prompts for Username, Password, Hostname at script start
-- Password input uses `read -s` for silent input
-
-✅ **Aesthetic Excellence**: 
-- Custom PS1 prompt with colors (neon green, blue, yellow)
-- Git branch detection via `parse_git_branch()` function
-- Structured prompt format: `[User@Hostname] [CurrentDir] [GitBranch] $`
-
-✅ **Mobile-First Optimization**: 
-- XFCE font size set to 12-13pt via `xfconf-query`
-- Desktop icon size set to 48
-- Panel size set to 48px height
-
-✅ **Clean Architecture**: 
-- Docker used for containerized services
-- NVM used for Node.js (user-space version manager)
-- Python uses system installation (Debian 13 default)
-
-✅ **Modularity**: 
-- Code organized into distinct functions:
-  - `get_user_inputs()` - Interactive input collection
-  - `system_prep()` - System preparation and hostname
-  - `setup_desktop_mobile()` - XFCE and XRDP installation
-  - `create_user_and_shell()` - User creation and shell configuration
-  - `setup_dev_stack()` - Docker, browsers, Node.js, Python
-  - `finalize()` - Cleanup and summary output
-
-✅ **Target Platform**: 
-- Debian 13 (Trixie) compatibility verified
-- OS version check at script start
-- Package names validated for Debian 13 repositories
-
-**No violations detected** - All constitution principles are satisfied.
+Any violations must be justified in Complexity Tracking section below.
 
 ## Project Structure
 
 ### Documentation (this feature)
 
 ```text
-specs/001-mobile-workstation-setup/
+specs/[###-feature]/
 ├── plan.md              # This file (/speckit.plan command output)
 ├── research.md          # Phase 0 output (/speckit.plan command)
 ├── data-model.md        # Phase 1 output (/speckit.plan command)
@@ -95,14 +57,57 @@ specs/001-mobile-workstation-setup/
 ```
 
 ### Source Code (repository root)
+<!--
+  ACTION REQUIRED: Replace the placeholder tree below with the concrete layout
+  for this feature. Delete unused options and expand the chosen structure with
+  real paths (e.g., apps/admin, packages/something). The delivered plan must
+  not include Option labels.
+-->
 
 ```text
-scripts/
-└── setup-workstation.sh  # Main installation script
+# [REMOVE IF UNUSED] Option 1: Single project (DEFAULT)
+src/
+├── models/
+├── services/
+├── cli/
+└── lib/
+
+tests/
+├── contract/
+├── integration/
+└── unit/
+
+# [REMOVE IF UNUSED] Option 2: Web application (when "frontend" + "backend" detected)
+backend/
+├── src/
+│   ├── models/
+│   ├── services/
+│   └── api/
+└── tests/
+
+frontend/
+├── src/
+│   ├── components/
+│   ├── pages/
+│   └── services/
+└── tests/
+
+# [REMOVE IF UNUSED] Option 3: Mobile + API (when "iOS/Android" detected)
+api/
+└── [same as backend above]
+
+ios/ or android/
+└── [platform-specific structure: feature modules, UI flows, platform tests]
 ```
 
-**Structure Decision**: Single standalone Bash script at repository root under `scripts/` directory. This follows the constitution's modularity principle by organizing the script into distinct functions while keeping it as a single executable file for simplicity and portability.
+**Structure Decision**: [Document the selected structure and reference the real
+directories captured above]
 
 ## Complexity Tracking
 
-> **No violations** - All constitution principles are satisfied without requiring complexity justification.
+> **Fill ONLY if Constitution Check has violations that must be justified**
+
+| Violation | Why Needed | Simpler Alternative Rejected Because |
+|-----------|------------|-------------------------------------|
+| [e.g., 4th project] | [current need] | [why 3 projects insufficient] |
+| [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient] |
