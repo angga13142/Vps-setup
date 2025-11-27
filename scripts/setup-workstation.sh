@@ -529,10 +529,19 @@ setup_docker_repository() {
     # Check for both .list and .sources files (legacy support)
     if [ -f /etc/apt/sources.list.d/docker.list ] || [ -f /etc/apt/sources.list.d/docker.sources ]; then
         echo -e "${GREEN}✓ Docker repository already configured${NC}"
-        # Clean up malformed .sources file if it exists
-        if [ -f /etc/apt/sources.list.d/docker.sources ]; then
-            echo -e "${YELLOW}Cleaning up old Docker repository configuration...${NC}"
-            rm -f /etc/apt/sources.list.d/docker.sources
+        # If old .list file exists, remove it and use .sources format
+        if [ -f /etc/apt/sources.list.d/docker.list ]; then
+            echo -e "${YELLOW}Migrating to DEB822 format (.sources)...${NC}"
+            rm -f /etc/apt/sources.list.d/docker.list
+            # Recreate with proper format
+            . /etc/os-release
+            cat > /etc/apt/sources.list.d/docker.sources <<EOF
+Types: deb
+URIs: https://download.docker.com/linux/debian
+Suites: ${VERSION_CODENAME} stable
+Architectures: $(dpkg --print-architecture)
+Signed-By: /etc/apt/keyrings/docker.asc
+EOF
         fi
         return 0
     fi
@@ -555,10 +564,14 @@ setup_docker_repository() {
     echo -e "${YELLOW}Adding Docker repository...${NC}"
     . /etc/os-release
     
-    # Use .list format instead of .sources for compatibility
-    # Format: deb [arch=ARCH signed-by=KEYRING] URL SUITE COMPONENT
-    cat > /etc/apt/sources.list.d/docker.list <<EOF
-deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian ${VERSION_CODENAME} stable
+    # Use DEB822 format (.sources) as per official Docker documentation
+    # Reference: https://docs.docker.com/engine/install/debian/
+    cat > /etc/apt/sources.list.d/docker.sources <<EOF
+Types: deb
+URIs: https://download.docker.com/linux/debian
+Suites: ${VERSION_CODENAME} stable
+Architectures: $(dpkg --print-architecture)
+Signed-By: /etc/apt/keyrings/docker.asc
 EOF
 
     # Update APT
