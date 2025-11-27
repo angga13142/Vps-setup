@@ -133,13 +133,22 @@ get_user_inputs() {
     echo ""
 
     # Username prompt with default
-    read -p "Username [coder]: " CUSTOM_USER
+    # Use /dev/tty to ensure we read from the terminal when script is piped
+    if [ -t 0 ] && [ -t 1 ]; then
+        read -p "Username [coder]: " CUSTOM_USER
+    else
+        read -p "Username [coder]: " CUSTOM_USER < /dev/tty
+    fi
     CUSTOM_USER=${CUSTOM_USER:-coder}
 
     # Validate username (alphanumeric, underscore, hyphen)
     while [[ ! "$CUSTOM_USER" =~ ^[a-zA-Z0-9_-]+$ ]]; do
         echo -e "${RED}Invalid username. Use only alphanumeric characters, underscore, or hyphen.${NC}"
-        read -p "Username [coder]: " CUSTOM_USER
+        if [ -t 0 ] && [ -t 1 ]; then
+            read -p "Username [coder]: " CUSTOM_USER
+        else
+            read -p "Username [coder]: " CUSTOM_USER < /dev/tty
+        fi
         CUSTOM_USER=${CUSTOM_USER:-coder}
     done
 
@@ -178,14 +187,23 @@ get_user_inputs() {
     # Hostname prompt
     # Initialize CUSTOM_HOSTNAME to empty string to avoid unbound variable error
     CUSTOM_HOSTNAME=""
-    read -p "Hostname (e.g., my-vps): " CUSTOM_HOSTNAME
+    # Use /dev/tty to ensure we read from the terminal when script is piped
+    if [ -t 0 ] && [ -t 1 ]; then
+        read -p "Hostname (e.g., my-vps): " CUSTOM_HOSTNAME
+    else
+        read -p "Hostname (e.g., my-vps): " CUSTOM_HOSTNAME < /dev/tty
+    fi
     while [[ -z "$CUSTOM_HOSTNAME" ]] || ! validate_hostname "$CUSTOM_HOSTNAME"; do
         if [[ -z "$CUSTOM_HOSTNAME" ]]; then
             echo -e "${RED}Hostname cannot be empty.${NC}"
         else
             echo -e "${RED}Invalid hostname format. Use alphanumeric characters and hyphens only.${NC}"
         fi
-        read -p "Hostname (e.g., my-vps): " CUSTOM_HOSTNAME
+        if [ -t 0 ] && [ -t 1 ]; then
+            read -p "Hostname (e.g., my-vps): " CUSTOM_HOSTNAME
+        else
+            read -p "Hostname (e.g., my-vps): " CUSTOM_HOSTNAME < /dev/tty
+        fi
     done
 
     # Confirmation prompt
@@ -194,7 +212,12 @@ get_user_inputs() {
     echo "  Username: $CUSTOM_USER"
     echo "  Hostname: $CUSTOM_HOSTNAME"
     echo ""
-    read -p "Proceed with installation? (yes/no): " confirm
+    # Use /dev/tty to ensure we read from the terminal when script is piped
+    if [ -t 0 ] && [ -t 1 ]; then
+        read -p "Proceed with installation? (yes/no): " confirm
+    else
+        read -p "Proceed with installation? (yes/no): " confirm < /dev/tty
+    fi
     if [[ ! "$confirm" =~ ^[Yy][Ee][Ss]$ ]]; then
         echo -e "${YELLOW}Installation cancelled.${NC}"
         return 1
