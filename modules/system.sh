@@ -108,15 +108,67 @@ setup_system() {
     
     # Install all missing packages in one batch with memory optimizations
     if [ -n "$packages_to_install" ]; then
-        run_with_progress "Installing essential packages: $packages_to_install" "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends $packages_to_install" || {
+        # Fix any existing broken packages before installation
+        log_info "[DEBUG] Checking for broken packages before installation..."
+        dpkg --configure -a 2>/dev/null || true
+        apt-get install -f -y -qq 2>/dev/null || true
+        
+        if run_with_progress "Installing essential packages: $packages_to_install" "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends $packages_to_install"; then
+            # Fix any broken packages after installation (prevent segmentation fault)
+            log_info "[DEBUG] Fixing any broken packages after installation..."
+            dpkg --configure -a 2>/dev/null || true
+            apt-get install -f -y -qq 2>/dev/null || true
+            
+            # Verify all packages were installed correctly
+            log_info "[DEBUG] Verifying essential packages installation..."
+            local failed_packages=""
+            for pkg in $packages_to_install; do
+                if ! dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q "install ok installed"; then
+                    failed_packages="$failed_packages $pkg"
+                fi
+            done
+            
+            if [ -n "$failed_packages" ]; then
+                log_warning "Some essential packages failed to install: $failed_packages"
+                log_warning "Attempting to fix and reinstall..."
+                dpkg --configure -a 2>/dev/null || true
+                apt-get install -f -y -qq 2>/dev/null || true
+                
+                # Retry failed packages
+                for pkg in $failed_packages; do
+                    ensure_swap_active
+                    log_info "Retrying installation of $pkg..."
+                    check_and_install "$pkg"
+                done
+            else
+                log_info "[DEBUG] All essential packages verified successfully"
+            fi
+        else
             log_warning "Batch install gagal, mencoba install satu per satu..."
+            # Fix broken packages before retry
+            dpkg --configure -a 2>/dev/null || true
+            apt-get install -f -y -qq 2>/dev/null || true
+            
             # Fallback: install one by one if batch fails
             for pkg in $packages_to_install; do
+                ensure_swap_active
                 check_and_install "$pkg"
+                
+                # Verify each package after install
+                if ! dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q "install ok installed"; then
+                    log_warning "Package $pkg verification failed, attempting fix..."
+                    dpkg --configure -a 2>/dev/null || true
+                    apt-get install -f -y -qq 2>/dev/null || true
+                fi
             done
-        }
-        # Clean cache after installation
-        apt-get clean -qq 2>/dev/null || true
+        fi
+        
+        # Final verification and cleanup
+        log_info "[DEBUG] Final verification of essential packages..."
+        dpkg --configure -a 2>/dev/null || true
+        
+        # Clean cache after installation (using safe method)
+        safe_apt_clean 100
     else
         log_info "Semua essential packages sudah terinstal"
     fi
