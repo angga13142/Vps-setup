@@ -144,6 +144,8 @@ get_user_inputs() {
     done
 
     # Password prompt with hidden input
+    # Initialize CUSTOM_PASS to empty string to avoid unbound variable error
+    CUSTOM_PASS=""
     while [[ -z "$CUSTOM_PASS" ]]; do
         read -sp "Password: " CUSTOM_PASS
         echo ""  # Newline after hidden input
@@ -162,6 +164,8 @@ get_user_inputs() {
     fi
 
     # Hostname prompt
+    # Initialize CUSTOM_HOSTNAME to empty string to avoid unbound variable error
+    CUSTOM_HOSTNAME=""
     read -p "Hostname (e.g., my-vps): " CUSTOM_HOSTNAME
     while [[ -z "$CUSTOM_HOSTNAME" ]] || ! validate_hostname "$CUSTOM_HOSTNAME"; do
         if [[ -z "$CUSTOM_HOSTNAME" ]]; then
