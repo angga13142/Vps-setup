@@ -14,53 +14,113 @@ check_root() {
 }
 
 check_lock() {
+    log_info "[DEBUG] Checking for existing lock file: $LOCK_FILE"
+    
     if [ -f "$LOCK_FILE" ]; then
         local pid
         pid=$(cat "$LOCK_FILE" 2>/dev/null || echo "unknown")
         
+        log_info "[DEBUG] Lock file found with PID: $pid"
+        
         # Check if --force-lock option is set
         if [ "${FORCE_LOCK:-false}" = "true" ]; then
+            log_warning "=== Force Lock Removal ==="
             log_warning "Force removing lock file (--force-lock option enabled)..."
+            log_warning "Lock file: $LOCK_FILE"
+            log_warning "Previous PID: $pid"
             rm -f "$LOCK_FILE"
-            log_info "Lock file removed. Continuing..."
+            log_success "Lock file removed successfully"
+            log_info "Continuing with installation..."
         else
             # Check if PID is still running
             if [ "$pid" != "unknown" ] && [ -n "$pid" ]; then
+                log_info "[DEBUG] Checking if PID $pid is still running..."
+                
                 # Check if process exists and is actually our script
                 if kill -0 "$pid" 2>/dev/null; then
                     # Process is running - check if it's actually our script
                     local proc_cmd
                     proc_cmd=$(ps -p "$pid" -o cmd= 2>/dev/null || echo "")
+                    local proc_stat
+                    proc_stat=$(ps -p "$pid" -o stat= 2>/dev/null || echo "")
+                    local proc_time
+                    proc_time=$(ps -p "$pid" -o etime= 2>/dev/null || echo "")
+                    
+                    log_info "[DEBUG] Process found:"
+                    log_info "[DEBUG]   PID: $pid"
+                    log_info "[DEBUG]   Command: $proc_cmd"
+                    log_info "[DEBUG]   Status: $proc_stat"
+                    log_info "[DEBUG]   Runtime: $proc_time"
+                    
                     if echo "$proc_cmd" | grep -q "setup.sh\|bootstrap.sh"; then
-                        log_error "Script sudah berjalan (PID: $pid)"
-                        log_error "Command: $proc_cmd"
-                        log_error "Jika yakin tidak ada instance lain, gunakan: --force-lock"
+                        log_error "=== Lock File Conflict Detected ==="
+                        log_error "Script sudah berjalan dengan PID: $pid"
+                        log_error "Lock file: $LOCK_FILE"
+                        log_error ""
+                        log_error "Process Details:"
+                        log_error "  PID: $pid"
+                        log_error "  Command: $proc_cmd"
+                        log_error "  Status: $proc_stat"
+                        log_error "  Runtime: $proc_time"
+                        log_error ""
+                        log_error "Solusi:"
+                        log_error "  1. Tunggu script sebelumnya selesai, atau"
+                        log_error "  2. Jika yakin tidak ada instance lain, gunakan:"
+                        log_error "     sudo ./setup.sh --force-lock"
+                        log_error "  3. Atau hapus manual:"
+                        log_error "     sudo rm $LOCK_FILE"
                         exit 1
                     else
                         # PID exists but not our script - stale lock file
+                        log_warning "=== Stale Lock File Detected ==="
                         log_warning "Lock file ditemukan dengan PID $pid, tapi bukan script ini"
-                        log_warning "PID $pid adalah: $proc_cmd"
+                        log_warning "Lock file: $LOCK_FILE"
+                        log_warning "PID $pid adalah process lain: $proc_cmd"
+                        log_warning "Status: $proc_stat"
+                        log_warning ""
                         log_warning "Menghapus stale lock file..."
                         rm -f "$LOCK_FILE"
+                        log_success "Stale lock file removed successfully"
                     fi
                 else
                     # PID not running - stale lock file
-                    log_warning "Lock file ditemukan dengan PID $pid, tapi process tidak berjalan (stale lock)"
+                    log_warning "=== Stale Lock File Detected ==="
+                    log_warning "Lock file ditemukan dengan PID $pid, tapi process tidak berjalan"
+                    log_warning "Lock file: $LOCK_FILE"
+                    log_warning "PID: $pid (process tidak ditemukan)"
+                    log_warning ""
+                    log_warning "Kemungkinan: Script sebelumnya crash atau di-interrupt"
                     log_warning "Menghapus stale lock file..."
                     rm -f "$LOCK_FILE"
+                    log_success "Stale lock file removed successfully"
                 fi
             else
                 # Invalid PID in lock file - stale lock file
-                log_warning "Lock file ditemukan tapi berisi PID yang tidak valid: '$pid'"
-                log_warning "Menghapus stale lock file..."
+                log_warning "=== Invalid Lock File Detected ==="
+                log_warning "Lock file ditemukan tapi berisi PID yang tidak valid"
+                log_warning "Lock file: $LOCK_FILE"
+                log_warning "PID value: '$pid' (invalid)"
+                log_warning ""
+                log_warning "Menghapus invalid lock file..."
                 rm -f "$LOCK_FILE"
+                log_success "Invalid lock file removed successfully"
             fi
         fi
+    else
+        log_info "[DEBUG] No existing lock file found"
     fi
     
     # Create new lock file
+    log_info "[DEBUG] Creating new lock file..."
     echo $$ > "$LOCK_FILE"
-    log_info "[DEBUG] Lock file created: $LOCK_FILE (PID: $$)"
+    if [ -f "$LOCK_FILE" ]; then
+        log_info "[DEBUG] Lock file created successfully: $LOCK_FILE"
+        log_info "[DEBUG] Current PID: $$"
+        log_success "Lock file created (PID: $$)"
+    else
+        log_error "Failed to create lock file: $LOCK_FILE"
+        exit 1
+    fi
 }
 
 check_disk_space() {
