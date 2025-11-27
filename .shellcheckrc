@@ -1,0 +1,16 @@
+# ShellCheck Configuration
+# Project: Mobile-Ready Coding Workstation Setup Script
+
+# Shell dialect
+shell=bash
+
+# Disable external sources (for security)
+external-sources=false
+
+# Severity levels
+# error: Issues that are likely to cause bugs or security problems
+# warning: Issues that may cause problems but are not critical
+# info: Style suggestions and best practices
+
+# Enable all checks by default
+# Use # shellcheck disable=SC#### for intentional violations

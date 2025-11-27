@@ -236,14 +236,13 @@ Each test must include:
     # Preconditions: None (function is self-contained)
     # Expected: User is created, password is set
     # Assertions: User exists, can login
-    
+
     run create_user "testuser" "testpass123"
     assert_success
     assert_output --partial "User created"
-    
+
     # Verify user exists
     id testuser
     assert_success
 }
 ```
-

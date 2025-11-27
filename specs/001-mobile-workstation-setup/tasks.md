@@ -258,4 +258,3 @@ Since this is a single script with function dependencies:
 - Script must be executable: `chmod +x scripts/setup-workstation.sh`
 - Test on fresh Debian 13 (Trixie) installation
 - Verify script can be safely re-run (idempotency)
-

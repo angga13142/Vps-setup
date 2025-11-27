@@ -12,7 +12,7 @@ A comprehensive development infrastructure improvement for the workstation setup
 ## Technical Context
 
 **Language/Version**: Bash 5.2+ (Debian 13 default), Python 3.11+ (for pre-commit), YAML (for GitHub Actions)  
-**Primary Dependencies**: 
+**Primary Dependencies**:
 - **Linting**: ShellCheck (via APT: `shellcheck`)
 - **Testing**: bats-core (via APT: `bats`)
 - **CI/CD**: GitHub Actions (built-in)
@@ -26,7 +26,7 @@ A comprehensive development infrastructure improvement for the workstation setup
 - Documentation: `README.md`, `CONTRIBUTING.md` (repository root)
 - ShellCheck config: `.shellcheckrc` (optional, repository root)
 
-**Testing**: 
+**Testing**:
 - Unit tests: bats-core for function-level testing
 - Integration tests: bats-core for end-to-end script execution
 - Idempotency tests: bats-core for verifying re-run safety
@@ -34,20 +34,20 @@ A comprehensive development infrastructure improvement for the workstation setup
 
 **Target Platform**: Debian 13 (Trixie) - 64-bit amd64 architecture  
 **Project Type**: Development infrastructure (quality assurance tools and workflows)  
-**Performance Goals**: 
+**Performance Goals**:
 - Linting completes in < 30 seconds for all scripts
 - Test suite runs in < 5 minutes
 - CI/CD pipeline completes in < 10 minutes
 - Pre-commit hooks run in < 10 seconds
 
-**Constraints**: 
+**Constraints**:
 - All tools must be available in Debian 13 APT repositories or installable without root
 - Must not interfere with existing script functionality
 - Must be maintainable by team members
 - Pre-commit hooks must be fast enough for daily use
 - CI/CD must run on free GitHub Actions tier
 
-**Scale/Scope**: 
+**Scale/Scope**:
 - Single repository with one main script (`scripts/setup-workstation.sh`)
 - Test coverage for ~15 critical functions
 - Documentation for end users and contributors
@@ -57,37 +57,37 @@ A comprehensive development infrastructure improvement for the workstation setup
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-✅ **Idempotency & Safety**: 
+✅ **Idempotency & Safety**:
 - Testing framework will verify idempotency of all functions
 - Pre-commit hooks prevent committing code with errors
 - CI/CD ensures code quality before merge
 - All checks are re-runnable without side effects
 
-✅ **Interactive UX**: 
+✅ **Interactive UX**:
 - Documentation will guide users through installation and usage
 - Error messages in tests will be clear and actionable
 - CI/CD provides clear feedback on failures
 
-✅ **Aesthetic Excellence**: 
+✅ **Aesthetic Excellence**:
 - Documentation will be well-formatted and readable
 - Test output will be clear and organized
 - CI/CD logs will be structured for easy reading
 
-✅ **Mobile-First Optimization**: 
+✅ **Mobile-First Optimization**:
 - Not applicable (development infrastructure, not GUI)
 
-✅ **Clean Architecture**: 
+✅ **Clean Architecture**:
 - Tools installed via package managers (APT, pip)
 - No system-wide pollution
 - Test environment isolated from production
 
-✅ **Modularity**: 
+✅ **Modularity**:
 - Tests organized by function/feature
 - CI/CD jobs separated by concern (lint, test, quality)
 - Documentation organized by topic
 - Pre-commit hooks modular and configurable
 
-✅ **Target Platform**: 
+✅ **Target Platform**:
 - All tools verified for Debian 13 (Trixie) compatibility
 - ShellCheck and bats-core available in APT
 - GitHub Actions runs on Debian-based runners

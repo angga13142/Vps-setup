@@ -24,8 +24,11 @@ readonly YELLOW='\033[1;33m'
 readonly NC='\033[0m'  # No Color
 
 # Script configuration
-readonly SCRIPT_NAME=$(basename "$0")
-readonly SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
+# shellcheck disable=SC2034  # SCRIPT_NAME and SCRIPT_DIR kept for future logging/debugging
+SCRIPT_NAME=$(basename "$0")
+SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
+readonly SCRIPT_NAME
+readonly SCRIPT_DIR
 
 #######################################
 # Check if running on Debian 13 (Trixie)
@@ -39,6 +42,7 @@ check_debian_version() {
     fi
 
     # Source the os-release file
+    # shellcheck disable=SC1091  # /etc/os-release is a standard system file, safe to source
     . /etc/os-release
 
     # Check for Debian
@@ -135,9 +139,9 @@ get_user_inputs() {
     # Username prompt with default
     # Use /dev/tty to ensure we read from the terminal when script is piped
     if [ -t 0 ] && [ -t 1 ]; then
-        read -p "Username [coder]: " CUSTOM_USER
+        read -rp "Username [coder]: " CUSTOM_USER
     else
-        read -p "Username [coder]: " CUSTOM_USER < /dev/tty
+        read -rp "Username [coder]: " CUSTOM_USER < /dev/tty
     fi
     CUSTOM_USER=${CUSTOM_USER:-coder}
 
@@ -145,9 +149,9 @@ get_user_inputs() {
     while [[ ! "$CUSTOM_USER" =~ ^[a-zA-Z0-9_-]+$ ]]; do
         echo -e "${RED}Invalid username. Use only alphanumeric characters, underscore, or hyphen.${NC}"
         if [ -t 0 ] && [ -t 1 ]; then
-            read -p "Username [coder]: " CUSTOM_USER
+            read -rp "Username [coder]: " CUSTOM_USER
         else
-            read -p "Username [coder]: " CUSTOM_USER < /dev/tty
+            read -rp "Username [coder]: " CUSTOM_USER < /dev/tty
         fi
         CUSTOM_USER=${CUSTOM_USER:-coder}
     done
@@ -160,10 +164,10 @@ get_user_inputs() {
         # This is necessary when script is run via: curl ... | bash
         if [ -t 0 ] && [ -t 1 ]; then
             # Interactive terminal - use standard read
-            read -sp "Password: " CUSTOM_PASS
+            read -rsp "Password: " CUSTOM_PASS
         else
             # Non-interactive or piped - force reading from terminal
-            read -sp "Password: " CUSTOM_PASS < /dev/tty
+            read -rsp "Password: " CUSTOM_PASS < /dev/tty
         fi
         echo ""  # Newline after hidden input
         if [[ -z "$CUSTOM_PASS" ]]; then
@@ -174,9 +178,9 @@ get_user_inputs() {
     # Confirm password
     local pass_confirm=""
     if [ -t 0 ] && [ -t 1 ]; then
-        read -sp "Confirm password: " pass_confirm
+        read -rsp "Confirm password: " pass_confirm
     else
-        read -sp "Confirm password: " pass_confirm < /dev/tty
+        read -rsp "Confirm password: " pass_confirm < /dev/tty
     fi
     echo ""
     if [[ "$CUSTOM_PASS" != "$pass_confirm" ]]; then
@@ -189,9 +193,9 @@ get_user_inputs() {
     CUSTOM_HOSTNAME=""
     # Use /dev/tty to ensure we read from the terminal when script is piped
     if [ -t 0 ] && [ -t 1 ]; then
-        read -p "Hostname (e.g., my-vps): " CUSTOM_HOSTNAME
+        read -rp "Hostname (e.g., my-vps): " CUSTOM_HOSTNAME
     else
-        read -p "Hostname (e.g., my-vps): " CUSTOM_HOSTNAME < /dev/tty
+        read -rp "Hostname (e.g., my-vps): " CUSTOM_HOSTNAME < /dev/tty
     fi
     while [[ -z "$CUSTOM_HOSTNAME" ]] || ! validate_hostname "$CUSTOM_HOSTNAME"; do
         if [[ -z "$CUSTOM_HOSTNAME" ]]; then
@@ -200,9 +204,9 @@ get_user_inputs() {
             echo -e "${RED}Invalid hostname format. Use alphanumeric characters and hyphens only.${NC}"
         fi
         if [ -t 0 ] && [ -t 1 ]; then
-            read -p "Hostname (e.g., my-vps): " CUSTOM_HOSTNAME
+            read -rp "Hostname (e.g., my-vps): " CUSTOM_HOSTNAME
         else
-            read -p "Hostname (e.g., my-vps): " CUSTOM_HOSTNAME < /dev/tty
+            read -rp "Hostname (e.g., my-vps): " CUSTOM_HOSTNAME < /dev/tty
         fi
     done
 
@@ -214,9 +218,9 @@ get_user_inputs() {
     echo ""
     # Use /dev/tty to ensure we read from the terminal when script is piped
     if [ -t 0 ] && [ -t 1 ]; then
-        read -p "Proceed with installation? (yes/no): " confirm
+        read -rp "Proceed with installation? (yes/no): " confirm
     else
-        read -p "Proceed with installation? (yes/no): " confirm < /dev/tty
+        read -rp "Proceed with installation? (yes/no): " confirm < /dev/tty
     fi
     if [[ ! "$confirm" =~ ^[Yy][Ee][Ss]$ ]]; then
         echo -e "${YELLOW}Installation cancelled.${NC}"
@@ -233,7 +237,7 @@ get_user_inputs() {
 #######################################
 system_prep() {
     local hostname="$1"
-    
+
     echo -e "${GREEN}Preparing system...${NC}"
 
     # Set hostname with idempotency check
@@ -290,7 +294,7 @@ create_user() {
 
     # Create user with home directory and bash shell
     useradd -m -s /bin/bash "$username"
-    
+
     # Set password
     echo "$username:$password" | chpasswd
 
@@ -539,7 +543,7 @@ setup_docker_repository() {
         fi
         curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
         chmod a+r /etc/apt/keyrings/docker.asc
-        
+
         # If old .list file exists, remove it and use .sources format
         if [ -f /etc/apt/sources.list.d/docker.list ]; then
             echo -e "${YELLOW}Migrating to DEB822 format (.sources)...${NC}"
@@ -586,7 +590,7 @@ EOF
     # Add Docker repository
     echo -e "${YELLOW}Adding Docker repository...${NC}"
     . /etc/os-release
-    
+
     # Use DEB822 format (.sources) as per official Docker documentation
     # Reference: https://docs.docker.com/engine/install/debian/
     # Note: Components field is optional for Docker repository
@@ -881,4 +885,3 @@ main() {
 
 # Run main function
 main "$@"
-

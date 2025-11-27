@@ -207,4 +207,3 @@ Developer commits code
 - Log levels must be standardized (INFO, WARNING, ERROR, DEBUG)
 - Test coverage must meet minimum threshold (80% for critical functions)
 - CI/CD must run on Debian 13 compatible runners
-

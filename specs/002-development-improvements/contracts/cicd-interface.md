@@ -175,7 +175,7 @@ env:
 
 ### Job Failure
 
-**Behavior**: 
+**Behavior**:
 - Job stops execution
 - Subsequent steps skipped
 - Status reported as failed
@@ -262,4 +262,3 @@ permissions:
 - Review workflow run history weekly
 - Track failure rates
 - Optimize slow jobs
-
