@@ -88,10 +88,10 @@
 - [X] T033 [US2] Write test case in tests/unit/test_shell_config.bats for parse_git_branch() function
 - [X] T034 [US2] Run test suite (bats tests/) and verify all tests pass or document expected failures
 - [X] T035 [US2] Add test execution instructions to README.md or CONTRIBUTING.md
-- [ ] T108 [US2] Document explicit list of 15 critical functions requiring test coverage in CONTRIBUTING.md (FR-019)
-- [ ] T109 [US2] Verify test coverage calculation method and document in CONTRIBUTING.md (FR-035, SC-002 measurement)
-- [ ] T110 [US2] Document boundary conditions for test coverage (zero coverage, 100% coverage scenarios) in CONTRIBUTING.md (FR-023, FR-024)
-- [ ] T111 [US2] Document performance limits for large test suites (>100 tests, <10 minutes) in specs/002-development-improvements/plan.md or CONTRIBUTING.md (FR-026)
+- [X] T108 [US2] Document explicit list of 15 critical functions requiring test coverage in CONTRIBUTING.md (FR-019)
+- [X] T109 [US2] Verify test coverage calculation method and document in CONTRIBUTING.md (FR-035, SC-002 measurement)
+- [X] T110 [US2] Document boundary conditions for test coverage (zero coverage, 100% coverage scenarios) in CONTRIBUTING.md (FR-023, FR-024)
+- [X] T111 [US2] Document performance limits for large test suites (>100 tests, <10 minutes) in specs/002-development-improvements/plan.md or CONTRIBUTING.md (FR-026)
 
 **Checkpoint**: At this point, User Story 2 should be fully functional. Test suite exists for critical functions, idempotency is verified, and tests can be run locally and in CI.
 
@@ -128,14 +128,14 @@
 - [X] T056 [US3] Add troubleshooting entry for XFCE configuration not applying in docs/troubleshooting.md
 - [X] T057 [US3] Link troubleshooting guide from README.md
 - [X] T058 [US3] Create CHANGELOG.md at repository root with semantic versioning format
-- [ ] T112 [US3] Verify README.md contains all mandatory sections: Overview, Installation, Quick Start, Features, Usage, Troubleshooting, Contributing (FR-036)
-- [ ] T113 [US3] Verify CONTRIBUTING.md contains all mandatory sections: Development Workflow, Coding Standards, Testing Guidelines, Pull Request Process (FR-037)
-- [ ] T114 [US3] Verify troubleshooting guide covers at least 5 common issues in docs/troubleshooting.md (FR-038)
-- [ ] T115 [US3] Document explicit list of public functions requiring documentation in CONTRIBUTING.md (FR-020)
-- [ ] T116 [US3] Document documentation update process (review on each PR, major update quarterly) in CONTRIBUTING.md (FR-033)
-- [ ] T117 [US3] Document developer workflow requirements (install tools → write code → lint → test → commit) in CONTRIBUTING.md (FR-034)
-- [ ] T118 [US3] Document version compatibility requirements (ShellCheck >=0.9.0, bats >=1.10.0) in README.md installation section (FR-027, FR-028)
-- [ ] T119 [US3] Document measurement methods for all success criteria (SC-001 through SC-010) in CONTRIBUTING.md or docs/measurement-methods.md (FR-035)
+- [X] T112 [US3] Verify README.md contains all mandatory sections: Overview, Installation, Quick Start, Features, Usage, Troubleshooting, Contributing (FR-036)
+- [X] T113 [US3] Verify CONTRIBUTING.md contains all mandatory sections: Development Workflow, Coding Standards, Testing Guidelines, Pull Request Process (FR-037)
+- [X] T114 [US3] Verify troubleshooting guide covers at least 5 common issues in docs/troubleshooting.md (FR-038)
+- [X] T115 [US3] Document explicit list of public functions requiring documentation in CONTRIBUTING.md (FR-020)
+- [X] T116 [US3] Document documentation update process (review on each PR, major update quarterly) in CONTRIBUTING.md (FR-033)
+- [X] T117 [US3] Document developer workflow requirements (install tools → write code → lint → test → commit) in CONTRIBUTING.md (FR-034)
+- [X] T118 [US3] Document version compatibility requirements (ShellCheck >=0.9.0, bats >=1.10.0) in README.md installation section (FR-027, FR-028)
+- [X] T119 [US3] Document measurement methods for all success criteria (SC-001 through SC-010) in CONTRIBUTING.md or docs/measurement-methods.md (FR-035)
 
 **Checkpoint**: At this point, User Story 3 should be fully functional. README enables new users to install and run script, all functions are documented, troubleshooting guide exists, and contribution guidelines are clear.
 

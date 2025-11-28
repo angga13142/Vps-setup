@@ -37,7 +37,8 @@ A comprehensive development infrastructure improvement for the workstation setup
 **Project Type**: Development infrastructure (quality assurance tools and workflows)  
 **Performance Goals**:
 - Linting completes in < 30 seconds for all scripts
-- Test suite runs in < 5 minutes
+- Test suite runs in < 5 minutes (normal test suite)
+- Large test suites (>100 tests): < 10 minutes execution time (FR-026)
 - CI/CD pipeline completes in < 10 minutes
 - Pre-commit hooks run in < 10 seconds
 
@@ -213,6 +214,16 @@ See `quickstart.md` for:
   3. Use parallel test execution where possible
   4. Cache dependencies in CI/CD
   5. Consider selective linting for very large files
+
+**Large Test Suite Performance Limits** (FR-026):
+- **Normal test suite** (<100 tests): Target < 5 minutes execution time
+- **Large test suite** (>100 tests): Target < 10 minutes execution time (2x normal limit)
+- **Strategy for large suites**:
+  - Use test tags to run subsets during development (`bats --filter-tags unit tests/`)
+  - Full suite runs in CI/CD only
+  - Monitor execution time in CI/CD logs
+  - If exceeding limits, review test structure for optimization opportunities
+  - Consider splitting large test files if execution time becomes problematic
 
 **Version Compatibility Strategy**:
 - Pin minimum versions in documentation

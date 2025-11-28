@@ -25,6 +25,17 @@ This script transforms a fresh Debian 13 installation into a fully configured de
 - **Network**: Internet connection for package downloads
 - **Storage**: At least 10GB free disk space
 
+### Version Compatibility (FR-027, FR-028)
+
+The following tools are required for development and testing:
+
+- **ShellCheck**: >=0.9.0 (available in Debian 13 APT)
+- **bats-core**: >=1.10.0 (available in Debian 13 APT)
+- **pre-commit**: >=3.0.0 (via pip)
+- **Python**: >=3.11+ (for pre-commit framework)
+
+All versions are documented in installation instructions and verified during setup.
+
 ## Installation
 
 ### Quick Start

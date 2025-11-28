@@ -4,6 +4,37 @@ Thank you for your interest in contributing to the Mobile-Ready Coding Workstati
 
 ## Development Workflow
 
+### Developer Workflow Requirements (FR-034)
+
+The standard developer workflow follows this sequence:
+
+1. **Install tools** → Install required development tools (ShellCheck, bats-core, pre-commit)
+2. **Write code** → Make your changes following coding standards
+3. **Lint** → Run ShellCheck to verify code quality
+4. **Test** → Run test suite to verify functionality
+5. **Commit** → Commit changes (pre-commit hooks run automatically)
+
+**Example workflow**:
+```bash
+# 1. Install tools (one-time setup)
+sudo apt install shellcheck bats
+pipx install pre-commit
+pre-commit install
+
+# 2. Write code
+vim scripts/setup-workstation.sh
+
+# 3. Lint
+shellcheck scripts/setup-workstation.sh
+
+# 4. Test
+sudo bats tests/
+
+# 5. Commit (hooks run automatically)
+git add scripts/setup-workstation.sh
+git commit -m "feat: Add new feature"
+```
+
 ### Prerequisites
 
 Before contributing, ensure you have the following tools installed:
@@ -147,6 +178,195 @@ The test suite is organized into:
 - **Integration tests** (`tests/integration/`): Test script execution end-to-end
   - `test_idempotency.bats` - Verify functions can run multiple times safely
   - `test_full_installation.bats` - End-to-end script execution
+
+### Test Coverage Requirements (FR-019)
+
+**Critical Functions** (explicit list requiring 80% test coverage):
+
+The following 15 functions are considered critical and must have test coverage:
+
+1. `create_user()` - User account creation
+2. `setup_docker_repository()` - Docker repository configuration
+3. `install_docker()` - Docker installation
+4. `configure_xfce_mobile()` - XFCE mobile optimization
+5. `configure_shell()` - Shell configuration
+6. `get_user_inputs()` - User input collection
+7. `system_prep()` - System preparation
+8. `finalize()` - Installation finalization
+9. `setup_desktop_mobile()` - Desktop environment setup
+10. `setup_dev_stack()` - Development stack setup
+11. `install_nvm_nodejs()` - NVM and Node.js installation
+12. `verify_python()` - Python verification
+13. `verify_installation()` - Installation verification
+14. `log()` - Structured logging function
+15. `check_debian_version()` - Debian version validation
+
+**Coverage Target**: At least 80% of these critical functions must have test coverage (12 out of 15 functions minimum).
+
+### Test Coverage Calculation (FR-035, SC-002)
+
+**Measurement Method**:
+
+Test coverage is calculated using the following formula:
+
+```
+Coverage % = (tested critical functions / total critical functions) × 100%
+```
+
+**Calculation Steps**:
+1. List all 15 critical functions from the list above
+2. Identify which functions have test cases in `tests/unit/` or `tests/integration/`
+3. Count tested functions (functions with at least one test case)
+4. Calculate: `(tested functions / 15) × 100%`
+5. Target: ≥80% (at least 12 functions must have tests)
+
+**Manual Calculation Example**:
+```bash
+# Count test files that cover critical functions
+# Each test file should test one or more critical functions
+# Review test files to verify which functions are covered
+
+# Example: If 12 out of 15 functions have tests
+# Coverage = (12 / 15) × 100% = 80% ✓
+```
+
+**Tools**:
+- Manual review of test files
+- Automated tools like `bats-coverage` (if available)
+- CI/CD pipeline can track coverage over time
+
+### Test Coverage Boundary Conditions (FR-023, FR-024)
+
+**Zero Test Coverage Scenario** (new projects):
+- Acceptable for initial project setup
+- Must achieve 80% coverage before first production release
+- Document coverage gap in README with timeline for test addition
+- Example: "Current test coverage: 0%. Target: 80% before v1.0.0 release."
+
+**100% Test Coverage Scenario** (maximum coverage):
+- Ideal but not required
+- Focus on critical functions first (80% minimum)
+- Additional coverage is optional but encouraged
+- Do not sacrifice code quality for 100% coverage
+- Balance between coverage and test maintainability
+
+**Coverage Strategy**:
+1. **Phase 1**: Cover all 15 critical functions (100% of critical functions)
+2. **Phase 2**: Add tests for edge cases and error handling
+3. **Phase 3**: Add integration tests for end-to-end scenarios
+4. **Phase 4**: Optional coverage for helper functions
+
+### Public Functions Documentation Requirements (FR-020)
+
+**Public Functions** (explicit list requiring complete documentation):
+
+All functions defined in `scripts/setup-workstation.sh` that are:
+- Called from `main()` function (entry points)
+- Exported or intended for external use
+- Documented with function header comments
+
+**Complete list** (matches Critical Functions list, plus helper functions):
+
+1. `create_user()` - User account creation
+2. `setup_docker_repository()` - Docker repository configuration
+3. `install_docker()` - Docker installation
+4. `configure_xfce_mobile()` - XFCE mobile optimization
+5. `configure_shell()` - Shell configuration
+6. `get_user_inputs()` - User input collection
+7. `system_prep()` - System preparation
+8. `finalize()` - Installation finalization
+9. `setup_desktop_mobile()` - Desktop environment setup
+10. `setup_dev_stack()` - Development stack setup
+11. `install_nvm_nodejs()` - NVM and Node.js installation
+12. `verify_python()` - Python verification
+13. `verify_installation()` - Installation verification
+14. `log()` - Structured logging function
+15. `check_debian_version()` - Debian version validation
+
+**Documentation Requirements**:
+Each public function must have documentation block with:
+- **Purpose**: What the function does
+- **Inputs**: Parameters and their types/constraints
+- **Outputs**: Return values and side effects
+- **Idempotency**: Whether function is safe to run multiple times
+- **Error Handling**: How errors are handled and reported
+
+**Example**:
+```bash
+# Function: create_user
+# Purpose: Creates a new user account with specified username and password
+# Inputs:
+#   - username: String, valid username format
+#   - password: String, non-empty password
+# Outputs:
+#   - Returns 0 on success, non-zero on failure
+#   - Side effects: Creates user account, sets password, creates home directory
+# Idempotency: Yes - checks if user exists before creation
+# Error Handling: Logs errors with context, returns error code
+```
+
+### Documentation Update Process (FR-033)
+
+**Update Frequency**:
+- **On each PR**: Review documentation for accuracy when code changes
+- **Major updates**: Quarterly review of all documentation for completeness and accuracy
+
+**Update Triggers**:
+- New features added → Update README Features section
+- Function changes → Update function documentation
+- New error scenarios → Update troubleshooting guide
+- Workflow changes → Update CONTRIBUTING.md
+- Version releases → Update CHANGELOG.md
+
+**Review Checklist**:
+- [ ] README.md reflects current functionality
+- [ ] Function documentation matches implementation
+- [ ] Troubleshooting guide covers new issues
+- [ ] CONTRIBUTING.md reflects current workflow
+- [ ] CHANGELOG.md updated with changes
+- [ ] All links are valid and working
+
+**Process**:
+1. Update documentation as part of feature development
+2. Include documentation changes in same PR as code changes
+3. Review documentation during PR review
+4. Quarterly comprehensive review of all documentation
+5. Archive outdated documentation in `docs/archive/` if needed
+
+### Test Performance Limits (FR-026)
+
+**Large Test Suites** (>100 tests):
+- **Execution time limit**: <10 minutes (2x normal limit of 5 minutes)
+- **Strategy**: Use test tags to run subsets during development
+- **Full suite**: Runs in CI/CD only
+- **Development**: Run specific test files or tagged subsets
+
+**Running Test Subsets**:
+```bash
+# Run only unit tests (faster during development)
+bats tests/unit/
+
+# Run only integration tests
+bats tests/integration/
+
+# Run specific test file
+bats tests/unit/test_user_creation.bats
+
+# Full suite (run in CI/CD)
+bats tests/
+```
+
+**Performance Optimization**:
+- Use test tags to categorize tests (unit, integration, slow)
+- Skip slow tests during development: `bats --filter-tags '!slow' tests/`
+- Run full suite only before commits or in CI/CD
+- Monitor test execution time in CI/CD logs
+
+**If Tests Exceed Limits**:
+- Review test structure for optimization opportunities
+- Consider splitting large test files
+- Use test fixtures and helpers to reduce duplication
+- Document performance impact in plan.md
 
 ### Writing Tests
 
@@ -429,6 +649,24 @@ Some CI/CD tasks require GitHub UI interaction or CLI commands. See [docs/cicd-s
 - **T065**: Testing CI/CD workflow by pushing code
 - **T066**: Testing CI/CD workflow by creating PR
 - **T067**: Testing merge blocking with intentional failures
+
+## Measurement Methods (FR-035)
+
+For detailed measurement methods for all success criteria (SC-001 through SC-010), see [docs/measurement-methods.md](docs/measurement-methods.md).
+
+This document defines how each success criterion is measured and validated, including:
+- SC-001: ShellCheck linting pass rate
+- SC-002: Test coverage calculation
+- SC-003: Function documentation coverage
+- SC-004: First-attempt success rate
+- SC-005: CI/CD pipeline success rate
+- SC-006: Merge blocking rate
+- SC-007: Error message context coverage
+- SC-008: Logging operation coverage
+- SC-009: Troubleshooting guide resolution rate
+- SC-010: Code review time reduction
+
+All measurement methods are objective and verifiable.
 
 ## Questions?
 
