@@ -179,12 +179,56 @@ echo $PS1 | grep -q "starship" && echo "✓ Starship prompt configured"
 # Press Ctrl+R - should open fzf interface
 ```
 
+## Visual Enhancements
+
+### Fonts
+
+**Fira Code** is automatically installed if a desktop environment is detected. This font includes programming ligatures for improved code readability.
+
+**Manual Installation** (if needed):
+```bash
+sudo apt install fonts-firacode
+```
+
+**Configure in Terminal**:
+- Most terminal emulators allow you to set the font in their preferences
+- Look for "Font" or "Appearance" settings
+- Select "Fira Code" from the font list
+- Enable ligatures if available
+
+### Color Schemes
+
+The following color schemes are recommended for improved visual comfort:
+
+#### Dracula Theme
+- **Description**: Dark theme with vibrant colors
+- **Installation**: Configure in your terminal emulator's settings
+- **URL**: https://draculatheme.com/terminal
+
+#### Nord Theme
+- **Description**: Arctic, north-bluish color palette
+- **Installation**: Configure in your terminal emulator's settings
+- **URL**: https://www.nordtheme.com/docs/ports/terminal-emulators
+
+#### One Dark Pro
+- **Description**: Popular dark theme based on Atom's One Dark
+- **Installation**: Configure in your terminal emulator's settings
+- **URL**: https://github.com/joshdick/onedark.vim
+
+#### Solarized Dark
+- **Description**: Carefully designed color palette for reduced eye strain
+- **Installation**: Configure in your terminal emulator's settings
+- **URL**: https://ethanschoonover.com/solarized/
+
+**Note**: All terminal enhancement tools (Starship, bat, exa) automatically detect terminal color capabilities and gracefully degrade when colors are not supported (FR-025). No manual configuration needed.
+
 ## Next Steps
 
 1. **Customize Starship**: Edit `~/.config/starship.toml`
 2. **Add more aliases**: Edit `~/.bashrc` to add your own
 3. **Explore tools**: Read documentation for Starship, fzf, bat, exa
 4. **Configure fzf**: Customize `FZF_DEFAULT_OPTS` for your preferences
+5. **Apply color scheme**: Choose and configure a color scheme from the options above
 
 ## Documentation
 

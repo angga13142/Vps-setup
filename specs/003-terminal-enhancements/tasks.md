@@ -168,13 +168,13 @@
 
 ### Implementation for User Story 6
 
-- [ ] T059 [US6] Create `configure_terminal_visuals(username)` function in scripts/setup-workstation.sh with desktop environment detection
-- [ ] T060 [US6] Add desktop environment detection (check `$DISPLAY` or `$XDG_SESSION_TYPE`) in `configure_terminal_visuals()` function in scripts/setup-workstation.sh (FR-016)
-- [ ] T061 [US6] Install fonts-firacode package via APT if desktop environment detected in `configure_terminal_visuals()` function in scripts/setup-workstation.sh (skip gracefully in headless, no error logged) (FR-016, Edge Cases: Font Installation in Headless)
-- [ ] T062 [US6] Add graceful degradation for font installation failures in headless environments in `configure_terminal_visuals()` function in scripts/setup-workstation.sh: skip font installation if headless detected, no error logged (FR-016, Edge Cases: Font Installation in Headless)
-- [ ] T063 [US6] Document color scheme options (Dracula, Nord, One Dark Pro, Solarized Dark) in quickstart.md or README.md
-- [ ] T064 [US6] Verify tools (Starship, bat, exa) auto-detect terminal color capabilities in `configure_terminal_visuals()` function comments in scripts/setup-workstation.sh (FR-025)
-- [ ] T065 [US6] Call `configure_terminal_visuals()` from `setup_terminal_enhancements()` function in scripts/setup-workstation.sh
+- [X] T059 [US6] Create `configure_terminal_visuals(username)` function in scripts/setup-workstation.sh with desktop environment detection
+- [X] T060 [US6] Add desktop environment detection (check `$DISPLAY` or `$XDG_SESSION_TYPE`) in `configure_terminal_visuals()` function in scripts/setup-workstation.sh (FR-016)
+- [X] T061 [US6] Install fonts-firacode package via APT if desktop environment detected in `configure_terminal_visuals()` function in scripts/setup-workstation.sh (skip gracefully in headless, no error logged) (FR-016, Edge Cases: Font Installation in Headless)
+- [X] T062 [US6] Add graceful degradation for font installation failures in headless environments in `configure_terminal_visuals()` function in scripts/setup-workstation.sh: skip font installation if headless detected, no error logged (FR-016, Edge Cases: Font Installation in Headless)
+- [X] T063 [US6] Document color scheme options (Dracula, Nord, One Dark Pro, Solarized Dark) in quickstart.md or README.md
+- [X] T064 [US6] Verify tools (Starship, bat, exa) auto-detect terminal color capabilities in `configure_terminal_visuals()` function comments in scripts/setup-workstation.sh (FR-025)
+- [X] T065 [US6] Call `configure_terminal_visuals()` from `setup_terminal_enhancements()` function in scripts/setup-workstation.sh
 
 **Checkpoint**: At this point, all user stories should be complete. Visual enhancements improve long-term comfort, and all features work in both desktop and headless environments.
 

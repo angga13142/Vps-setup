@@ -1752,6 +1752,87 @@ configure_bash_enhancements() {
 }
 
 #######################################
+# Configure terminal visual enhancements
+#
+# Purpose: Install modern fonts (if desktop environment available) and document color scheme options
+#          for improved visual comfort and professional appearance
+#
+# Inputs:
+#   - username: Username for which to configure visual enhancements (string, required)
+#
+# Outputs: None (uses structured logging)
+#
+# Side Effects:
+#   - Installs fonts-firacode package if desktop environment detected
+#   - Skips font installation gracefully in headless environments (no error logged)
+#
+# Returns:
+#   0 - Success (enhancements configured or skipped in headless)
+#   1 - Error (configuration failed)
+#
+# Idempotency: Yes
+#   - Checks for desktop environment before attempting font installation
+#   - Safe to run multiple times
+#
+# Dependencies:
+#   - Desktop environment detection (via $DISPLAY or $XDG_SESSION_TYPE)
+#   - APT package manager for font installation
+#
+# Configuration:
+#   - Installs fonts-firacode if desktop environment detected (FR-016)
+#   - Skips font installation in headless environments gracefully (FR-016, Edge Cases)
+#   - Tools (Starship, bat, exa) auto-detect terminal color capabilities (FR-025)
+#
+# Example:
+#   configure_terminal_visuals "coder"
+#######################################
+configure_terminal_visuals() {
+    local username="$1"
+    local home_dir="/home/$username"
+
+    log "INFO" "Configuring terminal visual enhancements..." "configure_terminal_visuals()" "username=$username"
+
+    # Desktop environment detection (T060, FR-016)
+    local has_desktop=false
+    if [ -n "${DISPLAY:-}" ] || [ -n "${XDG_SESSION_TYPE:-}" ]; then
+        # Check if DISPLAY is set and not empty, or XDG_SESSION_TYPE indicates desktop
+        if [ -n "${DISPLAY:-}" ] && [ "$DISPLAY" != "" ]; then
+            has_desktop=true
+        elif [ -n "${XDG_SESSION_TYPE:-}" ] && [ "$XDG_SESSION_TYPE" = "x11" ] || [ "$XDG_SESSION_TYPE" = "wayland" ]; then
+            has_desktop=true
+        fi
+    fi
+
+    # Install fonts if desktop environment detected (T061, T062, FR-016, Edge Cases: Font Installation in Headless)
+    if [ "$has_desktop" = true ]; then
+        log "INFO" "Desktop environment detected, installing Fira Code font..." "configure_terminal_visuals()" "username=$username"
+
+        # Check if font is already installed
+        if dpkg-query -W -f='${Status}' "fonts-firacode" 2>/dev/null | grep -q "install ok installed"; then
+            log "INFO" "Fira Code font already installed, skipping" "configure_terminal_visuals()" "username=$username"
+        else
+            # Install fonts-firacode via APT
+            if ! (sudo apt-get update -qq && sudo apt-get install -y fonts-firacode); then
+                log "WARNING" "Failed to install Fira Code font, but continuing (non-critical)" "configure_terminal_visuals()" "username=$username"
+            else
+                log "INFO" "✓ Fira Code font installed successfully" "configure_terminal_visuals()" "username=$username"
+            fi
+        fi
+    else
+        # Headless environment - skip font installation gracefully (T062, FR-016, Edge Cases)
+        # No error logged as per requirements - this is expected behavior
+        log "INFO" "Headless environment detected, skipping font installation" "configure_terminal_visuals()" "username=$username"
+    fi
+
+    # Note: Tools (Starship, bat, exa) automatically detect terminal color capabilities (T064, FR-025)
+    # These tools handle graceful degradation when terminal doesn't support colors or ANSI escape sequences
+    # No additional configuration needed - tools auto-detect and disable color features as needed
+
+    log "INFO" "✓ Terminal visual enhancements configured successfully" "configure_terminal_visuals()" "username=$username"
+    return 0
+}
+
+#######################################
 # Setup terminal enhancements (main orchestration function)
 #
 # Purpose: Main orchestration function for installing and configuring all terminal enhancements
@@ -1902,8 +1983,8 @@ setup_terminal_enhancements() {
     # Configure Bash history and completion enhancements (T058)
     configure_bash_enhancements "$username"
 
-    # TODO: Tool installations will be added in later phases:
-    # - configure_terminal_visuals()
+    # Configure terminal visual enhancements (T065)
+    configure_terminal_visuals "$username"
 
     # Add configuration marker to .bashrc
     if [ -f "$bashrc_file" ]; then
