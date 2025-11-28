@@ -160,7 +160,7 @@ refute_stderr_line() {
   __refute_stream_line "$@"
 }
 
-# __check_is_vvalid_regex
+# __check_is_valid_regex
 # =======================
 #
 # Summary: checks if the regex in unexpected is valid, also prints an error message if not.
