@@ -26,7 +26,11 @@ jobs:
         run: |
           echo "Running ShellCheck on all .sh files..."
           shellcheck --version
-          shellcheck scripts/*.sh || exit 1
+          # Find and check all shell scripts recursively
+          find . -name "*.sh" -type f -not -path "./.git/*" -not -path "./tests/helpers/*" | while read -r script; do
+            echo "Checking: $script"
+            shellcheck "$script" || exit 1
+          done
           echo "✅ All ShellCheck checks passed"
 
   test:
@@ -59,8 +63,34 @@ jobs:
           bats --version
           # Note: Most tests require root, but we'll run what we can
           # Full test suite should be run locally with sudo
-          bats --tap tests/ || true
-          echo "✅ Test suite completed"
+          # Run tests and capture output to check for actual failures
+          TEST_OUTPUT=$(bats --tap tests/ 2>&1)
+          EXIT_CODE=$?
+          
+          # Display test output
+          echo "$TEST_OUTPUT"
+          
+          if [ $EXIT_CODE -eq 0 ]; then
+            echo "✅ Test suite completed successfully"
+          else
+            echo "❌ Test suite exited with code: $EXIT_CODE"
+            echo "Some tests may require root privileges (run locally with: sudo bats tests/)"
+            
+            # Check if there are actual test failures (not ok) vs just skipped tests
+            # TAP format: "not ok" indicates failure, "ok" indicates pass, "# skip" indicates skip
+            if echo "$TEST_OUTPUT" | grep -q "^not ok"; then
+              echo "❌ Found actual test failures (not ok), failing workflow"
+              exit 1
+            elif echo "$TEST_OUTPUT" | grep -q "# skip"; then
+              echo "⚠️  Some tests were skipped (likely require root), but no actual failures detected"
+              echo "✅ Allowing workflow to pass (skips are expected without root)"
+              exit 0
+            else
+              # Unknown error condition, fail to be safe
+              echo "❌ Unknown error condition, failing workflow for safety"
+              exit 1
+            fi
+          fi
 
       - name: Upload test results
         if: always()
