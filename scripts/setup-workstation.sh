@@ -954,7 +954,7 @@ install_fzf() {
     log "INFO" "Installing fzf (fuzzy finder)..." "install_fzf()"
 
     # Install fzf via APT (T017)
-    if ! apt-get update -qq && apt-get install -y fzf; then
+    if ! (apt-get update -qq && apt-get install -y fzf); then
         log "WARNING" "[WARN] [terminal-enhancements] Failed to install fzf. Continuing with remaining tools." "install_fzf()" "reason=apt_install_failed"
         return 1
     fi
@@ -1101,7 +1101,7 @@ install_bat() {
     log "INFO" "Installing bat (better cat)..." "install_bat()"
 
     # Install bat via APT (T026)
-    if ! apt-get update -qq && apt-get install -y bat; then
+    if ! (apt-get update -qq && apt-get install -y bat); then
         log "WARNING" "[WARN] [terminal-enhancements] Failed to install bat. Continuing with remaining tools." "install_bat()" "reason=apt_install_failed"
         return 1
     fi
@@ -1380,8 +1380,6 @@ configure_terminal_aliases() {
             if command -v bat &>/dev/null || command -v batcat &>/dev/null; then
                 echo "alias cat='batcat'"
             fi
-        else
-            log "WARNING" "[WARN] [terminal-enhancements] Alias/function 'cat' already exists, skipping to preserve user customization." "configure_terminal_aliases()" "username=$username"
         fi
         echo ""
         echo "# exa aliases (modern ls)"
@@ -1389,61 +1387,76 @@ configure_terminal_aliases() {
             if command -v exa &>/dev/null; then
                 echo "alias ls='exa'"
             fi
-        else
-            log "WARNING" "[WARN] [terminal-enhancements] Alias/function 'ls' already exists, skipping to preserve user customization." "configure_terminal_aliases()" "username=$username"
         fi
         if [ "$ll_alias_exists" = false ]; then
             if command -v exa &>/dev/null; then
                 echo "alias ll='exa -lah'"
             fi
-        else
-            log "WARNING" "[WARN] [terminal-enhancements] Alias/function 'll' already exists, skipping to preserve user customization." "configure_terminal_aliases()" "username=$username"
         fi
         echo ""
         echo "# Git aliases (T038, FR-005)"
         if [ "$gst_alias_exists" = false ]; then
             echo "alias gst='git status'"
-        else
-            log "WARNING" "[WARN] [terminal-enhancements] Alias/function 'gst' already exists, skipping to preserve user customization." "configure_terminal_aliases()" "username=$username"
         fi
         if [ "$gco_alias_exists" = false ]; then
             echo "alias gco='git checkout'"
-        else
-            log "WARNING" "[WARN] [terminal-enhancements] Alias/function 'gco' already exists, skipping to preserve user customization." "configure_terminal_aliases()" "username=$username"
         fi
         if [ "$gcm_alias_exists" = false ]; then
             echo "alias gcm='git commit -m'"
-        else
-            log "WARNING" "[WARN] [terminal-enhancements] Alias/function 'gcm' already exists, skipping to preserve user customization." "configure_terminal_aliases()" "username=$username"
         fi
         if [ "$gpl_alias_exists" = false ]; then
             echo "alias gpl='git pull'"
-        else
-            log "WARNING" "[WARN] [terminal-enhancements] Alias/function 'gpl' already exists, skipping to preserve user customization." "configure_terminal_aliases()" "username=$username"
         fi
         if [ "$gps_alias_exists" = false ]; then
             echo "alias gps='git push'"
-        else
-            log "WARNING" "[WARN] [terminal-enhancements] Alias/function 'gps' already exists, skipping to preserve user customization." "configure_terminal_aliases()" "username=$username"
         fi
         echo ""
         echo "# Docker aliases (T040, FR-006)"
         if [ "$dc_alias_exists" = false ]; then
             echo "alias dc='docker-compose'"
-        else
-            log "WARNING" "[WARN] [terminal-enhancements] Alias/function 'dc' already exists, skipping to preserve user customization." "configure_terminal_aliases()" "username=$username"
         fi
         if [ "$dps_alias_exists" = false ]; then
             echo "alias dps='docker ps'"
-        else
-            log "WARNING" "[WARN] [terminal-enhancements] Alias/function 'dps' already exists, skipping to preserve user customization." "configure_terminal_aliases()" "username=$username"
         fi
         if [ "$dlog_alias_exists" = false ]; then
             echo "alias dlog='docker logs -f'"
-        else
-            log "WARNING" "[WARN] [terminal-enhancements] Alias/function 'dlog' already exists, skipping to preserve user customization." "configure_terminal_aliases()" "username=$username"
         fi
     } >> "$bashrc_file"
+
+    # Log warnings for skipped aliases (moved outside redirection block)
+    if [ "$cat_alias_exists" = true ]; then
+        log "WARNING" "[WARN] [terminal-enhancements] Alias/function 'cat' already exists, skipping to preserve user customization." "configure_terminal_aliases()" "username=$username"
+    fi
+    if [ "$ls_alias_exists" = true ]; then
+        log "WARNING" "[WARN] [terminal-enhancements] Alias/function 'ls' already exists, skipping to preserve user customization." "configure_terminal_aliases()" "username=$username"
+    fi
+    if [ "$ll_alias_exists" = true ]; then
+        log "WARNING" "[WARN] [terminal-enhancements] Alias/function 'll' already exists, skipping to preserve user customization." "configure_terminal_aliases()" "username=$username"
+    fi
+    if [ "$gst_alias_exists" = true ]; then
+        log "WARNING" "[WARN] [terminal-enhancements] Alias/function 'gst' already exists, skipping to preserve user customization." "configure_terminal_aliases()" "username=$username"
+    fi
+    if [ "$gco_alias_exists" = true ]; then
+        log "WARNING" "[WARN] [terminal-enhancements] Alias/function 'gco' already exists, skipping to preserve user customization." "configure_terminal_aliases()" "username=$username"
+    fi
+    if [ "$gcm_alias_exists" = true ]; then
+        log "WARNING" "[WARN] [terminal-enhancements] Alias/function 'gcm' already exists, skipping to preserve user customization." "configure_terminal_aliases()" "username=$username"
+    fi
+    if [ "$gpl_alias_exists" = true ]; then
+        log "WARNING" "[WARN] [terminal-enhancements] Alias/function 'gpl' already exists, skipping to preserve user customization." "configure_terminal_aliases()" "username=$username"
+    fi
+    if [ "$gps_alias_exists" = true ]; then
+        log "WARNING" "[WARN] [terminal-enhancements] Alias/function 'gps' already exists, skipping to preserve user customization." "configure_terminal_aliases()" "username=$username"
+    fi
+    if [ "$dc_alias_exists" = true ]; then
+        log "WARNING" "[WARN] [terminal-enhancements] Alias/function 'dc' already exists, skipping to preserve user customization." "configure_terminal_aliases()" "username=$username"
+    fi
+    if [ "$dps_alias_exists" = true ]; then
+        log "WARNING" "[WARN] [terminal-enhancements] Alias/function 'dps' already exists, skipping to preserve user customization." "configure_terminal_aliases()" "username=$username"
+    fi
+    if [ "$dlog_alias_exists" = true ]; then
+        log "WARNING" "[WARN] [terminal-enhancements] Alias/function 'dlog' already exists, skipping to preserve user customization." "configure_terminal_aliases()" "username=$username"
+    fi
 
     # Ensure correct ownership and permissions
     chown "$username:$username" "$bashrc_file" 2>/dev/null || true
@@ -1545,8 +1558,6 @@ mkcd() {
     mkdir -p "$1" && cd "$1" || return 1
 }
 MKCD_EOF
-        else
-            log "WARNING" "[WARN] [terminal-enhancements] Alias/function 'mkcd' already exists, skipping to preserve user customization." "configure_terminal_functions()" "username=$username"
         fi
         echo ""
         echo "# extract() - Extract archives (T044)"
@@ -1573,8 +1584,6 @@ extract() {
     fi
 }
 EXTRACT_EOF
-        else
-            log "WARNING" "[WARN] [terminal-enhancements] Alias/function 'extract' already exists, skipping to preserve user customization." "configure_terminal_functions()" "username=$username"
         fi
         echo ""
         echo "# ports() - Show listening ports (T045)"
@@ -1584,8 +1593,6 @@ ports() {
     netstat -tulanp 2>/dev/null | grep LISTEN || ss -tulanp 2>/dev/null | grep LISTEN || echo "Unable to list listening ports. Install net-tools or iproute2."
 }
 PORTS_EOF
-        else
-            log "WARNING" "[WARN] [terminal-enhancements] Alias/function 'ports' already exists, skipping to preserve user customization." "configure_terminal_functions()" "username=$username"
         fi
         echo ""
         echo "# weather() - Weather info with error handling (T046, FR-024)"
@@ -1610,10 +1617,22 @@ weather() {
     fi
 }
 WEATHER_EOF
-        else
-            log "WARNING" "[WARN] [terminal-enhancements] Alias/function 'weather' already exists, skipping to preserve user customization." "configure_terminal_functions()" "username=$username"
         fi
     } >> "$bashrc_file"
+
+    # Log warnings for skipped functions (moved outside redirection block)
+    if [ "$mkcd_exists" = true ]; then
+        log "WARNING" "[WARN] [terminal-enhancements] Alias/function 'mkcd' already exists, skipping to preserve user customization." "configure_terminal_functions()" "username=$username"
+    fi
+    if [ "$extract_exists" = true ]; then
+        log "WARNING" "[WARN] [terminal-enhancements] Alias/function 'extract' already exists, skipping to preserve user customization." "configure_terminal_functions()" "username=$username"
+    fi
+    if [ "$ports_exists" = true ]; then
+        log "WARNING" "[WARN] [terminal-enhancements] Alias/function 'ports' already exists, skipping to preserve user customization." "configure_terminal_functions()" "username=$username"
+    fi
+    if [ "$weather_exists" = true ]; then
+        log "WARNING" "[WARN] [terminal-enhancements] Alias/function 'weather' already exists, skipping to preserve user customization." "configure_terminal_functions()" "username=$username"
+    fi
 
     # Ensure correct ownership and permissions
     chown "$username:$username" "$bashrc_file" 2>/dev/null || true
