@@ -49,16 +49,16 @@
 
 ### Implementation for User Story 1
 
-- [ ] T006 [US1] Create `install_starship()` function in scripts/setup-workstation.sh with idempotency check using `command -v starship &>/dev/null` (FR-014 verification method)
-- [ ] T007 [US1] Implement Starship installation via official installer script (`curl -sS https://starship.rs/install.sh | sh`) in `install_starship()` function in scripts/setup-workstation.sh with error handling: continue on failure, log error with format `[WARN] [terminal-enhancements] Failed to install starship. Continuing with remaining tools.`, return error code (FR-013, FR-022)
-- [ ] T008 [US1] Add Starship installation verification using `command -v starship &>/dev/null` and visual feedback with format `[INFO] [terminal-enhancements] ✓ starship installed and configured successfully` in `install_starship()` function in scripts/setup-workstation.sh (FR-014, FR-015)
-- [ ] T009 [US1] Create `configure_starship_prompt(username)` function in scripts/setup-workstation.sh with backup creation before modification
-- [ ] T010 [US1] Implement backup creation in `configure_starship_prompt()` function using `create_bashrc_backup()` in scripts/setup-workstation.sh
-- [ ] T011 [US1] Implement existing PS1/PROMPT_COMMAND removal in `configure_starship_prompt()` function in scripts/setup-workstation.sh
-- [ ] T012 [US1] Add Starship initialization (`eval "$(starship init bash)"`) to .bashrc in `configure_starship_prompt()` function in scripts/setup-workstation.sh
-- [ ] T013 [US1] Add configuration marker check for Starship in `configure_starship_prompt()` function in scripts/setup-workstation.sh
-- [ ] T014 [US1] Call `install_starship()` and `configure_starship_prompt()` from `setup_terminal_enhancements()` function in scripts/setup-workstation.sh with error handling (only configure if installation successful)
-- [ ] T015 [US1] Verify Starship shows Python/Node.js versions when in project directories (FR-020) - verify Starship default config includes python and nodejs modules or add explicit configuration
+- [X] T006 [US1] Create `install_starship()` function in scripts/setup-workstation.sh with idempotency check using `command -v starship &>/dev/null` (FR-014 verification method)
+- [X] T007 [US1] Implement Starship installation via official installer script (`curl -sS https://starship.rs/install.sh | sh`) in `install_starship()` function in scripts/setup-workstation.sh with error handling: continue on failure, log error with format `[WARN] [terminal-enhancements] Failed to install starship. Continuing with remaining tools.`, return error code (FR-013, FR-022)
+- [X] T008 [US1] Add Starship installation verification using `command -v starship &>/dev/null` and visual feedback with format `[INFO] [terminal-enhancements] ✓ starship installed and configured successfully` in `install_starship()` function in scripts/setup-workstation.sh (FR-014, FR-015)
+- [X] T009 [US1] Create `configure_starship_prompt(username)` function in scripts/setup-workstation.sh with backup creation before modification
+- [X] T010 [US1] Implement backup creation in `configure_starship_prompt()` function using `create_bashrc_backup()` in scripts/setup-workstation.sh
+- [X] T011 [US1] Implement existing PS1/PROMPT_COMMAND removal in `configure_starship_prompt()` function in scripts/setup-workstation.sh
+- [X] T012 [US1] Add Starship initialization (`eval "$(starship init bash)"`) to .bashrc in `configure_starship_prompt()` function in scripts/setup-workstation.sh
+- [X] T013 [US1] Add configuration marker check for Starship in `configure_starship_prompt()` function in scripts/setup-workstation.sh
+- [X] T014 [US1] Call `install_starship()` and `configure_starship_prompt()` from `setup_terminal_enhancements()` function in scripts/setup-workstation.sh with error handling (only configure if installation successful)
+- [X] T015 [US1] Verify Starship shows Python/Node.js versions when in project directories (FR-020) - verify Starship default config includes python and nodejs modules or add explicit configuration
 
 **Checkpoint**: At this point, User Story 1 should be fully functional. Starship prompt is installed and configured, displaying Git status, exit codes, and environment info. Users can see immediate visual feedback in their terminal.
 

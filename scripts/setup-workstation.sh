@@ -746,6 +746,171 @@ create_bashrc_backup() {
 }
 
 #######################################
+# Install Starship prompt tool
+#
+# Purpose: Install Starship prompt via official installer script
+#
+# Inputs: None
+#
+# Outputs: None (uses structured logging)
+#
+# Side Effects:
+#   - Downloads and installs Starship binary
+#   - Adds Starship to system PATH (~/.local/bin/starship)
+#
+# Returns:
+#   0 - Success (Starship installed or already installed)
+#   1 - Error (installation failed)
+#
+# Idempotency: Yes
+#   - Checks if starship command exists in PATH before installing
+#   - Skips installation if already present
+#
+# Dependencies:
+#   - curl or wget (for downloading installer)
+#   - Internet connectivity
+#   - Write permissions for installation directory
+#
+# Verification:
+#   - After installation, verifies: command -v starship &>/dev/null
+#
+# Example:
+#   if install_starship; then
+#       log "INFO" "Starship installed successfully"
+#   fi
+#######################################
+install_starship() {
+    # Idempotency check (T006, FR-014)
+    if command -v starship &>/dev/null; then
+        log "INFO" "Starship already installed, skipping installation" "install_starship()"
+        return 0
+    fi
+
+    log "INFO" "Installing Starship prompt..." "install_starship()"
+
+    # Determine download command (curl or wget)
+    local download_cmd
+    if command -v curl &>/dev/null; then
+        download_cmd="curl -sS"
+    elif command -v wget &>/dev/null; then
+        download_cmd="wget -qO-"
+    else
+        log "WARNING" "[WARN] [terminal-enhancements] Failed to install starship. Continuing with remaining tools." "install_starship()" "reason=curl_or_wget_not_available"
+        return 1
+    fi
+
+    # Install Starship via official installer (T007)
+    if ! $download_cmd https://starship.rs/install.sh | sh -s -- --yes; then
+        log "WARNING" "[WARN] [terminal-enhancements] Failed to install starship. Continuing with remaining tools." "install_starship()" "reason=installer_failed"
+        return 1
+    fi
+
+    # Verify installation (T008, FR-014)
+    if ! command -v starship &>/dev/null; then
+        log "WARNING" "[WARN] [terminal-enhancements] Failed to install starship. Continuing with remaining tools." "install_starship()" "reason=verification_failed"
+        return 1
+    fi
+
+    # Visual feedback (T008, FR-015)
+    log "INFO" "[INFO] [terminal-enhancements] ✓ starship installed and configured successfully" "install_starship()"
+    return 0
+}
+
+#######################################
+# Configure Starship prompt in .bashrc
+#
+# Purpose: Configure Starship prompt by removing existing PS1/PROMPT_COMMAND and adding Starship initialization
+#
+# Inputs:
+#   - username: Username for which to configure Starship (string, required)
+#
+# Outputs: None (uses structured logging)
+#
+# Side Effects:
+#   - Creates backup of .bashrc before modification
+#   - Removes existing PS1 and PROMPT_COMMAND settings
+#   - Adds Starship initialization to .bashrc
+#   - Sets file ownership and permissions
+#
+# Returns:
+#   0 - Success (Starship configured or already configured)
+#   1 - Error (configuration failed)
+#
+# Idempotency: Yes
+#   - Checks for configuration marker before adding
+#   - Safe to run multiple times
+#
+# Dependencies:
+#   - install_starship() must succeed first
+#   - create_bashrc_backup() function
+#   - starship command must be available
+#
+# Example:
+#   configure_starship_prompt "coder"
+#######################################
+configure_starship_prompt() {
+    local username="$1"
+    local home_dir="/home/$username"
+    local bashrc_file="$home_dir/.bashrc"
+    local starship_marker="# Starship Prompt Configuration - Added by setup-workstation.sh"
+
+    log "INFO" "Configuring Starship prompt..." "configure_starship_prompt()" "username=$username"
+
+    # Verify Starship is installed before configuring
+    if ! command -v starship &>/dev/null; then
+        log "WARNING" "Starship not installed, skipping configuration" "configure_starship_prompt()" "username=$username"
+        return 1
+    fi
+
+    # Configuration marker check (T013)
+    if [ -f "$bashrc_file" ] && grep -q "$starship_marker" "$bashrc_file"; then
+        log "INFO" "Starship already configured, skipping" "configure_starship_prompt()" "username=$username"
+        return 0
+    fi
+
+    # Backup creation (T010)
+    if ! create_bashrc_backup "$bashrc_file"; then
+        log "ERROR" "Failed to create backup, aborting Starship configuration" "configure_starship_prompt()" "username=$username bashrc_file=$bashrc_file"
+        return 1
+    fi
+
+    # Ensure .bashrc exists
+    if [ ! -f "$bashrc_file" ]; then
+        touch "$bashrc_file"
+        chown "$username:$username" "$bashrc_file"
+        chmod 644 "$bashrc_file"
+    fi
+
+    # Remove existing PS1 and PROMPT_COMMAND (T011, FR-023)
+    # Create temporary file for processing
+    local temp_file
+    temp_file=$(mktemp)
+    if [ ! -f "$temp_file" ]; then
+        log "ERROR" "Failed to create temporary file for .bashrc processing" "configure_starship_prompt()" "username=$username"
+        return 1
+    fi
+
+    # Remove lines containing PS1= or PROMPT_COMMAND= (but preserve other content)
+    grep -v "^PS1=" "$bashrc_file" 2>/dev/null | grep -v "^PROMPT_COMMAND=" > "$temp_file" || true
+    mv "$temp_file" "$bashrc_file"
+
+    # Add Starship configuration (T012)
+    {
+        echo ""
+        echo "$starship_marker"
+        echo "# Initialize Starship prompt"
+        echo 'eval "$(starship init bash)"'
+    } >> "$bashrc_file"
+
+    # Ensure correct ownership and permissions
+    chown "$username:$username" "$bashrc_file" 2>/dev/null || true
+    chmod 644 "$bashrc_file" 2>/dev/null || true
+
+    log "INFO" "✓ Starship prompt configured successfully" "configure_starship_prompt()" "username=$username"
+    return 0
+}
+
+#######################################
 # Setup terminal enhancements (main orchestration function)
 #
 # Purpose: Main orchestration function for installing and configuring all terminal enhancements
@@ -856,12 +1021,18 @@ setup_terminal_enhancements() {
         return 1
     fi
 
+    # Install and configure terminal enhancement tools
+    # User Story 1: Starship prompt
+    if install_starship; then
+        configure_starship_prompt "$username"
+    else
+        log "WARNING" "[WARN] [terminal-enhancements] Failed to install starship. Continuing with remaining tools." "setup_terminal_enhancements()" "username=$username"
+    fi
+
     # TODO: Tool installations will be added in later phases:
-    # - install_starship()
     # - install_fzf()
     # - install_bat()
     # - install_exa()
-    # - configure_starship_prompt()
     # - configure_fzf_key_bindings()
     # - configure_terminal_aliases()
     # - configure_terminal_functions()
