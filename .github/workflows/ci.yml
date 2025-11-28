@@ -9,7 +9,6 @@ on:
 
 jobs:
   lint:
-    name: Lint (ShellCheck)
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
@@ -43,7 +42,6 @@ jobs:
           echo "✅ All ShellCheck checks passed"
 
   test:
-    name: Test (bats)
     runs-on: ubuntu-latest
     needs: lint
     timeout-minutes: 10
