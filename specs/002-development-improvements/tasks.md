@@ -15,11 +15,11 @@
 
 **Purpose**: Project initialization and basic structure for development infrastructure
 
-- [ ] T001 Create tests directory structure (tests/unit/, tests/integration/, tests/helpers/) at repository root
-- [ ] T002 Create .github/workflows/ directory at repository root
-- [ ] T003 [P] Create tests/helpers/bats-support/ directory for bats helper libraries
-- [ ] T004 [P] Create tests/helpers/bats-assert/ directory for bats assertion helpers
-- [ ] T005 Create docs/ directory at repository root for additional documentation
+- [X] T001 Create tests directory structure (tests/unit/, tests/integration/, tests/helpers/) at repository root
+- [X] T002 Create .github/workflows/ directory at repository root
+- [X] T003 [P] Create tests/helpers/bats-support/ directory for bats helper libraries
+- [X] T004 [P] Create tests/helpers/bats-assert/ directory for bats assertion helpers
+- [X] T005 Create docs/ directory at repository root for additional documentation
 
 ---
 
@@ -29,12 +29,12 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T006 Install ShellCheck via APT (sudo apt install -y shellcheck) and verify installation
-- [ ] T007 Install bats-core via APT (sudo apt install -y bats) and verify installation
-- [ ] T008 Install pre-commit framework via pip (pip3 install --user pre-commit) and verify installation
-- [ ] T009 Create .shellcheckrc configuration file at repository root with severity and shell dialect settings
-- [ ] T010 Download and setup bats-support helper library in tests/helpers/bats-support/
-- [ ] T011 Download and setup bats-assert helper library in tests/helpers/bats-assert/
+- [X] T006 Install ShellCheck via APT (sudo apt install -y shellcheck) and verify installation
+- [X] T007 Install bats-core via APT (sudo apt install -y bats) and verify installation
+- [X] T008 Install pre-commit framework via pip (pip3 install --user pre-commit) and verify installation
+- [X] T009 Create .shellcheckrc configuration file at repository root with severity and shell dialect settings
+- [X] T010 Download and setup bats-support helper library in tests/helpers/bats-support/
+- [X] T011 Download and setup bats-assert helper library in tests/helpers/bats-assert/
 
 **Checkpoint**: Foundation ready - development tools installed, test infrastructure in place. User story implementation can now begin.
 
@@ -48,14 +48,14 @@
 
 ### Implementation for User Story 1
 
-- [ ] T012 [US1] Create .pre-commit-config.yaml at repository root with ShellCheck hook configuration
-- [ ] T013 [US1] Configure ShellCheck hook in .pre-commit-config.yaml to lint all .sh files with error severity
-- [ ] T014 [US1] Add trailing-whitespace and end-of-file-fixer hooks to .pre-commit-config.yaml
-- [ ] T015 [US1] Install pre-commit hooks (pre-commit install) to enable automatic linting on commit
-- [ ] T016 [US1] Test pre-commit hook by attempting commit with ShellCheck error and verifying block
-- [ ] T017 [US1] Create .shellcheckrc at repository root with shell=bash and external-sources=false settings
-- [ ] T018 [US1] Run ShellCheck on scripts/setup-workstation.sh and fix any existing errors
-- [ ] T019 [US1] Document ShellCheck usage and configuration in README.md or CONTRIBUTING.md
+- [X] T012 [US1] Create .pre-commit-config.yaml at repository root with ShellCheck hook configuration
+- [X] T013 [US1] Configure ShellCheck hook in .pre-commit-config.yaml to lint all .sh files with error severity
+- [X] T014 [US1] Add trailing-whitespace and end-of-file-fixer hooks to .pre-commit-config.yaml
+- [X] T015 [US1] Install pre-commit hooks (pre-commit install) to enable automatic linting on commit
+- [X] T016 [US1] Test pre-commit hook by attempting commit with ShellCheck error and verifying block
+- [X] T017 [US1] Create .shellcheckrc at repository root with shell=bash and external-sources=false settings
+- [X] T018 [US1] Run ShellCheck on scripts/setup-workstation.sh and fix any existing errors
+- [X] T019 [US1] Document ShellCheck usage and configuration in README.md or CONTRIBUTING.md
 
 **Checkpoint**: At this point, User Story 1 should be fully functional. Developers can run ShellCheck locally, pre-commit hooks block bad commits, and linting configuration is documented.
 
@@ -69,22 +69,22 @@
 
 ### Implementation for User Story 2
 
-- [ ] T020 [US2] Create tests/unit/test_user_creation.bats with test cases for create_user() function
-- [ ] T021 [US2] Create tests/unit/test_docker_setup.bats with test cases for setup_docker_repository() and install_docker() functions
-- [ ] T022 [US2] Create tests/unit/test_xfce_config.bats with test cases for configure_xfce_mobile() function
-- [ ] T023 [US2] Create tests/unit/test_shell_config.bats with test cases for configure_shell() function
-- [ ] T024 [US2] Create tests/integration/test_idempotency.bats to verify script can run twice without errors
-- [ ] T025 [US2] Create tests/integration/test_full_installation.bats for end-to-end script execution testing
-- [ ] T026 [US2] Write test case in tests/unit/test_user_creation.bats for valid username and password input
-- [ ] T027 [US2] Write test case in tests/unit/test_user_creation.bats for invalid username format validation
-- [ ] T028 [US2] Write test case in tests/unit/test_docker_setup.bats for Docker repository configuration
-- [ ] T029 [US2] Write test case in tests/unit/test_docker_setup.bats for Docker GPG key installation
-- [ ] T030 [US2] Write test case in tests/integration/test_idempotency.bats for create_user() idempotency
-- [ ] T031 [US2] Write test case in tests/integration/test_idempotency.bats for setup_docker_repository() idempotency
-- [ ] T032 [US2] Write test case in tests/unit/test_shell_config.bats for .bashrc generation with custom PS1
-- [ ] T033 [US2] Write test case in tests/unit/test_shell_config.bats for parse_git_branch() function
-- [ ] T034 [US2] Run test suite (bats tests/) and verify all tests pass or document expected failures
-- [ ] T035 [US2] Add test execution instructions to README.md or CONTRIBUTING.md
+- [X] T020 [US2] Create tests/unit/test_user_creation.bats with test cases for create_user() function
+- [X] T021 [US2] Create tests/unit/test_docker_setup.bats with test cases for setup_docker_repository() and install_docker() functions
+- [X] T022 [US2] Create tests/unit/test_xfce_config.bats with test cases for configure_xfce_mobile() function
+- [X] T023 [US2] Create tests/unit/test_shell_config.bats with test cases for configure_shell() function
+- [X] T024 [US2] Create tests/integration/test_idempotency.bats to verify script can run twice without errors
+- [X] T025 [US2] Create tests/integration/test_full_installation.bats for end-to-end script execution testing
+- [X] T026 [US2] Write test case in tests/unit/test_user_creation.bats for valid username and password input
+- [X] T027 [US2] Write test case in tests/unit/test_user_creation.bats for invalid username format validation
+- [X] T028 [US2] Write test case in tests/unit/test_docker_setup.bats for Docker repository configuration
+- [X] T029 [US2] Write test case in tests/unit/test_docker_setup.bats for Docker GPG key installation
+- [X] T030 [US2] Write test case in tests/integration/test_idempotency.bats for create_user() idempotency
+- [X] T031 [US2] Write test case in tests/integration/test_idempotency.bats for setup_docker_repository() idempotency
+- [X] T032 [US2] Write test case in tests/unit/test_shell_config.bats for .bashrc generation with custom PS1
+- [X] T033 [US2] Write test case in tests/unit/test_shell_config.bats for parse_git_branch() function
+- [X] T034 [US2] Run test suite (bats tests/) and verify all tests pass or document expected failures
+- [X] T035 [US2] Add test execution instructions to README.md or CONTRIBUTING.md
 
 **Checkpoint**: At this point, User Story 2 should be fully functional. Test suite exists for critical functions, idempotency is verified, and tests can be run locally and in CI.
 
@@ -98,29 +98,29 @@
 
 ### Implementation for User Story 3
 
-- [ ] T036 [US3] Create README.md at repository root with project overview and description
-- [ ] T037 [US3] Add installation instructions section to README.md with prerequisites and setup steps
-- [ ] T038 [US3] Add quick start guide section to README.md with example usage and curl command
-- [ ] T039 [US3] Add features list section to README.md describing script capabilities
-- [ ] T040 [US3] Document get_user_inputs() function in scripts/setup-workstation.sh with inputs, outputs, side effects, and idempotency notes
-- [ ] T041 [US3] Document create_user() function in scripts/setup-workstation.sh with inputs, outputs, side effects, and idempotency notes
-- [ ] T042 [US3] Document setup_docker_repository() function in scripts/setup-workstation.sh with inputs, outputs, side effects, and idempotency notes
-- [ ] T043 [US3] Document install_docker() function in scripts/setup-workstation.sh with inputs, outputs, side effects, and idempotency notes
-- [ ] T044 [US3] Document configure_xfce_mobile() function in scripts/setup-workstation.sh with inputs, outputs, side effects, and idempotency notes
-- [ ] T045 [US3] Document configure_shell() function in scripts/setup-workstation.sh with inputs, outputs, side effects, and idempotency notes
-- [ ] T046 [US3] Document setup_dev_stack() function in scripts/setup-workstation.sh with inputs, outputs, side effects, and idempotency notes
-- [ ] T047 [US3] Document finalize() function in scripts/setup-workstation.sh with inputs, outputs, side effects, and idempotency notes
-- [ ] T048 [US3] Create CONTRIBUTING.md at repository root with development workflow guidelines
-- [ ] T049 [US3] Add coding standards section to CONTRIBUTING.md with ShellCheck and style guidelines
-- [ ] T050 [US3] Add testing guidelines section to CONTRIBUTING.md with bats test requirements
-- [ ] T051 [US3] Add pull request process section to CONTRIBUTING.md with review and merge requirements
-- [ ] T052 [US3] Create docs/troubleshooting.md with common error scenarios and solutions
-- [ ] T053 [US3] Add troubleshooting entry for "CUSTOM_PASS: unbound variable" error in docs/troubleshooting.md
-- [ ] T054 [US3] Add troubleshooting entry for "Malformed stanza" Docker repository error in docs/troubleshooting.md
-- [ ] T055 [US3] Add troubleshooting entry for password input loop issues in docs/troubleshooting.md
-- [ ] T056 [US3] Add troubleshooting entry for XFCE configuration not applying in docs/troubleshooting.md
-- [ ] T057 [US3] Link troubleshooting guide from README.md
-- [ ] T058 [US3] Create CHANGELOG.md at repository root with semantic versioning format
+- [X] T036 [US3] Create README.md at repository root with project overview and description
+- [X] T037 [US3] Add installation instructions section to README.md with prerequisites and setup steps
+- [X] T038 [US3] Add quick start guide section to README.md with example usage and curl command
+- [X] T039 [US3] Add features list section to README.md describing script capabilities
+- [X] T040 [US3] Document get_user_inputs() function in scripts/setup-workstation.sh with inputs, outputs, side effects, and idempotency notes
+- [X] T041 [US3] Document create_user() function in scripts/setup-workstation.sh with inputs, outputs, side effects, and idempotency notes
+- [X] T042 [US3] Document setup_docker_repository() function in scripts/setup-workstation.sh with inputs, outputs, side effects, and idempotency notes
+- [X] T043 [US3] Document install_docker() function in scripts/setup-workstation.sh with inputs, outputs, side effects, and idempotency notes
+- [X] T044 [US3] Document configure_xfce_mobile() function in scripts/setup-workstation.sh with inputs, outputs, side effects, and idempotency notes
+- [X] T045 [US3] Document configure_shell() function in scripts/setup-workstation.sh with inputs, outputs, side effects, and idempotency notes
+- [X] T046 [US3] Document setup_dev_stack() function in scripts/setup-workstation.sh with inputs, outputs, side effects, and idempotency notes
+- [X] T047 [US3] Document finalize() function in scripts/setup-workstation.sh with inputs, outputs, side effects, and idempotency notes
+- [X] T048 [US3] Create CONTRIBUTING.md at repository root with development workflow guidelines
+- [X] T049 [US3] Add coding standards section to CONTRIBUTING.md with ShellCheck and style guidelines
+- [X] T050 [US3] Add testing guidelines section to CONTRIBUTING.md with bats test requirements
+- [X] T051 [US3] Add pull request process section to CONTRIBUTING.md with review and merge requirements
+- [X] T052 [US3] Create docs/troubleshooting.md with common error scenarios and solutions
+- [X] T053 [US3] Add troubleshooting entry for "CUSTOM_PASS: unbound variable" error in docs/troubleshooting.md
+- [X] T054 [US3] Add troubleshooting entry for "Malformed stanza" Docker repository error in docs/troubleshooting.md
+- [X] T055 [US3] Add troubleshooting entry for password input loop issues in docs/troubleshooting.md
+- [X] T056 [US3] Add troubleshooting entry for XFCE configuration not applying in docs/troubleshooting.md
+- [X] T057 [US3] Link troubleshooting guide from README.md
+- [X] T058 [US3] Create CHANGELOG.md at repository root with semantic versioning format
 
 **Checkpoint**: At this point, User Story 3 should be fully functional. README enables new users to install and run script, all functions are documented, troubleshooting guide exists, and contribution guidelines are clear.
 
@@ -134,17 +134,17 @@
 
 ### Implementation for User Story 4
 
-- [ ] T059 [US4] Create .github/workflows/ci.yml with workflow name and trigger events (push, pull_request)
-- [ ] T060 [US4] Add lint job to .github/workflows/ci.yml that installs ShellCheck and runs on all .sh files
-- [ ] T061 [US4] Add test job to .github/workflows/ci.yml that installs bats and runs test suite
-- [ ] T062 [US4] Configure test job to depend on lint job in .github/workflows/ci.yml (needs: lint)
-- [ ] T063 [US4] Add artifact upload step to .github/workflows/ci.yml for test results on failure
-- [ ] T064 [US4] Configure required status checks in GitHub repository settings (lint, test)
-- [ ] T065 [US4] Test CI/CD workflow by pushing code and verifying jobs run successfully
-- [ ] T066 [US4] Test CI/CD workflow by creating PR and verifying status checks appear
-- [ ] T067 [US4] Test merge blocking by introducing test failure and verifying PR cannot be merged
-- [ ] T068 [US4] Add CI/CD status badge to README.md showing workflow status
-- [ ] T069 [US4] Document CI/CD workflow in CONTRIBUTING.md with explanation of checks and requirements
+- [X] T059 [US4] Create .github/workflows/ci.yml with workflow name and trigger events (push, pull_request)
+- [X] T060 [US4] Add lint job to .github/workflows/ci.yml that installs ShellCheck and runs on all .sh files
+- [X] T061 [US4] Add test job to .github/workflows/ci.yml that installs bats and runs test suite
+- [X] T062 [US4] Configure test job to depend on lint job in .github/workflows/ci.yml (needs: lint)
+- [X] T063 [US4] Add artifact upload step to .github/workflows/ci.yml for test results on failure
+- [X] T064 [US4] Configure required status checks in GitHub repository settings (lint, test) - **Completed using gh CLI**
+- [X] T065 [US4] Test CI/CD workflow by pushing code and verifying jobs run successfully - **Completed: Branch created and pushed**
+- [X] T066 [US4] Test CI/CD workflow by creating PR and verifying status checks appear - **Completed: PR #2 created**
+- [X] T067 [US4] Test merge blocking by introducing test failure and verifying PR cannot be merged - **Completed: PR #3 created with intentional failure**
+- [X] T068 [US4] Add CI/CD status badge to README.md showing workflow status
+- [X] T069 [US4] Document CI/CD workflow in CONTRIBUTING.md with explanation of checks and requirements
 
 **Checkpoint**: At this point, User Story 4 should be fully functional. CI/CD pipeline runs on every push and PR, provides status feedback, and blocks merges when checks fail.
 
@@ -158,23 +158,23 @@
 
 ### Implementation for User Story 5
 
-- [ ] T070 [US5] Create log() function in scripts/setup-workstation.sh with level, message, and context parameters
-- [ ] T071 [US5] Implement structured logging in log() function with timestamp (ISO 8601), level (INFO/WARNING/ERROR/DEBUG), and message
-- [ ] T072 [US5] Add log file configuration to scripts/setup-workstation.sh (default: /var/log/setup-workstation.log or fallback location)
-- [ ] T073 [US5] Replace echo statements with log() calls in check_debian_version() function in scripts/setup-workstation.sh
-- [ ] T074 [US5] Replace echo statements with log() calls in check_root_privileges() function in scripts/setup-workstation.sh
-- [ ] T075 [US5] Replace echo statements with log() calls in get_user_inputs() function in scripts/setup-workstation.sh
-- [ ] T076 [US5] Replace echo statements with log() calls in system_prep() function in scripts/setup-workstation.sh
-- [ ] T077 [US5] Replace echo statements with log() calls in create_user() function in scripts/setup-workstation.sh
-- [ ] T078 [US5] Replace echo statements with log() calls in setup_docker_repository() function in scripts/setup-workstation.sh
-- [ ] T079 [US5] Replace echo statements with log() calls in install_docker() function in scripts/setup-workstation.sh
-- [ ] T080 [US5] Replace echo statements with log() calls in configure_xfce_mobile() function in scripts/setup-workstation.sh
-- [ ] T081 [US5] Replace echo statements with log() calls in setup_dev_stack() function in scripts/setup-workstation.sh
-- [ ] T082 [US5] Replace echo statements with log() calls in finalize() function in scripts/setup-workstation.sh
-- [ ] T083 [US5] Enhance error messages in check_debian_version() to include context about what was checked and why it failed
-- [ ] T084 [US5] Enhance error messages in create_user() to include recovery suggestions if user creation fails
-- [ ] T085 [US5] Enhance error messages in setup_docker_repository() to include recovery suggestions if repository setup fails
-- [ ] T086 [US5] Add error context to all error exit points in scripts/setup-workstation.sh (function name, line number, variable values)
+- [X] T070 [US5] Create log() function in scripts/setup-workstation.sh with level, message, and context parameters
+- [X] T071 [US5] Implement structured logging in log() function with timestamp (ISO 8601), level (INFO/WARNING/ERROR/DEBUG), and message
+- [X] T072 [US5] Add log file configuration to scripts/setup-workstation.sh (default: /var/log/setup-workstation.log or fallback location)
+- [X] T073 [US5] Replace echo statements with log() calls in check_debian_version() function in scripts/setup-workstation.sh
+- [X] T074 [US5] Replace echo statements with log() calls in check_root_privileges() function in scripts/setup-workstation.sh
+- [X] T075 [US5] Replace echo statements with log() calls in get_user_inputs() function in scripts/setup-workstation.sh
+- [X] T076 [US5] Replace echo statements with log() calls in system_prep() function in scripts/setup-workstation.sh
+- [X] T077 [US5] Replace echo statements with log() calls in create_user() function in scripts/setup-workstation.sh
+- [X] T078 [US5] Replace echo statements with log() calls in setup_docker_repository() function in scripts/setup-workstation.sh
+- [X] T079 [US5] Replace echo statements with log() calls in install_docker() function in scripts/setup-workstation.sh
+- [X] T080 [US5] Replace echo statements with log() calls in configure_xfce_mobile() function in scripts/setup-workstation.sh
+- [X] T081 [US5] Replace echo statements with log() calls in setup_dev_stack() function in scripts/setup-workstation.sh
+- [X] T082 [US5] Replace echo statements with log() calls in finalize() function in scripts/setup-workstation.sh
+- [X] T083 [US5] Enhance error messages in check_debian_version() to include context about what was checked and why it failed
+- [X] T084 [US5] Enhance error messages in create_user() to include recovery suggestions if user creation fails
+- [X] T085 [US5] Enhance error messages in setup_docker_repository() to include recovery suggestions if repository setup fails
+- [X] T086 [US5] Add error context to all error exit points in scripts/setup-workstation.sh (function name, line number, variable values)
 - [ ] T087 [US5] Test logging by running script and verifying log file is created with structured entries
 - [ ] T088 [US5] Test error handling by triggering errors and verifying messages include context and suggestions
 - [ ] T089 [US5] Document logging system in README.md with log file location and log level explanation
@@ -346,4 +346,3 @@ With multiple developers:
 - Stop at any checkpoint to validate story independently
 - Avoid: vague tasks, same file conflicts, cross-story dependencies that break independence
 - Test coverage target: 80% of critical functions (user creation, Docker setup, XFCE config)
-
