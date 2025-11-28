@@ -141,12 +141,16 @@
   - `source`: Source of log (script name, test name, CI job)
 - `log_file`: Path to log file (e.g., `/var/log/setup-workstation.log`)
 - `log_format`: Format specification (`json`, `text`, `structured`)
-- `retention_policy`: How long to keep logs (days or size limit)
+- `retention_policy`: How long to keep logs (30 days or 100MB file size, whichever comes first)
+- `log_permissions`: File permissions (600 - user read/write only, no group/other access)
+- `log_rotation`: Automatic rotation when size limit reached (archive old logs, start new file)
 
 **Validation Rules**:
-- Log level must be valid level
-- Timestamp must be valid ISO 8601
+- Log level must be valid level (INFO, WARNING, ERROR, DEBUG)
+- Timestamp must be valid ISO 8601 format (YYYY-MM-DDTHH:MM:SSZ)
 - Log file must be writable
+- Log file permissions must be 600 (user-only access)
+- Log retention policy must be enforced (30 days or 100MB)
 
 **Relationships**:
 - One Logging System contains many Log Entries

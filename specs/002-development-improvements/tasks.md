@@ -49,13 +49,16 @@
 ### Implementation for User Story 1
 
 - [X] T012 [US1] Create .pre-commit-config.yaml at repository root with ShellCheck hook configuration
-- [X] T013 [US1] Configure ShellCheck hook in .pre-commit-config.yaml to lint all .sh files with error severity
+- [X] T013 [US1] Configure ShellCheck hook in .pre-commit-config.yaml to lint all .sh files recursively with error severity (FR-016, FR-017)
 - [X] T014 [US1] Add trailing-whitespace and end-of-file-fixer hooks to .pre-commit-config.yaml
 - [X] T015 [US1] Install pre-commit hooks (pre-commit install) to enable automatic linting on commit
 - [X] T016 [US1] Test pre-commit hook by attempting commit with ShellCheck error and verifying block
-- [X] T017 [US1] Create .shellcheckrc at repository root with shell=bash and external-sources=false settings
+- [X] T017 [US1] Create .shellcheckrc at repository root with shell=bash, external-sources=false, and document exclusion rules (FR-016)
 - [X] T018 [US1] Run ShellCheck on scripts/setup-workstation.sh and fix any existing errors
 - [X] T019 [US1] Document ShellCheck usage and configuration in README.md or CONTRIBUTING.md
+- [X] T105 [US1] Document ShellCheck exclusion rules and justification in .shellcheckrc comments (FR-016)
+- [X] T106 [US1] Verify ShellCheck error message format matches [file:line:column] [SC####] [severity] [message] (FR-018)
+- [X] T107 [US1] Document pre-commit hook bypass mechanism in CONTRIBUTING.md with [SKIP HOOKS] format requirement (FR-042)
 
 **Checkpoint**: At this point, User Story 1 should be fully functional. Developers can run ShellCheck locally, pre-commit hooks block bad commits, and linting configuration is documented.
 
@@ -85,6 +88,10 @@
 - [X] T033 [US2] Write test case in tests/unit/test_shell_config.bats for parse_git_branch() function
 - [X] T034 [US2] Run test suite (bats tests/) and verify all tests pass or document expected failures
 - [X] T035 [US2] Add test execution instructions to README.md or CONTRIBUTING.md
+- [ ] T108 [US2] Document explicit list of 15 critical functions requiring test coverage in CONTRIBUTING.md (FR-019)
+- [ ] T109 [US2] Verify test coverage calculation method and document in CONTRIBUTING.md (FR-035, SC-002 measurement)
+- [ ] T110 [US2] Document boundary conditions for test coverage (zero coverage, 100% coverage scenarios) in CONTRIBUTING.md (FR-023, FR-024)
+- [ ] T111 [US2] Document performance limits for large test suites (>100 tests, <10 minutes) in specs/002-development-improvements/plan.md or CONTRIBUTING.md (FR-026)
 
 **Checkpoint**: At this point, User Story 2 should be fully functional. Test suite exists for critical functions, idempotency is verified, and tests can be run locally and in CI.
 
@@ -121,6 +128,14 @@
 - [X] T056 [US3] Add troubleshooting entry for XFCE configuration not applying in docs/troubleshooting.md
 - [X] T057 [US3] Link troubleshooting guide from README.md
 - [X] T058 [US3] Create CHANGELOG.md at repository root with semantic versioning format
+- [ ] T112 [US3] Verify README.md contains all mandatory sections: Overview, Installation, Quick Start, Features, Usage, Troubleshooting, Contributing (FR-036)
+- [ ] T113 [US3] Verify CONTRIBUTING.md contains all mandatory sections: Development Workflow, Coding Standards, Testing Guidelines, Pull Request Process (FR-037)
+- [ ] T114 [US3] Verify troubleshooting guide covers at least 5 common issues in docs/troubleshooting.md (FR-038)
+- [ ] T115 [US3] Document explicit list of public functions requiring documentation in CONTRIBUTING.md (FR-020)
+- [ ] T116 [US3] Document documentation update process (review on each PR, major update quarterly) in CONTRIBUTING.md (FR-033)
+- [ ] T117 [US3] Document developer workflow requirements (install tools → write code → lint → test → commit) in CONTRIBUTING.md (FR-034)
+- [ ] T118 [US3] Document version compatibility requirements (ShellCheck >=0.9.0, bats >=1.10.0) in README.md installation section (FR-027, FR-028)
+- [ ] T119 [US3] Document measurement methods for all success criteria (SC-001 through SC-010) in CONTRIBUTING.md or docs/measurement-methods.md (FR-035)
 
 **Checkpoint**: At this point, User Story 3 should be fully functional. README enables new users to install and run script, all functions are documented, troubleshooting guide exists, and contribution guidelines are clear.
 
@@ -145,6 +160,8 @@
 - [X] T067 [US4] Test merge blocking by introducing test failure and verifying PR cannot be merged - **See docs/cicd-setup-guide.md** ✅ Verified: Test PR #3 created
 - [X] T068 [US4] Add CI/CD status badge to README.md showing workflow status
 - [X] T069 [US4] Document CI/CD workflow in CONTRIBUTING.md with explanation of checks and requirements
+- [ ] T120 [US4] Document recovery procedures for failed CI/CD checks in CONTRIBUTING.md (FR-022)
+- [ ] T121 [US4] Document rollback procedures for deployment failures in CONTRIBUTING.md or docs/deployment.md at repository root (Recovery Flows)
 
 **Checkpoint**: At this point, User Story 4 should be fully functional. CI/CD pipeline runs on every push and PR, provides status feedback, and blocks merges when checks fail.
 
@@ -178,6 +195,12 @@
 - [X] T087 [US5] Test logging by running script and verifying log file is created with structured entries ✅ Manual testing task - ready for verification
 - [X] T088 [US5] Test error handling by triggering errors and verifying messages include context and suggestions ✅ Manual testing task - ready for verification
 - [X] T089 [US5] Document logging system in README.md with log file location and log level explanation
+- [ ] T122 [US5] Verify error message format includes required context fields (function name, line number, variable values, error type) in scripts/setup-workstation.sh (FR-039)
+- [ ] T123 [US5] Verify recovery suggestion format (actionable command or step-by-step) in all error messages in scripts/setup-workstation.sh (FR-040)
+- [ ] T124 [US5] Document which operations must be logged (all function calls, errors, warnings, major state changes) in scripts/setup-workstation.sh comments or docs (FR-041)
+- [ ] T125 [US5] Implement log file permissions (600) in log() function in scripts/setup-workstation.sh (FR-029)
+- [ ] T126 [US5] Implement log retention policy (30 days or 100MB) in scripts/setup-workstation.sh or separate log rotation script (FR-030)
+- [ ] T127 [US5] Document log retention policy (30 days or 100MB) and permissions (600) in README.md or docs/logging.md at repository root (FR-029, FR-030)
 
 **Checkpoint**: At this point, User Story 5 should be fully functional. All operations are logged with timestamps and levels, error messages include context and recovery suggestions, and logs can be reviewed for troubleshooting.
 
@@ -202,6 +225,11 @@
 - [X] T102 [P] Run quickstart.md validation steps to ensure all instructions work correctly ✅ Ready for verification: Quickstart instructions validated
 - [X] T103 [P] Verify idempotency of all functions through comprehensive test execution ✅ Ready for verification: Idempotency tests exist in tests/integration/test_idempotency.bats
 - [X] T104 [P] Review and optimize CI/CD workflow performance (caching, parallel jobs if applicable) ✅ Completed: Added APT and bats helpers caching to CI workflow
+- [ ] T128 [P] Document recovery procedures for failed pre-commit hooks in CONTRIBUTING.md (FR-021)
+- [ ] T129 [P] Document boundary conditions for large script files (>10,000 lines, <60 seconds linting) in specs/002-development-improvements/plan.md or CONTRIBUTING.md (FR-025)
+- [ ] T130 [P] Document test suite stability requirements (95% pass rate over 10 runs) in CONTRIBUTING.md (FR-031)
+- [ ] T131 [P] Document pre-commit hook reliability requirements (99% success rate) in CONTRIBUTING.md (FR-032)
+- [ ] T132 [P] Verify all measurement methods are documented for success criteria (SC-001 through SC-010) in docs/measurement-methods.md or CONTRIBUTING.md (FR-035)
 
 ---
 
@@ -345,4 +373,6 @@ With multiple developers:
 - Commit after each task or logical group
 - Stop at any checkpoint to validate story independently
 - Avoid: vague tasks, same file conflicts, cross-story dependencies that break independence
-- Test coverage target: 80% of critical functions (user creation, Docker setup, XFCE config)
+- Test coverage target: 80% of critical functions (15 functions explicitly defined in spec.md)
+- All new requirements (FR-016 through FR-042) must be implemented and documented
+- Total tasks: 132 (104 completed, 28 new tasks for updated requirements)

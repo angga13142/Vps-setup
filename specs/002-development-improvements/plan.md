@@ -13,10 +13,11 @@ A comprehensive development infrastructure improvement for the workstation setup
 
 **Language/Version**: Bash 5.2+ (Debian 13 default), Python 3.11+ (for pre-commit), YAML (for GitHub Actions)  
 **Primary Dependencies**:
-- **Linting**: ShellCheck (via APT: `shellcheck`)
-- **Testing**: bats-core (via APT: `bats`)
+- **Linting**: ShellCheck >=0.9.0 (via APT: `shellcheck`)
+- **Testing**: bats-core >=1.10.0 (via APT: `bats`)
 - **CI/CD**: GitHub Actions (built-in)
-- **Pre-commit**: pre-commit framework (via pip: `pre-commit`)
+- **Pre-commit**: pre-commit framework >=3.0.0 (via pip: `pre-commit`)
+- **Python**: Python 3.11+ (for pre-commit framework)
 - **Documentation**: Markdown (no dependencies)
 
 **Storage**: File-based configuration:
@@ -44,8 +45,11 @@ A comprehensive development infrastructure improvement for the workstation setup
 - All tools must be available in Debian 13 APT repositories or installable without root
 - Must not interfere with existing script functionality
 - Must be maintainable by team members
-- Pre-commit hooks must be fast enough for daily use
-- CI/CD must run on free GitHub Actions tier
+- Pre-commit hooks must be fast enough for daily use (< 10 seconds)
+- CI/CD must run on free GitHub Actions tier (2000 minutes/month limit)
+- ShellCheck version >=0.9.0 required (available in Debian 13)
+- bats-core version >=1.10.0 required (available in Debian 13)
+- Performance must not conflict with comprehensive coverage (optimize if needed)
 
 **Scale/Scope**:
 - Single repository with one main script (`scripts/setup-workstation.sh`)
@@ -187,3 +191,31 @@ See `quickstart.md` for:
 - Running tests locally
 - Running linting
 - Contributing workflow
+
+### Measurement Methods
+
+**Success Criteria Measurement** (see spec.md §Measurement Methods for details):
+- SC-001: ShellCheck exit code verification (automated)
+- SC-002: Test coverage calculation via coverage tool or manual count (semi-automated)
+- SC-003: Documentation completeness review (manual or automated parser)
+- SC-004: User success rate tracking via survey/analytics (manual)
+- SC-005: GitHub Actions workflow run monitoring (automated)
+- SC-006: Branch protection rule verification and merge blocking rate (automated)
+- SC-007: Error message context review (manual or automated parsing)
+- SC-008: Log file analysis (automated log analysis tool)
+- SC-009: Support request tracking and resolution rate (manual)
+- SC-010: Code review time comparison (manual, baseline required)
+
+**Performance Optimization Strategy**:
+- If performance conflicts with comprehensive coverage:
+  1. Use test tags to run subset during development
+  2. Optimize slow tests (mock external dependencies)
+  3. Use parallel test execution where possible
+  4. Cache dependencies in CI/CD
+  5. Consider selective linting for very large files
+
+**Version Compatibility Strategy**:
+- Pin minimum versions in documentation
+- Test compatibility on Debian 13 before deployment
+- Document upgrade path if versions change
+- Monitor for security updates

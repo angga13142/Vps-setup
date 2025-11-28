@@ -84,11 +84,30 @@ The project uses pre-commit hooks to ensure code quality:
 - **check-merge-conflict**: Detects merge conflict markers
 - **check-case-conflict**: Detects case-only filename conflicts
 
-**Bypassing hooks** (emergency only):
+**Bypassing hooks** (emergency only - FR-042):
+
+Pre-commit hooks can be bypassed using the `--no-verify` flag, but this should only be used in genuine emergencies. When bypassing hooks, you **MUST** include `[SKIP HOOKS]` in your commit message to document the justification.
+
+**Format**: `[SKIP HOOKS] <justification>`
+
+**Example**:
 ```bash
-git commit --no-verify -m "Emergency fix"
+git commit --no-verify -m "fix: Emergency security patch [SKIP HOOKS] Critical vulnerability fix, hooks will be verified in follow-up commit"
 ```
-⚠️ **Warning**: Only bypass hooks in genuine emergencies. All code must pass quality checks before merging.
+
+**Requirements**:
+- ⚠️ **Warning**: Only bypass hooks in genuine emergencies
+- **MUST** include `[SKIP HOOKS]` in commit message
+- **MUST** provide justification for bypass
+- All code must pass quality checks before merging to main/master
+- Follow-up commits must pass all hooks normally
+
+**Recovery Procedure** (FR-021):
+1. Developer receives error message with file:line:column and SC code
+2. Developer fixes issues in code
+3. Developer re-runs `pre-commit run --all-files` to verify fixes
+4. Developer commits again (hook will re-run automatically)
+5. If bypass needed: Use `git commit --no-verify` with `[SKIP HOOKS]` and documented justification in commit message
 
 ## Testing
 

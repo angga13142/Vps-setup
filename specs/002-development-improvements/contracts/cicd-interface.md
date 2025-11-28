@@ -200,6 +200,27 @@ env:
 - Re-run failed workflow from GitHub UI
 - Or push new commit to trigger new run
 
+### Recovery Procedures
+
+**CI/CD Check Failure Recovery**:
+1. Developer receives notification of failed CI checks via GitHub PR status
+2. Developer reviews error messages in CI logs (available in GitHub Actions UI)
+3. Developer fixes issues locally:
+   - Run `pre-commit run --all-files` to reproduce linting errors
+   - Run `bats tests/` to reproduce test failures
+4. Developer verifies fixes locally before pushing
+5. Developer pushes fixes to same branch
+6. CI/CD automatically re-runs on new push
+7. Process repeats until all checks pass
+8. Merge is automatically allowed when all required checks pass
+
+**Rollback Procedures** (if deployment fails):
+1. Identify failed deployment step from CI/CD logs
+2. Revert code changes via `git revert <commit-hash>` or `git reset --hard <previous-commit>`
+3. Verify reverted code passes all checks (push triggers CI/CD)
+4. Document failure reason in issue tracker
+5. Re-deploy after fixes are implemented and tested
+
 ---
 
 ## Performance Requirements
