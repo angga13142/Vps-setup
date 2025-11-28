@@ -72,14 +72,14 @@
 
 ### Implementation for User Story 2
 
-- [ ] T016 [US2] Create `install_fzf()` function in scripts/setup-workstation.sh with idempotency check using `dpkg-query -W -f='${Status}' "fzf" | grep -q "install ok installed"` (FR-014 verification method)
-- [ ] T017 [US2] Implement fzf installation via APT (`sudo apt install -y fzf`) in `install_fzf()` function in scripts/setup-workstation.sh with error handling: continue on failure, log error with format `[WARN] [terminal-enhancements] Failed to install fzf. Continuing with remaining tools.`, return error code (FR-013, FR-022)
-- [ ] T018 [US2] Add fzf installation verification using `command -v fzf &>/dev/null` and visual feedback with format `[INFO] [terminal-enhancements] ✓ fzf installed and configured successfully` in `install_fzf()` function in scripts/setup-workstation.sh (FR-014, FR-015)
-- [ ] T019 [US2] Create `configure_fzf_key_bindings(username)` function in scripts/setup-workstation.sh with configuration marker check
-- [ ] T020 [US2] Add fzf key bindings (`eval "$(fzf --bash)"`) to .bashrc in `configure_fzf_key_bindings()` function in scripts/setup-workstation.sh
-- [ ] T021 [US2] Configure FZF_DEFAULT_OPTS environment variable in `configure_fzf_key_bindings()` function in scripts/setup-workstation.sh
-- [ ] T022 [US2] Configure FZF_CTRL_T_COMMAND with ignore patterns (node_modules, .git) in `configure_fzf_key_bindings()` function in scripts/setup-workstation.sh (FR-017)
-- [ ] T023 [US2] Call `install_fzf()` and `configure_fzf_key_bindings()` from `setup_terminal_enhancements()` function in scripts/setup-workstation.sh with error handling (only configure if installation successful)
+- [X] T016 [US2] Create `install_fzf()` function in scripts/setup-workstation.sh with idempotency check using `dpkg-query -W -f='${Status}' "fzf" | grep -q "install ok installed"` (FR-014 verification method)
+- [X] T017 [US2] Implement fzf installation via APT (`sudo apt install -y fzf`) in `install_fzf()` function in scripts/setup-workstation.sh with error handling: continue on failure, log error with format `[WARN] [terminal-enhancements] Failed to install fzf. Continuing with remaining tools.`, return error code (FR-013, FR-022)
+- [X] T018 [US2] Add fzf installation verification using `command -v fzf &>/dev/null` and visual feedback with format `[INFO] [terminal-enhancements] ✓ fzf installed and configured successfully` in `install_fzf()` function in scripts/setup-workstation.sh (FR-014, FR-015)
+- [X] T019 [US2] Create `configure_fzf_key_bindings(username)` function in scripts/setup-workstation.sh with configuration marker check
+- [X] T020 [US2] Add fzf key bindings (`eval "$(fzf --bash)"`) to .bashrc in `configure_fzf_key_bindings()` function in scripts/setup-workstation.sh
+- [X] T021 [US2] Configure FZF_DEFAULT_OPTS environment variable in `configure_fzf_key_bindings()` function in scripts/setup-workstation.sh
+- [X] T022 [US2] Configure FZF_CTRL_T_COMMAND with ignore patterns (node_modules, .git) in `configure_fzf_key_bindings()` function in scripts/setup-workstation.sh (FR-017)
+- [X] T023 [US2] Call `install_fzf()` and `configure_fzf_key_bindings()` from `setup_terminal_enhancements()` function in scripts/setup-workstation.sh with error handling (only configure if installation successful)
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently. Users can use fuzzy search for history and files, dramatically improving navigation efficiency.
 
@@ -93,18 +93,18 @@
 
 ### Implementation for User Story 3
 
-- [ ] T024 [P] [US3] Create `install_bat()` function in scripts/setup-workstation.sh with idempotency check using `dpkg-query -W -f='${Status}' "bat" | grep -q "install ok installed"` (FR-014 verification method)
-- [ ] T025 [P] [US3] Create `install_exa()` function in scripts/setup-workstation.sh with idempotency check using `command -v exa &>/dev/null` (FR-014 verification method)
-- [ ] T026 [US3] Implement bat installation via APT (`sudo apt install -y bat`) in `install_bat()` function in scripts/setup-workstation.sh with error handling: continue on failure, log error with format `[WARN] [terminal-enhancements] Failed to install bat. Continuing with remaining tools.`, return error code (FR-013, FR-022)
-- [ ] T027 [US3] Create symlink `bat → batcat` in ~/.local/bin/ in `install_bat()` function in scripts/setup-workstation.sh (Note: batcat is Debian package name, bat is symlink alias for consistency)
-- [ ] T028 [US3] Ensure ~/.local/bin exists and is in PATH before creating symlink in `install_bat()` function in scripts/setup-workstation.sh
-- [ ] T029 [US3] Add bat installation verification using `command -v batcat &>/dev/null` and symlink check, and visual feedback with format `[INFO] [terminal-enhancements] ✓ bat installed and configured successfully` in `install_bat()` function in scripts/setup-workstation.sh (FR-014, FR-015)
-- [ ] T030 [US3] Implement exa binary download from GitHub releases in `install_exa()` function in scripts/setup-workstation.sh with error handling: continue on failure, log error with format `[ERROR] [terminal-enhancements] Network failure during exa download. Skipping exa installation. Remaining tools will continue installation.`, return error code (FR-013, FR-022, Edge Cases: Network Failures)
-- [ ] T031 [US3] Implement exa binary extraction and installation to /usr/local/bin/exa in `install_exa()` function in scripts/setup-workstation.sh with error handling: check disk space (abort if < 500MB free), log error with format `[ERROR] [terminal-enhancements] Disk space exhausted. Free at least 500MB and retry installation.` if space insufficient (Edge Cases: Disk Space Exhaustion)
-- [ ] T032 [US3] Add exa installation verification using `command -v exa &>/dev/null` and visual feedback with format `[INFO] [terminal-enhancements] ✓ exa installed and configured successfully` in `install_exa()` function in scripts/setup-workstation.sh (FR-014, FR-015)
-- [ ] T033 [US3] Add bat alias (`alias cat='bat'` or `alias cat='batcat'`) to .bashrc in `configure_terminal_aliases()` function in scripts/setup-workstation.sh
-- [ ] T034 [US3] Add exa aliases (`alias ls='exa'`, `alias ll='exa -lah'`) to .bashrc in `configure_terminal_aliases()` function in scripts/setup-workstation.sh
-- [ ] T035 [US3] Call `install_bat()` and `install_exa()` from `setup_terminal_enhancements()` function in scripts/setup-workstation.sh with error handling (only configure if installation successful)
+- [X] T024 [P] [US3] Create `install_bat()` function in scripts/setup-workstation.sh with idempotency check using `dpkg-query -W -f='${Status}' "bat" | grep -q "install ok installed"` (FR-014 verification method)
+- [X] T025 [P] [US3] Create `install_exa()` function in scripts/setup-workstation.sh with idempotency check using `command -v exa &>/dev/null` (FR-014 verification method)
+- [X] T026 [US3] Implement bat installation via APT (`sudo apt install -y bat`) in `install_bat()` function in scripts/setup-workstation.sh with error handling: continue on failure, log error with format `[WARN] [terminal-enhancements] Failed to install bat. Continuing with remaining tools.`, return error code (FR-013, FR-022)
+- [X] T027 [US3] Create symlink `bat → batcat` in ~/.local/bin/ in `install_bat()` function in scripts/setup-workstation.sh (Note: batcat is Debian package name, bat is symlink alias for consistency)
+- [X] T028 [US3] Ensure ~/.local/bin exists and is in PATH before creating symlink in `install_bat()` function in scripts/setup-workstation.sh
+- [X] T029 [US3] Add bat installation verification using `command -v batcat &>/dev/null` and symlink check, and visual feedback with format `[INFO] [terminal-enhancements] ✓ bat installed and configured successfully` in `install_bat()` function in scripts/setup-workstation.sh (FR-014, FR-015)
+- [X] T030 [US3] Implement exa binary download from GitHub releases in `install_exa()` function in scripts/setup-workstation.sh with error handling: continue on failure, log error with format `[ERROR] [terminal-enhancements] Network failure during exa download. Skipping exa installation. Remaining tools will continue installation.`, return error code (FR-013, FR-022, Edge Cases: Network Failures)
+- [X] T031 [US3] Implement exa binary extraction and installation to /usr/local/bin/exa in `install_exa()` function in scripts/setup-workstation.sh with error handling: check disk space (abort if < 500MB free), log error with format `[ERROR] [terminal-enhancements] Disk space exhausted. Free at least 500MB and retry installation.` if space insufficient (Edge Cases: Disk Space Exhaustion)
+- [X] T032 [US3] Add exa installation verification using `command -v exa &>/dev/null` and visual feedback with format `[INFO] [terminal-enhancements] ✓ exa installed and configured successfully` in `install_exa()` function in scripts/setup-workstation.sh (FR-014, FR-015)
+- [X] T033 [US3] Add bat alias (`alias cat='bat'` or `alias cat='batcat'`) to .bashrc in `configure_terminal_aliases()` function in scripts/setup-workstation.sh
+- [X] T034 [US3] Add exa aliases (`alias ls='exa'`, `alias ll='exa -lah'`) to .bashrc in `configure_terminal_aliases()` function in scripts/setup-workstation.sh
+- [X] T035 [US3] Call `install_bat()` and `install_exa()` from `setup_terminal_enhancements()` function in scripts/setup-workstation.sh with error handling (only configure if installation successful)
 
 **Checkpoint**: At this point, User Stories 1, 2, AND 3 should all work independently. Users can view files with syntax highlighting and use better directory listings with Git integration.
 

@@ -911,6 +911,471 @@ configure_starship_prompt() {
 }
 
 #######################################
+# Install fzf (fuzzy finder) tool
+#
+# Purpose: Install fzf via APT package manager
+#
+# Inputs: None
+#
+# Outputs: None (uses structured logging)
+#
+# Side Effects:
+#   - Installs fzf package via APT
+#   - Makes fzf available in system PATH
+#
+# Returns:
+#   0 - Success (fzf installed or already installed)
+#   1 - Error (installation failed)
+#
+# Idempotency: Yes
+#   - Checks package status using dpkg-query before installing
+#   - Skips installation if package already installed
+#
+# Dependencies:
+#   - apt package manager
+#   - Internet connectivity
+#   - Root/sudo privileges
+#
+# Verification:
+#   - After installation, verifies: command -v fzf &>/dev/null
+#
+# Example:
+#   if install_fzf; then
+#       log "INFO" "fzf installed successfully"
+#   fi
+#######################################
+install_fzf() {
+    # Idempotency check (T016, FR-014)
+    if dpkg-query -W -f='${Status}' "fzf" 2>/dev/null | grep -q "install ok installed"; then
+        log "INFO" "fzf already installed, skipping installation" "install_fzf()"
+        return 0
+    fi
+
+    log "INFO" "Installing fzf (fuzzy finder)..." "install_fzf()"
+
+    # Install fzf via APT (T017)
+    if ! apt-get update -qq && apt-get install -y fzf; then
+        log "WARNING" "[WARN] [terminal-enhancements] Failed to install fzf. Continuing with remaining tools." "install_fzf()" "reason=apt_install_failed"
+        return 1
+    fi
+
+    # Verify installation (T018, FR-014)
+    if ! command -v fzf &>/dev/null; then
+        log "WARNING" "[WARN] [terminal-enhancements] Failed to install fzf. Continuing with remaining tools." "install_fzf()" "reason=verification_failed"
+        return 1
+    fi
+
+    # Visual feedback (T018, FR-015)
+    log "INFO" "[INFO] [terminal-enhancements] ✓ fzf installed and configured successfully" "install_fzf()"
+    return 0
+}
+
+#######################################
+# Configure fzf key bindings in .bashrc
+#
+# Purpose: Configure fzf key bindings (Ctrl+R for history, Ctrl+T for files) with ignore patterns
+#
+# Inputs:
+#   - username: Username for which to configure fzf (string, required)
+#
+# Outputs: None (uses structured logging)
+#
+# Side Effects:
+#   - Adds fzf key bindings to .bashrc
+#   - Configures FZF_DEFAULT_OPTS environment variable
+#   - Configures FZF_CTRL_T_COMMAND with ignore patterns (node_modules, .git)
+#   - Sets file ownership and permissions
+#
+# Returns:
+#   0 - Success (fzf configured or already configured)
+#   1 - Error (configuration failed)
+#
+# Idempotency: Yes
+#   - Checks for configuration marker before adding
+#   - Safe to run multiple times
+#
+# Dependencies:
+#   - install_fzf() must succeed first
+#   - fzf command must be available
+#   - User's .bashrc file must exist or be creatable
+#
+# Example:
+#   configure_fzf_key_bindings "coder"
+#######################################
+configure_fzf_key_bindings() {
+    local username="$1"
+    local home_dir="/home/$username"
+    local bashrc_file="$home_dir/.bashrc"
+    local fzf_marker="# fzf Key Bindings Configuration - Added by setup-workstation.sh"
+
+    log "INFO" "Configuring fzf key bindings..." "configure_fzf_key_bindings()" "username=$username"
+
+    # Verify fzf is installed before configuring
+    if ! command -v fzf &>/dev/null; then
+        log "WARNING" "fzf not installed, skipping configuration" "configure_fzf_key_bindings()" "username=$username"
+        return 1
+    fi
+
+    # Configuration marker check (T019)
+    if [ -f "$bashrc_file" ] && grep -q "$fzf_marker" "$bashrc_file"; then
+        log "INFO" "fzf key bindings already configured, skipping" "configure_fzf_key_bindings()" "username=$username"
+        return 0
+    fi
+
+    # Ensure .bashrc exists
+    if [ ! -f "$bashrc_file" ]; then
+        touch "$bashrc_file"
+        chown "$username:$username" "$bashrc_file"
+        chmod 644 "$bashrc_file"
+    fi
+
+    # Add fzf key bindings (T020)
+    {
+        echo ""
+        echo "$fzf_marker"
+        echo "# Initialize fzf key bindings (Ctrl+R for history, Ctrl+T for files)"
+        echo 'eval "$(fzf --bash)"'
+        echo ""
+        echo "# fzf default options (T021)"
+        echo 'export FZF_DEFAULT_OPTS="--height 40% --layout=reverse --border"'
+        echo ""
+        echo "# fzf file search command with ignore patterns (T022, FR-017)"
+        echo 'export FZF_CTRL_T_COMMAND="find . -type f -not -path '\''*/\.git/*'\'' -not -path '\''*/node_modules/*'\'' 2>/dev/null"'
+    } >> "$bashrc_file"
+
+    # Ensure correct ownership and permissions
+    chown "$username:$username" "$bashrc_file" 2>/dev/null || true
+    chmod 644 "$bashrc_file" 2>/dev/null || true
+
+    log "INFO" "✓ fzf key bindings configured successfully" "configure_fzf_key_bindings()" "username=$username"
+    return 0
+}
+
+#######################################
+# Install bat (better cat) tool
+#
+# Purpose: Install bat via APT and create symlink bat → batcat
+#
+# Inputs: None
+#
+# Outputs: None (uses structured logging)
+#
+# Side Effects:
+#   - Installs bat package via APT (installs as batcat)
+#   - Creates symlink bat → batcat in ~/.local/bin/
+#   - Ensures ~/.local/bin exists and is in PATH
+#
+# Returns:
+#   0 - Success (bat installed and symlink created, or already installed)
+#   1 - Error (installation or symlink creation failed)
+#
+# Idempotency: Yes
+#   - Checks package status using dpkg-query before installing
+#   - Checks if symlink exists before creating
+#   - Skips if already installed and configured
+#
+# Dependencies:
+#   - apt package manager
+#   - ~/.local/bin directory (created if needed)
+#   - Write permissions for user's home directory
+#
+# Verification:
+#   - After installation, verifies: command -v batcat &>/dev/null
+#   - After symlink, verifies: command -v bat &>/dev/null
+#
+# Example:
+#   if install_bat; then
+#       log "INFO" "bat installed and symlink created"
+#   fi
+#######################################
+install_bat() {
+    # Idempotency check (T024, FR-014)
+    if dpkg-query -W -f='${Status}' "bat" 2>/dev/null | grep -q "install ok installed"; then
+        # Check if symlink exists
+        if [ -L "$HOME/.local/bin/bat" ] || command -v bat &>/dev/null; then
+            log "INFO" "bat already installed and configured, skipping installation" "install_bat()"
+            return 0
+        fi
+    fi
+
+    log "INFO" "Installing bat (better cat)..." "install_bat()"
+
+    # Install bat via APT (T026)
+    if ! apt-get update -qq && apt-get install -y bat; then
+        log "WARNING" "[WARN] [terminal-enhancements] Failed to install bat. Continuing with remaining tools." "install_bat()" "reason=apt_install_failed"
+        return 1
+    fi
+
+    # Ensure ~/.local/bin exists and is in PATH (T028)
+    if [ ! -d "$HOME/.local/bin" ]; then
+        mkdir -p "$HOME/.local/bin"
+    fi
+
+    # Add ~/.local/bin to PATH if not already there
+    if ! echo "$PATH" | grep -q "$HOME/.local/bin"; then
+        export PATH="$HOME/.local/bin:$PATH"
+    fi
+
+    # Create symlink bat → batcat (T027)
+    if [ ! -L "$HOME/.local/bin/bat" ] && [ ! -f "$HOME/.local/bin/bat" ]; then
+        if ! ln -s /usr/bin/batcat "$HOME/.local/bin/bat" 2>/dev/null; then
+            log "WARNING" "Failed to create bat symlink, but batcat is available" "install_bat()"
+            # Continue - user can use batcat directly
+        fi
+    fi
+
+    # Verify installation (T029, FR-014)
+    if ! command -v batcat &>/dev/null; then
+        log "WARNING" "[WARN] [terminal-enhancements] Failed to install bat. Continuing with remaining tools." "install_bat()" "reason=verification_failed"
+        return 1
+    fi
+
+    # Visual feedback (T029, FR-015)
+    log "INFO" "[INFO] [terminal-enhancements] ✓ bat installed and configured successfully" "install_bat()"
+    return 0
+}
+
+#######################################
+# Install exa (modern ls) tool
+#
+# Purpose: Install exa binary from GitHub releases
+#
+# Inputs: None
+#
+# Outputs: None (uses structured logging)
+#
+# Side Effects:
+#   - Downloads exa binary from GitHub releases
+#   - Installs binary to /usr/local/bin/exa
+#   - Makes exa available in system PATH
+#
+# Returns:
+#   0 - Success (exa installed or already installed)
+#   1 - Error (download or installation failed)
+#
+# Idempotency: Yes
+#   - Checks if exa command exists in PATH before installing
+#   - Skips installation if already present
+#
+# Dependencies:
+#   - wget or curl (for downloading)
+#   - unzip (for extracting binary)
+#   - Internet connectivity
+#   - Root/sudo privileges (for /usr/local/bin/)
+#
+# Verification:
+#   - After installation, verifies: command -v exa &>/dev/null
+#
+# Example:
+#   if install_exa; then
+#       log "INFO" "exa installed successfully"
+#   fi
+#######################################
+install_exa() {
+    # Idempotency check (T025, FR-014)
+    if command -v exa &>/dev/null; then
+        log "INFO" "exa already installed, skipping installation" "install_exa()"
+        return 0
+    fi
+
+    log "INFO" "Installing exa (modern ls)..." "install_exa()"
+
+    # Check disk space (T031, Edge Cases: Disk Space Exhaustion)
+    local available_space
+    available_space=$(df /usr/local/bin 2>/dev/null | tail -1 | awk '{print $4}' || echo "0")
+    if [ "$available_space" -lt 524288 ]; then  # 500MB in KB
+        log "ERROR" "[ERROR] [terminal-enhancements] Disk space exhausted. Free at least 500MB and retry installation." "install_exa()" "available_space=${available_space}KB"
+        return 1
+    fi
+
+    # Determine architecture
+    local arch
+    arch=$(uname -m)
+    if [ "$arch" != "x86_64" ]; then
+        log "WARNING" "Unsupported architecture for exa: $arch. Skipping installation." "install_exa()"
+        return 1
+    fi
+
+    # Determine download command
+    local download_cmd
+    if command -v wget &>/dev/null; then
+        download_cmd="wget -q"
+    elif command -v curl &>/dev/null; then
+        download_cmd="curl -sSL -o"
+    else
+        log "ERROR" "[ERROR] [terminal-enhancements] Network failure during exa download. Skipping exa installation. Remaining tools will continue installation." "install_exa()" "reason=curl_or_wget_not_available"
+        return 1
+    fi
+
+    # Create temporary directory for download
+    local temp_dir
+    temp_dir=$(mktemp -d)
+    if [ ! -d "$temp_dir" ]; then
+        log "ERROR" "[ERROR] [terminal-enhancements] Network failure during exa download. Skipping exa installation. Remaining tools will continue installation." "install_exa()" "reason=temp_dir_creation_failed"
+        return 1
+    fi
+
+    # Download exa binary (T030)
+    local zip_file="$temp_dir/exa-linux-x86_64-musl.zip"
+    if command -v wget &>/dev/null; then
+        if ! wget -q "https://github.com/ogham/exa/releases/latest/download/exa-linux-x86_64-musl.zip" -O "$zip_file"; then
+            log "ERROR" "[ERROR] [terminal-enhancements] Network failure during exa download. Skipping exa installation. Remaining tools will continue installation." "install_exa()" "reason=download_failed"
+            rm -rf "$temp_dir"
+            return 1
+        fi
+    else
+        if ! curl -sSL "https://github.com/ogham/exa/releases/latest/download/exa-linux-x86_64-musl.zip" -o "$zip_file"; then
+            log "ERROR" "[ERROR] [terminal-enhancements] Network failure during exa download. Skipping exa installation. Remaining tools will continue installation." "install_exa()" "reason=download_failed"
+            rm -rf "$temp_dir"
+            return 1
+        fi
+    fi
+
+    # Extract binary (T031)
+    if ! unzip -q "$zip_file" -d "$temp_dir" 2>/dev/null; then
+        log "ERROR" "[ERROR] [terminal-enhancements] Network failure during exa download. Skipping exa installation. Remaining tools will continue installation." "install_exa()" "reason=extraction_failed"
+        rm -rf "$temp_dir"
+        return 1
+    fi
+
+    # Install binary to /usr/local/bin/exa (T031)
+    if [ ! -f "$temp_dir/bin/exa" ]; then
+        log "ERROR" "[ERROR] [terminal-enhancements] Network failure during exa download. Skipping exa installation. Remaining tools will continue installation." "install_exa()" "reason=binary_not_found"
+        rm -rf "$temp_dir"
+        return 1
+    fi
+
+    if ! mv "$temp_dir/bin/exa" /usr/local/bin/exa; then
+        log "ERROR" "[ERROR] [terminal-enhancements] Network failure during exa download. Skipping exa installation. Remaining tools will continue installation." "install_exa()" "reason=installation_failed"
+        rm -rf "$temp_dir"
+        return 1
+    fi
+
+    # Set permissions
+    chmod +x /usr/local/bin/exa 2>/dev/null || true
+
+    # Cleanup
+    rm -rf "$temp_dir"
+
+    # Verify installation (T032, FR-014)
+    if ! command -v exa &>/dev/null; then
+        log "WARNING" "[WARN] [terminal-enhancements] Failed to install exa. Continuing with remaining tools." "install_exa()" "reason=verification_failed"
+        return 1
+    fi
+
+    # Visual feedback (T032, FR-015)
+    log "INFO" "[INFO] [terminal-enhancements] ✓ exa installed and configured successfully" "install_exa()"
+    return 0
+}
+
+#######################################
+# Configure terminal aliases (bat, exa, and future aliases)
+#
+# Purpose: Add aliases for bat and exa to user's .bashrc with conflict detection
+#
+# Inputs:
+#   - username: Username for which to configure aliases (string, required)
+#
+# Outputs: None (uses structured logging)
+#
+# Side Effects:
+#   - Adds bat and exa aliases to .bashrc
+#   - Sets file ownership and permissions
+#
+# Returns:
+#   0 - Success (aliases configured or already configured)
+#   1 - Error (configuration failed)
+#
+# Idempotency: Yes
+#   - Checks for configuration marker before adding
+#   - Checks for conflicts before adding aliases
+#   - Safe to run multiple times
+#
+# Dependencies:
+#   - install_bat() and install_exa() should succeed first
+#   - check_alias_conflict() function
+#   - User's .bashrc file must exist or be creatable
+#
+# Example:
+#   configure_terminal_aliases "coder"
+#######################################
+configure_terminal_aliases() {
+    local username="$1"
+    local home_dir="/home/$username"
+    local bashrc_file="$home_dir/.bashrc"
+    local aliases_marker="# Terminal Aliases Configuration - Added by setup-workstation.sh"
+
+    log "INFO" "Configuring terminal aliases..." "configure_terminal_aliases()" "username=$username"
+
+    # Configuration marker check
+    if [ -f "$bashrc_file" ] && grep -q "$aliases_marker" "$bashrc_file"; then
+        log "INFO" "Terminal aliases already configured, skipping" "configure_terminal_aliases()" "username=$username"
+        return 0
+    fi
+
+    # Ensure .bashrc exists
+    if [ ! -f "$bashrc_file" ]; then
+        touch "$bashrc_file"
+        chown "$username:$username" "$bashrc_file"
+        chmod 644 "$bashrc_file"
+    fi
+
+    # Check for existing aliases in .bashrc (for conflict detection)
+    local cat_alias_exists=false
+    local ls_alias_exists=false
+    local ll_alias_exists=false
+
+    if [ -f "$bashrc_file" ]; then
+        if grep -qE "^alias cat=" "$bashrc_file" 2>/dev/null; then
+            cat_alias_exists=true
+        fi
+        if grep -qE "^alias ls=" "$bashrc_file" 2>/dev/null; then
+            ls_alias_exists=true
+        fi
+        if grep -qE "^alias ll=" "$bashrc_file" 2>/dev/null; then
+            ll_alias_exists=true
+        fi
+    fi
+
+    # Add aliases (T033, T034)
+    {
+        echo ""
+        echo "$aliases_marker"
+        echo "# bat alias (better cat)"
+        if [ "$cat_alias_exists" = false ]; then
+            if command -v bat &>/dev/null || command -v batcat &>/dev/null; then
+                echo "alias cat='batcat'"
+            fi
+        else
+            log "WARNING" "[WARN] [terminal-enhancements] Alias/function 'cat' already exists, skipping to preserve user customization." "configure_terminal_aliases()" "username=$username"
+        fi
+        echo ""
+        echo "# exa aliases (modern ls)"
+        if [ "$ls_alias_exists" = false ]; then
+            if command -v exa &>/dev/null; then
+                echo "alias ls='exa'"
+            fi
+        else
+            log "WARNING" "[WARN] [terminal-enhancements] Alias/function 'ls' already exists, skipping to preserve user customization." "configure_terminal_aliases()" "username=$username"
+        fi
+        if [ "$ll_alias_exists" = false ]; then
+            if command -v exa &>/dev/null; then
+                echo "alias ll='exa -lah'"
+            fi
+        else
+            log "WARNING" "[WARN] [terminal-enhancements] Alias/function 'll' already exists, skipping to preserve user customization." "configure_terminal_aliases()" "username=$username"
+        fi
+    } >> "$bashrc_file"
+
+    # Ensure correct ownership and permissions
+    chown "$username:$username" "$bashrc_file" 2>/dev/null || true
+    chmod 644 "$bashrc_file" 2>/dev/null || true
+
+    log "INFO" "✓ Terminal aliases configured successfully" "configure_terminal_aliases()" "username=$username"
+    return 0
+}
+
+#######################################
 # Setup terminal enhancements (main orchestration function)
 #
 # Purpose: Main orchestration function for installing and configuring all terminal enhancements
@@ -1029,12 +1494,35 @@ setup_terminal_enhancements() {
         log "WARNING" "[WARN] [terminal-enhancements] Failed to install starship. Continuing with remaining tools." "setup_terminal_enhancements()" "username=$username"
     fi
 
+    # User Story 2: fzf (fuzzy finder)
+    if install_fzf; then
+        configure_fzf_key_bindings "$username"
+    else
+        log "WARNING" "[WARN] [terminal-enhancements] Failed to install fzf. Continuing with remaining tools." "setup_terminal_enhancements()" "username=$username"
+    fi
+
+    # User Story 3: bat and exa (file viewing and listing)
+    local bat_installed=false
+    local exa_installed=false
+
+    if install_bat; then
+        bat_installed=true
+    else
+        log "WARNING" "[WARN] [terminal-enhancements] Failed to install bat. Continuing with remaining tools." "setup_terminal_enhancements()" "username=$username"
+    fi
+
+    if install_exa; then
+        exa_installed=true
+    else
+        log "WARNING" "[WARN] [terminal-enhancements] Failed to install exa. Continuing with remaining tools." "setup_terminal_enhancements()" "username=$username"
+    fi
+
+    # Configure aliases only if at least one tool is installed
+    if [ "$bat_installed" = true ] || [ "$exa_installed" = true ]; then
+        configure_terminal_aliases "$username"
+    fi
+
     # TODO: Tool installations will be added in later phases:
-    # - install_fzf()
-    # - install_bat()
-    # - install_exa()
-    # - configure_fzf_key_bindings()
-    # - configure_terminal_aliases()
     # - configure_terminal_functions()
     # - configure_bash_enhancements()
     # - configure_terminal_visuals()
