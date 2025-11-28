@@ -69,22 +69,22 @@
 
 ### Implementation for User Story 2
 
-- [ ] T020 [US2] Create tests/unit/test_user_creation.bats with test cases for create_user() function
-- [ ] T021 [US2] Create tests/unit/test_docker_setup.bats with test cases for setup_docker_repository() and install_docker() functions
-- [ ] T022 [US2] Create tests/unit/test_xfce_config.bats with test cases for configure_xfce_mobile() function
-- [ ] T023 [US2] Create tests/unit/test_shell_config.bats with test cases for configure_shell() function
-- [ ] T024 [US2] Create tests/integration/test_idempotency.bats to verify script can run twice without errors
-- [ ] T025 [US2] Create tests/integration/test_full_installation.bats for end-to-end script execution testing
-- [ ] T026 [US2] Write test case in tests/unit/test_user_creation.bats for valid username and password input
-- [ ] T027 [US2] Write test case in tests/unit/test_user_creation.bats for invalid username format validation
-- [ ] T028 [US2] Write test case in tests/unit/test_docker_setup.bats for Docker repository configuration
-- [ ] T029 [US2] Write test case in tests/unit/test_docker_setup.bats for Docker GPG key installation
-- [ ] T030 [US2] Write test case in tests/integration/test_idempotency.bats for create_user() idempotency
-- [ ] T031 [US2] Write test case in tests/integration/test_idempotency.bats for setup_docker_repository() idempotency
-- [ ] T032 [US2] Write test case in tests/unit/test_shell_config.bats for .bashrc generation with custom PS1
-- [ ] T033 [US2] Write test case in tests/unit/test_shell_config.bats for parse_git_branch() function
-- [ ] T034 [US2] Run test suite (bats tests/) and verify all tests pass or document expected failures
-- [ ] T035 [US2] Add test execution instructions to README.md or CONTRIBUTING.md
+- [X] T020 [US2] Create tests/unit/test_user_creation.bats with test cases for create_user() function
+- [X] T021 [US2] Create tests/unit/test_docker_setup.bats with test cases for setup_docker_repository() and install_docker() functions
+- [X] T022 [US2] Create tests/unit/test_xfce_config.bats with test cases for configure_xfce_mobile() function
+- [X] T023 [US2] Create tests/unit/test_shell_config.bats with test cases for configure_shell() function
+- [X] T024 [US2] Create tests/integration/test_idempotency.bats to verify script can run twice without errors
+- [X] T025 [US2] Create tests/integration/test_full_installation.bats for end-to-end script execution testing
+- [X] T026 [US2] Write test case in tests/unit/test_user_creation.bats for valid username and password input
+- [X] T027 [US2] Write test case in tests/unit/test_user_creation.bats for invalid username format validation
+- [X] T028 [US2] Write test case in tests/unit/test_docker_setup.bats for Docker repository configuration
+- [X] T029 [US2] Write test case in tests/unit/test_docker_setup.bats for Docker GPG key installation
+- [X] T030 [US2] Write test case in tests/integration/test_idempotency.bats for create_user() idempotency
+- [X] T031 [US2] Write test case in tests/integration/test_idempotency.bats for setup_docker_repository() idempotency
+- [X] T032 [US2] Write test case in tests/unit/test_shell_config.bats for .bashrc generation with custom PS1
+- [X] T033 [US2] Write test case in tests/unit/test_shell_config.bats for parse_git_branch() function
+- [X] T034 [US2] Run test suite (bats tests/) and verify all tests pass or document expected failures
+- [X] T035 [US2] Add test execution instructions to README.md or CONTRIBUTING.md
 
 **Checkpoint**: At this point, User Story 2 should be fully functional. Test suite exists for critical functions, idempotency is verified, and tests can be run locally and in CI.
 
@@ -98,29 +98,29 @@
 
 ### Implementation for User Story 3
 
-- [ ] T036 [US3] Create README.md at repository root with project overview and description
-- [ ] T037 [US3] Add installation instructions section to README.md with prerequisites and setup steps
-- [ ] T038 [US3] Add quick start guide section to README.md with example usage and curl command
-- [ ] T039 [US3] Add features list section to README.md describing script capabilities
-- [ ] T040 [US3] Document get_user_inputs() function in scripts/setup-workstation.sh with inputs, outputs, side effects, and idempotency notes
-- [ ] T041 [US3] Document create_user() function in scripts/setup-workstation.sh with inputs, outputs, side effects, and idempotency notes
-- [ ] T042 [US3] Document setup_docker_repository() function in scripts/setup-workstation.sh with inputs, outputs, side effects, and idempotency notes
-- [ ] T043 [US3] Document install_docker() function in scripts/setup-workstation.sh with inputs, outputs, side effects, and idempotency notes
-- [ ] T044 [US3] Document configure_xfce_mobile() function in scripts/setup-workstation.sh with inputs, outputs, side effects, and idempotency notes
-- [ ] T045 [US3] Document configure_shell() function in scripts/setup-workstation.sh with inputs, outputs, side effects, and idempotency notes
-- [ ] T046 [US3] Document setup_dev_stack() function in scripts/setup-workstation.sh with inputs, outputs, side effects, and idempotency notes
-- [ ] T047 [US3] Document finalize() function in scripts/setup-workstation.sh with inputs, outputs, side effects, and idempotency notes
-- [ ] T048 [US3] Create CONTRIBUTING.md at repository root with development workflow guidelines
-- [ ] T049 [US3] Add coding standards section to CONTRIBUTING.md with ShellCheck and style guidelines
-- [ ] T050 [US3] Add testing guidelines section to CONTRIBUTING.md with bats test requirements
-- [ ] T051 [US3] Add pull request process section to CONTRIBUTING.md with review and merge requirements
-- [ ] T052 [US3] Create docs/troubleshooting.md with common error scenarios and solutions
-- [ ] T053 [US3] Add troubleshooting entry for "CUSTOM_PASS: unbound variable" error in docs/troubleshooting.md
-- [ ] T054 [US3] Add troubleshooting entry for "Malformed stanza" Docker repository error in docs/troubleshooting.md
-- [ ] T055 [US3] Add troubleshooting entry for password input loop issues in docs/troubleshooting.md
-- [ ] T056 [US3] Add troubleshooting entry for XFCE configuration not applying in docs/troubleshooting.md
-- [ ] T057 [US3] Link troubleshooting guide from README.md
-- [ ] T058 [US3] Create CHANGELOG.md at repository root with semantic versioning format
+- [X] T036 [US3] Create README.md at repository root with project overview and description
+- [X] T037 [US3] Add installation instructions section to README.md with prerequisites and setup steps
+- [X] T038 [US3] Add quick start guide section to README.md with example usage and curl command
+- [X] T039 [US3] Add features list section to README.md describing script capabilities
+- [X] T040 [US3] Document get_user_inputs() function in scripts/setup-workstation.sh with inputs, outputs, side effects, and idempotency notes
+- [X] T041 [US3] Document create_user() function in scripts/setup-workstation.sh with inputs, outputs, side effects, and idempotency notes
+- [X] T042 [US3] Document setup_docker_repository() function in scripts/setup-workstation.sh with inputs, outputs, side effects, and idempotency notes
+- [X] T043 [US3] Document install_docker() function in scripts/setup-workstation.sh with inputs, outputs, side effects, and idempotency notes
+- [X] T044 [US3] Document configure_xfce_mobile() function in scripts/setup-workstation.sh with inputs, outputs, side effects, and idempotency notes
+- [X] T045 [US3] Document configure_shell() function in scripts/setup-workstation.sh with inputs, outputs, side effects, and idempotency notes
+- [X] T046 [US3] Document setup_dev_stack() function in scripts/setup-workstation.sh with inputs, outputs, side effects, and idempotency notes
+- [X] T047 [US3] Document finalize() function in scripts/setup-workstation.sh with inputs, outputs, side effects, and idempotency notes
+- [X] T048 [US3] Create CONTRIBUTING.md at repository root with development workflow guidelines
+- [X] T049 [US3] Add coding standards section to CONTRIBUTING.md with ShellCheck and style guidelines
+- [X] T050 [US3] Add testing guidelines section to CONTRIBUTING.md with bats test requirements
+- [X] T051 [US3] Add pull request process section to CONTRIBUTING.md with review and merge requirements
+- [X] T052 [US3] Create docs/troubleshooting.md with common error scenarios and solutions
+- [X] T053 [US3] Add troubleshooting entry for "CUSTOM_PASS: unbound variable" error in docs/troubleshooting.md
+- [X] T054 [US3] Add troubleshooting entry for "Malformed stanza" Docker repository error in docs/troubleshooting.md
+- [X] T055 [US3] Add troubleshooting entry for password input loop issues in docs/troubleshooting.md
+- [X] T056 [US3] Add troubleshooting entry for XFCE configuration not applying in docs/troubleshooting.md
+- [X] T057 [US3] Link troubleshooting guide from README.md
+- [X] T058 [US3] Create CHANGELOG.md at repository root with semantic versioning format
 
 **Checkpoint**: At this point, User Story 3 should be fully functional. README enables new users to install and run script, all functions are documented, troubleshooting guide exists, and contribution guidelines are clear.
 

@@ -127,8 +127,33 @@ validate_hostname() {
 
 #######################################
 # Collect user inputs interactively
-# Outputs: CUSTOM_USER, CUSTOM_PASS, CUSTOM_HOSTNAME
-# Returns: 0 on success, 1 on cancellation
+#
+# Purpose: Prompt user for username, password, and hostname with validation
+#
+# Inputs: None (reads from terminal interactively)
+#
+# Outputs:
+#   - CUSTOM_USER: Username for the new user account (default: "coder")
+#   - CUSTOM_PASS: Password for the new user account
+#   - CUSTOM_HOSTNAME: System hostname (validated RFC 1123 format)
+#
+# Side Effects:
+#   - Displays welcome banner
+#   - Prompts user for input (may read from /dev/tty if script is piped)
+#   - Validates username format (alphanumeric, underscore, hyphen)
+#   - Validates password (non-empty, confirmation required)
+#   - Validates hostname format (RFC 1123 compliant)
+#
+# Returns:
+#   0 - Success (all inputs collected and validated)
+#   1 - User cancelled or validation failed
+#
+# Idempotency: N/A (interactive function, not meant to be re-run)
+#
+# Example:
+#   get_user_inputs
+#   echo "Username: $CUSTOM_USER"
+#   echo "Hostname: $CUSTOM_HOSTNAME"
 #######################################
 get_user_inputs() {
     show_welcome_banner
@@ -232,8 +257,31 @@ get_user_inputs() {
 
 #######################################
 # Prepare system (hostname, packages)
-# Inputs: CUSTOM_HOSTNAME
-# Returns: 0 on success, 1 on error
+#
+# Purpose: Set system hostname and install essential packages
+#
+# Inputs:
+#   - hostname: System hostname to set (string, RFC 1123 format)
+#
+# Outputs: None
+#
+# Side Effects:
+#   - Sets system hostname via hostnamectl
+#   - Updates APT package repositories
+#   - Installs essential packages: curl, git, htop, vim, build-essential
+#   - Creates package installation log
+#
+# Returns:
+#   0 - Success (hostname set, packages installed or already present)
+#   1 - Error (hostname setting failed, package installation failed)
+#
+# Idempotency: Yes
+#   - Checks current hostname before setting (skips if already set)
+#   - Checks package installation status before installing (skips if already installed)
+#   - Safe to run multiple times
+#
+# Example:
+#   system_prep "my-vps"
 #######################################
 system_prep() {
     local hostname="$1"
@@ -280,6 +328,34 @@ system_prep() {
 # Inputs: CUSTOM_USER, CUSTOM_PASS
 # Returns: 0 on success, 1 on error
 #######################################
+#######################################
+# Create user account with password
+#
+# Purpose: Create a new system user with home directory and set password
+#
+# Inputs:
+#   - username: Username for the new account (string, validated format)
+#   - password: Password for the new account (string, plain text)
+#
+# Outputs: None
+#
+# Side Effects:
+#   - Creates new user account with home directory (/home/username)
+#   - Sets user password via chpasswd
+#   - Creates home directory structure
+#   - Sets default shell to /bin/bash
+#
+# Returns:
+#   0 - Success (user created or already exists)
+#   1 - Error (user creation failed)
+#
+# Idempotency: Yes
+#   - Checks if user exists before creation (skips if user already exists)
+#   - Safe to run multiple times (won't create duplicate users)
+#
+# Example:
+#   create_user "coder" "SecurePass123!"
+#######################################
 create_user() {
     local username="$1"
     local password="$2"
@@ -314,6 +390,40 @@ parse_git_branch() {
 # Configure shell environment (.bashrc)
 # Inputs: username
 # Returns: 0 on success, 1 on error
+#######################################
+#######################################
+# Configure shell environment (.bashrc)
+#
+# Purpose: Configure custom PS1 prompt, Git branch detection, and aliases
+#
+# Inputs:
+#   - username: Username for which to configure shell (string)
+#
+# Outputs: None
+#
+# Side Effects:
+#   - Creates backup of existing .bashrc if it exists
+#   - Appends custom configuration to .bashrc file
+#   - Sets custom PS1 prompt: [User@Hostname] [CurrentDir] [GitBranch] $
+#   - Adds parse_git_branch() function for Git branch detection
+#   - Adds aliases: ll, update, docker-clean
+#   - Sets file ownership and permissions
+#
+# Returns:
+#   0 - Success (configuration applied or already configured)
+#   1 - Error (file creation failed, permission setting failed)
+#
+# Idempotency: Yes
+#   - Checks if custom configuration marker exists in .bashrc (skips if found)
+#   - Safe to run multiple times (won't duplicate configuration)
+#
+# Example:
+#   configure_shell "coder"
+#
+# Notes:
+#   - Configuration is appended to existing .bashrc (does not replace)
+#   - Backup is created with timestamp before modification
+#   - Custom configuration marker: "# Mobile-Ready Workstation Custom Configuration"
 #######################################
 configure_shell() {
     local username="$1"
@@ -385,6 +495,41 @@ create_user_and_shell() {
 # Inputs: username
 # Returns: 0 on success, 1 on error
 # Note: Must run as target user (not root)
+#######################################
+#######################################
+# Configure XFCE for mobile optimization
+#
+# Purpose: Configure XFCE desktop environment with mobile-friendly settings
+#
+# Inputs:
+#   - username: Username for which to configure XFCE (string)
+#
+# Outputs: None
+#
+# Side Effects:
+#   - Sets XFCE font size to 12pt (mobile-friendly)
+#   - Sets desktop icon size to 48px (touch-friendly)
+#   - Sets panel size to 48px (finger-friendly)
+#   - Creates autostart script if XFCE session is not running (fallback mechanism)
+#   - Creates autostart desktop entry for configuration script
+#   - Modifies user's home directory files (.xfce4-mobile-config.sh, .config/autostart/)
+#
+# Returns:
+#   0 - Success (configuration applied or fallback script created)
+#   1 - Error (configuration failed, script creation failed)
+#
+# Idempotency: Yes
+#   - Checks if configuration can be applied directly (xfconf-query)
+#   - Creates fallback script only if direct configuration fails
+#   - Safe to run multiple times (won't duplicate autostart entries)
+#
+# Example:
+#   configure_xfce_mobile "coder"
+#
+# Notes:
+#   - If XFCE session is not running, creates autostart script that applies settings on first login
+#   - Autostart script removes itself after execution
+#   - Settings are applied via xfconf-query when XFCE is running, or via autostart script on login
 #######################################
 configure_xfce_mobile() {
     local username="$1"
@@ -523,8 +668,39 @@ setup_desktop_mobile() {
 }
 
 #######################################
-# Setup Docker APT repository
-# Returns: 0 on success, 1 on error
+# Set up Docker APT repository
+#
+# Purpose: Configure Docker's official APT repository for Debian 13
+#
+# Inputs: None
+#
+# Outputs: None
+#
+# Side Effects:
+#   - Creates /etc/apt/keyrings/ directory if it doesn't exist
+#   - Downloads and installs Docker GPG key to /etc/apt/keyrings/docker.asc
+#   - Creates /etc/apt/sources.list.d/docker.sources file in DEB822 format
+#   - Removes old .list or .gpg files if present (migration)
+#   - Updates APT package list
+#   - Installs prerequisites (ca-certificates, curl) if needed
+#
+# Returns:
+#   0 - Success (repository configured or already configured)
+#   1 - Error (GPG key download failed, repository file creation failed)
+#
+# Idempotency: Yes
+#   - Checks if repository file exists before creating (skips if exists)
+#   - Always refreshes GPG key to ensure it's up to date
+#   - Migrates old .list format to .sources format if needed
+#   - Safe to run multiple times
+#
+# Example:
+#   setup_docker_repository
+#
+# Notes:
+#   - Uses DEB822 format (.sources) as per official Docker documentation
+#   - GPG key is refreshed on each run to ensure validity
+#   - Automatically handles migration from legacy .list format
 #######################################
 setup_docker_repository() {
     echo -e "${GREEN}Setting up Docker repository...${NC}"
@@ -613,7 +789,35 @@ EOF
 
 #######################################
 # Install Docker and Docker Compose
-# Returns: 0 on success, 1 on error
+#
+# Purpose: Install Docker Engine, Docker Compose, and add user to docker group
+#
+# Inputs:
+#   - username: Username to add to docker group (string)
+#
+# Outputs: None
+#
+# Side Effects:
+#   - Calls setup_docker_repository() to ensure repository is configured
+#   - Installs Docker packages: docker-ce, docker-ce-cli, containerd.io, docker-buildx-plugin, docker-compose-plugin
+#   - Adds user to docker group (requires logout/login to take effect)
+#   - Creates docker group if it doesn't exist
+#
+# Returns:
+#   0 - Success (Docker installed or already installed, user added to group)
+#   1 - Error (package installation failed, user addition failed)
+#
+# Idempotency: Yes
+#   - Checks if Docker is installed before installing (skips if already installed)
+#   - Checks if user is in docker group before adding (skips if already member)
+#   - Safe to run multiple times
+#
+# Example:
+#   install_docker "coder"
+#
+# Notes:
+#   - User must logout and login again for docker group membership to take effect
+#   - Docker service is automatically started by package installation
 #######################################
 install_docker() {
     local username="$1"
@@ -745,6 +949,37 @@ verify_python() {
 # Inputs: CUSTOM_USER
 # Returns: 0 on success, 1 on error
 #######################################
+#######################################
+# Set up development stack
+#
+# Purpose: Install and configure all development tools (Docker, browsers, Node.js, Python)
+#
+# Inputs:
+#   - username: Username for which to set up development tools (string)
+#
+# Outputs: None
+#
+# Side Effects:
+#   - Calls install_docker() to install Docker and add user to docker group
+#   - Calls install_browsers() to install Firefox ESR and Chromium
+#   - Calls install_nvm_nodejs() to install NVM and Node.js LTS
+#   - Calls verify_python() to verify Python installation
+#
+# Returns:
+#   0 - Success (all components installed or verified)
+#   1 - Error (one or more components failed to install)
+#
+# Idempotency: Yes
+#   - All called functions are idempotent
+#   - Safe to run multiple times
+#
+# Example:
+#   setup_dev_stack "coder"
+#
+# Notes:
+#   - This is a convenience function that orchestrates multiple installation functions
+#   - Each component installation is independent and can succeed/fail independently
+#######################################
 setup_dev_stack() {
     local username="$1"
 
@@ -798,8 +1033,39 @@ get_server_ip() {
 
 #######################################
 # Finalize installation: cleanup and display summary
-# Inputs: CUSTOM_USER, CUSTOM_HOSTNAME
-# Returns: 0 on success
+#
+# Purpose: Clean up APT cache and display installation summary with connection information
+#
+# Inputs:
+#   - username: Username that was created (string)
+#   - hostname: Hostname that was set (string)
+#
+# Outputs: None (displays summary to stdout)
+#
+# Side Effects:
+#   - Cleans APT cache (apt-get clean, apt-get autoclean)
+#   - Calls get_server_ip() to retrieve server IP address
+#   - Displays formatted summary box with:
+#     - Server IP address
+#     - Username
+#     - Hostname
+#     - Reboot instructions
+#     - RDP connection information
+#
+# Returns:
+#   0 - Success (cleanup completed, summary displayed)
+#
+# Idempotency: Yes
+#   - APT cache cleanup is safe to run multiple times
+#   - Summary display is informational only
+#   - Safe to run multiple times
+#
+# Example:
+#   finalize "coder" "my-vps"
+#
+# Notes:
+#   - Summary includes RDP connection information (IP:3389)
+#   - User is reminded to reboot the system
 #######################################
 finalize() {
     local username="$1"
@@ -883,5 +1149,7 @@ main() {
     echo -e "${GREEN}✓ All phases completed successfully!${NC}"
 }
 
-# Run main function
-main "$@"
+# Run main function only if script is executed directly
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    main "$@"
+fi
