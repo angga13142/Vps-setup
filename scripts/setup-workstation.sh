@@ -282,11 +282,12 @@ verify_installation() {
 
     # Verify exa
     # Check both command availability and binary existence (exa is installed to /usr/local/bin/exa)
-    if ! command -v exa &>/dev/null && [ ! -f /usr/local/bin/exa ]; then
+    # This handles cases where PATH is not updated or bash hash table is not refreshed
+    if command -v exa &>/dev/null || [ -f /usr/local/bin/exa ]; then
+        log "INFO" "✓ exa is installed" "verify_installation()"
+    else
         log "WARNING" "exa is not installed or not in PATH" "verify_installation()"
         all_ok=false
-    else
-        log "INFO" "✓ exa is installed" "verify_installation()"
     fi
 
     # Verify terminal enhancements configuration marker
