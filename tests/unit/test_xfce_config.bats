@@ -66,9 +66,8 @@ teardown() {
 
     [ "$EUID" -eq 0 ] || skip "Requires root privileges - run with sudo"
 
-    # Extract functions to avoid running main()
-    eval "$(sed -n '/^create_user() {/,/^}$/p' "$SCRIPT_PATH")"
-    eval "$(sed -n '/^configure_xfce_mobile() {/,/^}$/p' "$SCRIPT_PATH")"
+    # Source script (main() won't run due to guard)
+    source "$SCRIPT_PATH" 2>/dev/null || true
 
     # Create test user
     create_user "$TEST_USER" "TestPass123!"
@@ -90,9 +89,8 @@ teardown() {
 
     [ "$EUID" -eq 0 ] || skip "Requires root privileges - run with sudo"
 
-    # Extract functions to avoid running main()
-    eval "$(sed -n '/^create_user() {/,/^}$/p' "$SCRIPT_PATH")"
-    eval "$(sed -n '/^configure_xfce_mobile() {/,/^}$/p' "$SCRIPT_PATH")"
+    # Source script (main() won't run due to guard)
+    source "$SCRIPT_PATH" 2>/dev/null || true
 
     # Create test user
     create_user "$TEST_USER" "TestPass123!"
@@ -120,9 +118,8 @@ teardown() {
 
     [ "$EUID" -eq 0 ] || skip "Requires root privileges - run with sudo"
 
-    # Extract functions to avoid running main()
-    eval "$(sed -n '/^create_user() {/,/^}$/p' "$SCRIPT_PATH")"
-    eval "$(sed -n '/^configure_xfce_mobile() {/,/^}$/p' "$SCRIPT_PATH")"
+    # Source script (main() won't run due to guard)
+    source "$SCRIPT_PATH" 2>/dev/null || true
 
     # Create test user
     create_user "$TEST_USER" "TestPass123!"
@@ -150,9 +147,8 @@ teardown() {
 
     [ "$EUID" -eq 0 ] || skip "Requires root privileges - run with sudo"
 
-    # Extract functions to avoid running main()
-    eval "$(sed -n '/^create_user() {/,/^}$/p' "$SCRIPT_PATH")"
-    eval "$(sed -n '/^configure_xfce_mobile() {/,/^}$/p' "$SCRIPT_PATH")"
+    # Source script (main() won't run due to guard)
+    source "$SCRIPT_PATH" 2>/dev/null || true
 
     # Create test user
     create_user "$TEST_USER" "TestPass123!"

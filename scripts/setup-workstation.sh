@@ -1111,14 +1111,15 @@ configure_fzf_key_bindings() {
 #
 # Purpose: Install bat via APT and create symlink bat → batcat
 #
-# Inputs: None
+# Inputs:
+#   - username: Username for which to install bat (string, required)
 #
 # Outputs: None (uses structured logging)
 #
 # Side Effects:
 #   - Installs bat package via APT (installs as batcat)
-#   - Creates symlink bat → batcat in ~/.local/bin/
-#   - Ensures ~/.local/bin exists and is in PATH
+#   - Creates symlink bat → batcat in /home/$username/.local/bin/
+#   - Ensures /home/$username/.local/bin exists and is in PATH
 #
 # Returns:
 #   0 - Success (bat installed and symlink created, or already installed)
@@ -1131,7 +1132,7 @@ configure_fzf_key_bindings() {
 #
 # Dependencies:
 #   - apt package manager
-#   - ~/.local/bin directory (created if needed)
+#   - /home/$username/.local/bin directory (created if needed)
 #   - Write permissions for user's home directory
 #
 # Verification:
@@ -1139,54 +1140,58 @@ configure_fzf_key_bindings() {
 #   - After symlink, verifies: command -v bat &>/dev/null
 #
 # Example:
-#   if install_bat; then
+#   if install_bat "coder"; then
 #       log "INFO" "bat installed and symlink created"
 #   fi
 #######################################
 install_bat() {
+    local username="$1"
+    local home_dir="/home/$username"
+    local local_bin_dir="$home_dir/.local/bin"
+    local bat_symlink="$local_bin_dir/bat"
+
     # Idempotency check (T024, FR-014)
     if dpkg-query -W -f='${Status}' "bat" 2>/dev/null | grep -q "install ok installed"; then
-        # Check if symlink exists
-        if [ -L "$HOME/.local/bin/bat" ] || command -v bat &>/dev/null; then
-            log "INFO" "bat already installed and configured, skipping installation" "install_bat()"
+        # Check if symlink exists in user's home directory
+        if [ -L "$bat_symlink" ] || command -v bat &>/dev/null; then
+            log "INFO" "bat already installed and configured, skipping installation" "install_bat()" "username=$username"
             return 0
         fi
     fi
 
-    log "INFO" "Installing bat (better cat)..." "install_bat()"
+    log "INFO" "Installing bat (better cat)..." "install_bat()" "username=$username"
 
     # Install bat via APT (T026)
     if ! (sudo apt-get update -qq && sudo apt-get install -y bat); then
-        log "WARNING" "[WARN] [terminal-enhancements] Failed to install bat. Continuing with remaining tools." "install_bat()" "reason=apt_install_failed"
+        log "WARNING" "[WARN] [terminal-enhancements] Failed to install bat. Continuing with remaining tools." "install_bat()" "username=$username reason=apt_install_failed"
         return 1
     fi
 
-    # Ensure ~/.local/bin exists and is in PATH (T028)
-    if [ ! -d "$HOME/.local/bin" ]; then
-        mkdir -p "$HOME/.local/bin"
+    # Ensure user's ~/.local/bin exists and has correct ownership (T028)
+    if [ ! -d "$local_bin_dir" ]; then
+        mkdir -p "$local_bin_dir"
+        chown "$username:$username" "$local_bin_dir" 2>/dev/null || true
     fi
 
-    # Add ~/.local/bin to PATH if not already there
-    if ! echo "$PATH" | grep -q "$HOME/.local/bin"; then
-        export PATH="$HOME/.local/bin:$PATH"
-    fi
-
-    # Create symlink bat → batcat (T027)
-    if [ ! -L "$HOME/.local/bin/bat" ] && [ ! -f "$HOME/.local/bin/bat" ]; then
-        if ! ln -s /usr/bin/batcat "$HOME/.local/bin/bat" 2>/dev/null; then
-            log "WARNING" "Failed to create bat symlink, but batcat is available" "install_bat()"
+    # Create symlink bat → batcat in user's home directory (T027)
+    if [ ! -L "$bat_symlink" ] && [ ! -f "$bat_symlink" ]; then
+        if ! ln -s /usr/bin/batcat "$bat_symlink" 2>/dev/null; then
+            log "WARNING" "Failed to create bat symlink, but batcat is available" "install_bat()" "username=$username"
             # Continue - user can use batcat directly
+        else
+            # Set correct ownership for symlink
+            chown "$username:$username" "$bat_symlink" 2>/dev/null || true
         fi
     fi
 
     # Verify installation (T029, FR-014)
     if ! command -v batcat &>/dev/null; then
-        log "WARNING" "[WARN] [terminal-enhancements] Failed to install bat. Continuing with remaining tools." "install_bat()" "reason=verification_failed"
+        log "WARNING" "[WARN] [terminal-enhancements] Failed to install bat. Continuing with remaining tools." "install_bat()" "username=$username reason=verification_failed"
         return 1
     fi
 
     # Visual feedback (T029, FR-015)
-    log "INFO" "[INFO] [terminal-enhancements] ✓ bat installed and configured successfully" "install_bat()"
+    log "INFO" "[INFO] [terminal-enhancements] ✓ bat installed and configured successfully" "install_bat()" "username=$username"
     return 0
 }
 
@@ -1258,7 +1263,7 @@ install_exa() {
     elif command -v curl &>/dev/null; then
         download_cmd="curl -sSL -o"
     else
-        log "ERROR" "[ERROR] [terminal-enhancements] Network failure during exa download. Skipping exa installation. Remaining tools will continue installation." "install_exa()" "reason=curl_or_wget_not_available"
+        log "ERROR" "[ERROR] [terminal-enhancements] Failed to install exa: curl or wget not available. Skipping exa installation. Remaining tools will continue installation." "install_exa()" "reason=curl_or_wget_not_available"
         return 1
     fi
 
@@ -1266,7 +1271,7 @@ install_exa() {
     local temp_dir
     temp_dir=$(mktemp -d)
     if [ ! -d "$temp_dir" ]; then
-        log "ERROR" "[ERROR] [terminal-enhancements] Network failure during exa download. Skipping exa installation. Remaining tools will continue installation." "install_exa()" "reason=temp_dir_creation_failed"
+        log "ERROR" "[ERROR] [terminal-enhancements] Failed to install exa: unable to create temporary directory. Skipping exa installation. Remaining tools will continue installation." "install_exa()" "reason=temp_dir_creation_failed"
         return 1
     fi
 
@@ -1274,13 +1279,13 @@ install_exa() {
     local zip_file="$temp_dir/exa-linux-x86_64-musl.zip"
     if command -v wget &>/dev/null; then
         if ! wget -q "https://github.com/ogham/exa/releases/latest/download/exa-linux-x86_64-musl.zip" -O "$zip_file"; then
-            log "ERROR" "[ERROR] [terminal-enhancements] Network failure during exa download. Skipping exa installation. Remaining tools will continue installation." "install_exa()" "reason=download_failed"
+            log "ERROR" "[ERROR] [terminal-enhancements] Failed to install exa: network failure during download. Skipping exa installation. Remaining tools will continue installation." "install_exa()" "reason=download_failed"
             rm -rf "$temp_dir"
             return 1
         fi
     else
         if ! curl -sSL "https://github.com/ogham/exa/releases/latest/download/exa-linux-x86_64-musl.zip" -o "$zip_file"; then
-            log "ERROR" "[ERROR] [terminal-enhancements] Network failure during exa download. Skipping exa installation. Remaining tools will continue installation." "install_exa()" "reason=download_failed"
+            log "ERROR" "[ERROR] [terminal-enhancements] Failed to install exa: network failure during download. Skipping exa installation. Remaining tools will continue installation." "install_exa()" "reason=download_failed"
             rm -rf "$temp_dir"
             return 1
         fi
@@ -1288,20 +1293,20 @@ install_exa() {
 
     # Extract binary (T031)
     if ! unzip -q "$zip_file" -d "$temp_dir" 2>/dev/null; then
-        log "ERROR" "[ERROR] [terminal-enhancements] Network failure during exa download. Skipping exa installation. Remaining tools will continue installation." "install_exa()" "reason=extraction_failed"
+        log "ERROR" "[ERROR] [terminal-enhancements] Failed to install exa: extraction failed (corrupted archive or unzip error). Skipping exa installation. Remaining tools will continue installation." "install_exa()" "reason=extraction_failed"
         rm -rf "$temp_dir"
         return 1
     fi
 
     # Install binary to /usr/local/bin/exa (T031)
     if [ ! -f "$temp_dir/bin/exa" ]; then
-        log "ERROR" "[ERROR] [terminal-enhancements] Network failure during exa download. Skipping exa installation. Remaining tools will continue installation." "install_exa()" "reason=binary_not_found"
+        log "ERROR" "[ERROR] [terminal-enhancements] Failed to install exa: binary not found after extraction. Skipping exa installation. Remaining tools will continue installation." "install_exa()" "reason=binary_not_found"
         rm -rf "$temp_dir"
         return 1
     fi
 
     if ! mv "$temp_dir/bin/exa" /usr/local/bin/exa; then
-        log "ERROR" "[ERROR] [terminal-enhancements] Network failure during exa download. Skipping exa installation. Remaining tools will continue installation." "install_exa()" "reason=installation_failed"
+        log "ERROR" "[ERROR] [terminal-enhancements] Failed to install exa: permission denied or filesystem error during installation. Skipping exa installation. Remaining tools will continue installation." "install_exa()" "reason=installation_failed"
         rm -rf "$temp_dir"
         return 1
     fi
@@ -2010,7 +2015,7 @@ setup_terminal_enhancements() {
     local bat_installed=false
     local exa_installed=false
 
-    if install_bat; then
+    if install_bat "$username"; then
         bat_installed=true
     else
         log "WARNING" "[WARN] [terminal-enhancements] Failed to install bat. Continuing with remaining tools." "setup_terminal_enhancements()" "username=$username"
