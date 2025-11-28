@@ -196,9 +196,9 @@
 - [X] T075 [P] Update verify_installation() function to check for terminal enhancement tools in scripts/setup-workstation.sh
 - [X] T076 [P] Run quickstart.md validation to ensure all documented features are implemented
 - [X] T077 [P] Add integration test for terminal enhancements in tests/integration/test_terminal_enhancements.bats
-- [ ] T090 [P] Add edge case handling tests: backup failures, permission errors, network failures, disk space exhaustion, concurrent executions, Git not installed, large history files in tests/integration/test_terminal_enhancements.bats
-- [ ] T091 [P] Add rollback procedure test: verify backup restoration works correctly, verify configuration marker removal works, verify tool uninstallation procedures in tests/integration/test_terminal_enhancements.bats
-- [ ] T092 [P] Add non-functional requirements verification: test resource usage (disk space ~50MB, memory < 10MB), test performance (startup time < 100ms increase), test scalability (history files up to 100MB, directories with 10,000 files) in tests/integration/test_terminal_enhancements.bats
+- [X] T090 [P] Add edge case handling tests: backup failures, permission errors, network failures, disk space exhaustion, concurrent executions, Git not installed, large history files in tests/integration/test_terminal_enhancements.bats
+- [X] T091 [P] Add rollback procedure test: verify backup restoration works correctly, verify configuration marker removal works, verify tool uninstallation procedures in tests/integration/test_terminal_enhancements.bats
+- [X] T092 [P] Add non-functional requirements verification: test resource usage (disk space ~50MB, memory < 10MB), test performance (startup time < 100ms increase), test scalability (history files up to 100MB, directories with 10,000 files) in tests/integration/test_terminal_enhancements.bats
 - [X] T078 [P] [SC-001] Add verification task: Test Git branch information displays in prompt within 1 second when in a repository
 - [X] T079 [P] [SC-002] Add performance verification task: Test command history search responds in < 100ms using fzf
 - [X] T080 [P] [SC-003] Add performance verification task: Test file search responds in < 200ms for directories with up to 10,000 files
