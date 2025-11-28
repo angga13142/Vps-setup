@@ -184,17 +184,17 @@
 
 **Purpose**: Error handling, verification, documentation, and integration improvements
 
-- [ ] T066 [P] Verify error handling implementation in all install functions (T007, T017, T026, T030-T031) - ensure continue on failure pattern is correctly implemented with error format: `[WARN] [terminal-enhancements] Failed to install [tool-name]. Continuing with remaining tools.` (FR-022)
-- [ ] T067 [P] Verify tool verification before configuration is implemented in `setup_terminal_enhancements()` function - ensure verification uses FR-014 methods: `command -v [tool] &>/dev/null` for binaries, `dpkg-query -W -f='${Status}' "[package]" | grep -q "install ok installed"` for APT packages, and only successfully installed tools are configured (FR-014)
-- [ ] T068 [P] Verify visual feedback (success messages) are present in all install/configure functions (T008, T018, T029, T032) - ensure format: `[INFO] [terminal-enhancements] ✓ [tool-name] installed and configured successfully` (FR-015)
-- [ ] T069 [P] Verify all functions handle installation failures gracefully without breaking existing terminal functionality - test failure scenarios including network failures, permission errors, disk space exhaustion (FR-013, Edge Cases)
-- [ ] T070 [P] Verify idempotency of all installation and configuration functions (safe to run multiple times) in scripts/setup-workstation.sh - test concurrent execution scenario: check configuration marker exists, subsequent runs are idempotent and safe (FR-018, Edge Cases: Concurrent Script Executions)
-- [ ] T071 [P] Document all added aliases and functions in quickstart.md with usage examples and add inline comments in .bashrc above each alias/function group (FR-019: documentation format and location)
-- [ ] T072 [P] Add configuration marker `# Terminal Enhancements Configuration - Added by setup-workstation.sh` to .bashrc after all configurations are applied in `setup_terminal_enhancements()` function in scripts/setup-workstation.sh (used for idempotency and concurrent execution detection)
-- [ ] T073 [P] Verify .bashrc file ownership and permissions are set correctly after modifications in all configure functions in scripts/setup-workstation.sh (permissions: 600 for backup files per spec.md Non-Functional Requirements)
-- [ ] T074 [P] Test terminal startup time increase is < 100ms compared to baseline in scripts/setup-workstation.sh (SC-009)
-- [ ] T075 [P] Update verify_installation() function to check for terminal enhancement tools in scripts/setup-workstation.sh
-- [ ] T076 [P] Run quickstart.md validation to ensure all documented features are implemented
+- [X] T066 [P] Verify error handling implementation in all install functions (T007, T017, T026, T030-T031) - ensure continue on failure pattern is correctly implemented with error format: `[WARN] [terminal-enhancements] Failed to install [tool-name]. Continuing with remaining tools.` (FR-022)
+- [X] T067 [P] Verify tool verification before configuration is implemented in `setup_terminal_enhancements()` function - ensure verification uses FR-014 methods: `command -v [tool] &>/dev/null` for binaries, `dpkg-query -W -f='${Status}' "[package]" | grep -q "install ok installed"` for APT packages, and only successfully installed tools are configured (FR-014)
+- [X] T068 [P] Verify visual feedback (success messages) are present in all install/configure functions (T008, T018, T029, T032) - ensure format: `[INFO] [terminal-enhancements] ✓ [tool-name] installed and configured successfully` (FR-015)
+- [X] T069 [P] Verify all functions handle installation failures gracefully without breaking existing terminal functionality - test failure scenarios including network failures, permission errors, disk space exhaustion (FR-013, Edge Cases)
+- [X] T070 [P] Verify idempotency of all installation and configuration functions (safe to run multiple times) in scripts/setup-workstation.sh - test concurrent execution scenario: check configuration marker exists, subsequent runs are idempotent and safe (FR-018, Edge Cases: Concurrent Script Executions)
+- [X] T071 [P] Document all added aliases and functions in quickstart.md with usage examples and add inline comments in .bashrc above each alias/function group (FR-019: documentation format and location)
+- [X] T072 [P] Add configuration marker `# Terminal Enhancements Configuration - Added by setup-workstation.sh` to .bashrc after all configurations are applied in `setup_terminal_enhancements()` function in scripts/setup-workstation.sh (used for idempotency and concurrent execution detection)
+- [X] T073 [P] Verify .bashrc file ownership and permissions are set correctly after modifications in all configure functions in scripts/setup-workstation.sh (permissions: 600 for backup files per spec.md Non-Functional Requirements)
+- [X] T074 [P] Test terminal startup time increase is < 100ms compared to baseline in scripts/setup-workstation.sh (SC-009)
+- [X] T075 [P] Update verify_installation() function to check for terminal enhancement tools in scripts/setup-workstation.sh
+- [X] T076 [P] Run quickstart.md validation to ensure all documented features are implemented
 - [ ] T077 [P] Add integration test for terminal enhancements in tests/integration/test_terminal_enhancements.bats
 - [ ] T090 [P] Add edge case handling tests: backup failures, permission errors, network failures, disk space exhaustion, concurrent executions, Git not installed, large history files in tests/integration/test_terminal_enhancements.bats
 - [ ] T091 [P] Add rollback procedure test: verify backup restoration works correctly, verify configuration marker removal works, verify tool uninstallation procedures in tests/integration/test_terminal_enhancements.bats
@@ -208,8 +208,8 @@
 - [ ] T084 [P] [SC-007] Add performance verification task: Test tab completion provides suggestions within 50ms for commands with up to 100 possible completions
 - [ ] T085 [P] [SC-008] Add measurement methodology task: Document test matrix for 95% install success rate (20 fresh Debian 13 installations, 19/20 must succeed)
 - [ ] T086 [P] [SC-010] Add verification task: Test all new aliases and functions are accessible immediately after workstation setup without manual configuration
-- [ ] T093 [P] Add rollback procedure documentation task: Document rollback procedures in quickstart.md or README.md per spec.md Rollback Procedures section (4 steps: restore .bashrc, remove Starship, uninstall tools, remove configuration marker)
-- [ ] T094 [P] Add error message format verification: Verify all error messages match spec.md formats (installation failures, backup failures, permission errors, network failures, disk space, Git not installed, large history files, conflicts) in scripts/setup-workstation.sh
+- [X] T093 [P] Add rollback procedure documentation task: Document rollback procedures in quickstart.md or README.md per spec.md Rollback Procedures section (4 steps: restore .bashrc, remove Starship, uninstall tools, remove configuration marker)
+- [X] T094 [P] Add error message format verification: Verify all error messages match spec.md formats (installation failures, backup failures, permission errors, network failures, disk space, Git not installed, large history files, conflicts) in scripts/setup-workstation.sh
 
 ---
 

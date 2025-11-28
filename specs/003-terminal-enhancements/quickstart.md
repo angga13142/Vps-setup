@@ -222,6 +222,68 @@ The following color schemes are recommended for improved visual comfort:
 
 **Note**: All terminal enhancement tools (Starship, bat, exa) automatically detect terminal color capabilities and gracefully degrade when colors are not supported (FR-025). No manual configuration needed.
 
+## Rollback Procedures
+
+If you need to revert terminal enhancements or restore your previous configuration:
+
+### Step 1: Restore .bashrc from Backup
+
+The setup script creates automatic backups before making changes. To restore:
+
+```bash
+# List available backups
+ls -la ~/.bashrc.backup.*
+
+# Restore from a specific backup (replace YYYYMMDD_HHMMSS with actual timestamp)
+cp ~/.bashrc.backup.YYYYMMDD_HHMMSS ~/.bashrc
+source ~/.bashrc
+```
+
+### Step 2: Remove Starship Configuration
+
+If you only want to remove Starship:
+
+```bash
+# Edit .bashrc and remove the Starship initialization line
+sed -i '/eval "$(starship init bash)"/d' ~/.bashrc
+source ~/.bashrc
+```
+
+### Step 3: Uninstall Tools (Optional)
+
+If you want to completely remove the tools:
+
+```bash
+# Remove Starship
+rm ~/.local/bin/starship 2>/dev/null || rm /usr/local/bin/starship 2>/dev/null
+
+# Remove fzf (if installed via APT)
+sudo apt remove fzf
+
+# Remove bat (if installed via APT)
+sudo apt remove bat
+
+# Remove exa
+rm /usr/local/bin/exa 2>/dev/null || rm ~/.local/bin/exa 2>/dev/null
+```
+
+### Step 4: Remove Configuration Marker
+
+To remove all terminal enhancement configurations:
+
+```bash
+# Remove the configuration marker and all related sections
+sed -i '/# Terminal Enhancements Configuration - Added by setup-workstation.sh/,/^$/d' ~/.bashrc
+sed -i '/# Starship Prompt Configuration/,/^$/d' ~/.bashrc
+sed -i '/# fzf Key Bindings Configuration/,/^$/d' ~/.bashrc
+sed -i '/# Terminal Aliases Configuration/,/^$/d' ~/.bashrc
+sed -i '/# Terminal Functions Configuration/,/^$/d' ~/.bashrc
+sed -i '/# Bash History & Completion Enhancements/,/^$/d' ~/.bashrc
+source ~/.bashrc
+```
+
+**Note**: Backup files are preserved for 30 days or until disk space is needed. You can restore from any backup file using the timestamp in the filename.
+
 ## Next Steps
 
 1. **Customize Starship**: Edit `~/.config/starship.toml`

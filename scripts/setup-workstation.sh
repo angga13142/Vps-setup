@@ -253,6 +253,55 @@ verify_installation() {
         log "INFO" "✓ Python 3 is available: $python_version" "verify_installation()"
     fi
 
+    # Verify Terminal Enhancement Tools (T075)
+    log "INFO" "Verifying terminal enhancement tools..." "verify_installation()" "username=$username"
+
+    # Verify Starship
+    if ! command -v starship &>/dev/null; then
+        log "WARNING" "Starship is not installed or not in PATH" "verify_installation()"
+        all_ok=false
+    else
+        log "INFO" "✓ Starship is installed" "verify_installation()"
+    fi
+
+    # Verify fzf
+    if ! command -v fzf &>/dev/null && ! dpkg-query -W -f='${Status}' "fzf" 2>/dev/null | grep -q "install ok installed"; then
+        log "WARNING" "fzf is not installed" "verify_installation()"
+        all_ok=false
+    else
+        log "INFO" "✓ fzf is installed" "verify_installation()"
+    fi
+
+    # Verify bat
+    if ! command -v batcat &>/dev/null && ! command -v bat &>/dev/null && ! dpkg-query -W -f='${Status}' "bat" 2>/dev/null | grep -q "install ok installed"; then
+        log "WARNING" "bat is not installed" "verify_installation()"
+        all_ok=false
+    else
+        log "INFO" "✓ bat is installed" "verify_installation()"
+    fi
+
+    # Verify exa
+    if ! command -v exa &>/dev/null; then
+        log "WARNING" "exa is not installed or not in PATH" "verify_installation()"
+        all_ok=false
+    else
+        log "INFO" "✓ exa is installed" "verify_installation()"
+    fi
+
+    # Verify terminal enhancements configuration marker
+    local bashrc_file="$home_dir/.bashrc"
+    if [ -f "$bashrc_file" ] && grep -q "# Terminal Enhancements Configuration - Added by setup-workstation.sh" "$bashrc_file" 2>/dev/null; then
+        log "INFO" "✓ Terminal enhancements configuration marker found in .bashrc" "verify_installation()"
+    else
+        log "WARNING" "Terminal enhancements configuration marker not found in .bashrc" "verify_installation()"
+        all_ok=false
+    fi
+
+    if [ "$all_ok" = true ]; then
+        python_version=$(python3 --version 2>&1)
+        log "INFO" "✓ Python 3 is available: $python_version" "verify_installation()"
+    fi
+
     # Verify .bashrc configuration
     if [ ! -f "$home_dir/.bashrc" ] || ! grep -q "# Mobile-Ready Workstation Custom Configuration" "$home_dir/.bashrc" 2>/dev/null; then
         log "WARNING" ".bashrc is not configured for user '$username'" "verify_installation()" "username=$username"
