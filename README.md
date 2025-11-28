@@ -1,5 +1,7 @@
 # Mobile-Ready Coding Workstation Setup Script
 
+[![CI](https://github.com/angga13142/Vps-setup/actions/workflows/ci.yml/badge.svg)](https://github.com/angga13142/Vps-setup/actions/workflows/ci.yml)
+
 A comprehensive Bash installation script for setting up a mobile-ready coding workstation on Debian 13 (Trixie). This script automates the installation and configuration of essential development tools, desktop environment, and remote access capabilities.
 
 ## Overview

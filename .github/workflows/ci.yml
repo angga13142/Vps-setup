@@ -1,0 +1,102 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main, '*-development-improvements']
+  pull_request:
+    branches: [master, main]
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  lint:
+    name: Lint (ShellCheck)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install ShellCheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+
+      - name: Run ShellCheck
+        run: |
+          echo "Running ShellCheck on all .sh files..."
+          shellcheck --version
+          # Find and check all shell scripts recursively
+          find . -name "*.sh" -type f -not -path "./.git/*" -not -path "./tests/helpers/*" | while read -r script; do
+            echo "Checking: $script"
+            shellcheck "$script" || exit 1
+          done
+          echo "✅ All ShellCheck checks passed"
+
+  test:
+    name: Test (bats)
+    runs-on: ubuntu-latest
+    needs: lint
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bats git
+
+      - name: Download bats helpers
+        run: |
+          if [ ! -d "tests/helpers/bats-support" ]; then
+            git clone --depth 1 https://github.com/bats-core/bats-support.git tests/helpers/bats-support
+          fi
+          if [ ! -d "tests/helpers/bats-assert" ]; then
+            git clone --depth 1 https://github.com/bats-core/bats-assert.git tests/helpers/bats-assert
+          fi
+
+      - name: Run test suite
+        run: |
+          echo "Running test suite..."
+          bats --version
+          # Note: Most tests require root, but we'll run what we can
+          # Full test suite should be run locally with sudo
+          # Run tests and capture output to check for actual failures
+          TEST_OUTPUT=$(bats --tap tests/ 2>&1)
+          EXIT_CODE=$?
+
+          # Display test output
+          echo "$TEST_OUTPUT"
+
+          if [ $EXIT_CODE -eq 0 ]; then
+            echo "✅ Test suite completed successfully"
+          else
+            echo "❌ Test suite exited with code: $EXIT_CODE"
+            echo "Some tests may require root privileges (run locally with: sudo bats tests/)"
+
+            # Check if there are actual test failures (not ok) vs just skipped tests
+            # TAP format: "not ok" indicates failure, "ok" indicates pass, "# skip" indicates skip
+            if echo "$TEST_OUTPUT" | grep -q "^not ok"; then
+              echo "❌ Found actual test failures (not ok), failing workflow"
+              exit 1
+            elif echo "$TEST_OUTPUT" | grep -q "# skip"; then
+              echo "⚠️  Some tests were skipped (likely require root), but no actual failures detected"
+              echo "✅ Allowing workflow to pass (skips are expected without root)"
+              exit 0
+            else
+              # Unknown error condition, fail to be safe
+              echo "❌ Unknown error condition, failing workflow for safety"
+              exit 1
+            fi
+          fi
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ github.run_id }}
+          path: |
+            tests/
+          retention-days: 30

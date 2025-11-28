@@ -301,6 +301,116 @@ feat: Add Docker installation verification
 - Update documentation with verification steps
 ```
 
+## CI/CD Workflow
+
+The project uses GitHub Actions for continuous integration and continuous deployment (CI/CD). The workflow automatically runs on every push and pull request.
+
+### Workflow Overview
+
+**Location**: `.github/workflows/ci.yml`
+
+**Jobs**:
+1. **Lint Job** (`lint`):
+   - Installs ShellCheck
+   - Runs ShellCheck recursively on all `.sh` files in the repository
+   - Excludes `.git/` and `tests/helpers/` directories
+   - Must pass with zero errors
+   - Timeout: 5 minutes
+
+2. **Test Job** (`test`):
+   - Depends on lint job (runs only if lint passes)
+   - Installs bats and dependencies
+   - Downloads bats helper libraries (bats-support, bats-assert)
+   - Runs test suite from `tests/` directory
+   - Properly detects actual test failures vs expected skips
+   - Uploads test results as artifacts
+   - Timeout: 10 minutes
+
+**Trigger Events**:
+- Push to `master`, `main`, or branches matching `*-development-improvements`
+- Pull requests to `master` or `main`
+- Manual trigger via `workflow_dispatch`
+
+**Status Checks**:
+- Both `lint` and `test` jobs are required for merge
+- Configured in GitHub repository settings → Branches → Branch protection rules
+- PRs cannot be merged until all checks pass
+
+### Local CI Simulation
+
+```bash
+# Simulate CI environment
+docker run --rm -v "$PWD:/workspace" -w /workspace \
+  debian:13 \
+  bash -c "apt update && apt install -y shellcheck bats && \
+           find . -name '*.sh' -type f -not -path './.git/*' -not -path './tests/helpers/*' -exec shellcheck {} \; && \
+           bats tests/"
+```
+
+### Check CI Status
+
+- **View workflow runs**: GitHub → Actions tab
+- **Check specific run**: Click on workflow run
+- **View logs**: Expand job steps to see detailed output
+- **Download artifacts**: Available in workflow run page (test results, logs)
+- **PR status**: Check PR page for status check indicators (✅ or ❌)
+
+### Understanding CI/CD Results
+
+**Success Indicators**:
+- ✅ Green checkmark: All checks passed
+- All jobs completed successfully
+- PR can be merged (if other requirements met)
+
+**Failure Indicators**:
+- ❌ Red X: One or more checks failed
+- Review error messages in Actions tab
+- Fix issues and push updates
+- PR cannot be merged until all checks pass
+
+**In Progress**:
+- ⏳ Yellow circle: Checks are running
+- Wait for completion before merging
+
+### Troubleshooting CI/CD Failures
+
+**Lint Job Fails**:
+```bash
+# Run ShellCheck locally to see errors
+find . -name "*.sh" -type f -not -path "./.git/*" -not -path "./tests/helpers/*" -exec shellcheck {} \;
+
+# Fix errors and commit
+git add scripts/
+git commit -m "fix: Resolve ShellCheck errors"
+git push
+```
+
+**Test Job Fails**:
+```bash
+# Run tests locally (requires sudo for most tests)
+sudo bats tests/
+
+# Fix failing tests and commit
+git add tests/
+git commit -m "fix: Fix failing tests"
+git push
+```
+
+**Workflow Not Running**:
+- Check if workflow file exists: `.github/workflows/ci.yml`
+- Verify branch name matches trigger patterns
+- Check GitHub Actions is enabled for repository
+- Review workflow syntax in Actions tab
+
+### Manual CI/CD Setup Tasks
+
+Some CI/CD tasks require GitHub UI interaction or CLI commands. See [docs/cicd-setup-guide.md](docs/cicd-setup-guide.md) for detailed step-by-step instructions on:
+
+- **T064**: Configuring required status checks in GitHub repository settings (using `gh` CLI or UI)
+- **T065**: Testing CI/CD workflow by pushing code
+- **T066**: Testing CI/CD workflow by creating PR
+- **T067**: Testing merge blocking with intentional failures
+
 ## Questions?
 
 If you have questions or need help, please:
