@@ -638,6 +638,114 @@ parse_git_branch() {
 }
 
 #######################################
+# Check if an alias already exists (for conflict detection)
+# Purpose: Detect existing aliases to preserve user customizations
+# Inputs:
+#   - alias_name: Name of alias to check (string, required)
+# Returns:
+#   0 - Conflict exists (alias already defined)
+#   1 - No conflict (alias not defined)
+# Side Effects: None
+# Idempotency: Safe to call multiple times
+# Example:
+#   if check_alias_conflict "gst"; then
+#       log "WARNING" "Alias 'gst' already exists, skipping"
+#   fi
+#######################################
+check_alias_conflict() {
+    local alias_name="$1"
+
+    # Check if alias exists using 'type' command
+    # type returns 0 if alias/function/command exists, 1 if not
+    if type "$alias_name" &>/dev/null; then
+        # Check if it's specifically an alias (not a function or command)
+        if alias "$alias_name" &>/dev/null 2>&1; then
+            return 0  # Conflict exists
+        fi
+    fi
+    return 1  # No conflict
+}
+
+#######################################
+# Check if a function already exists (for conflict detection)
+# Purpose: Detect existing functions to preserve user customizations
+# Inputs:
+#   - function_name: Name of function to check (string, required)
+# Returns:
+#   0 - Conflict exists (function already defined)
+#   1 - No conflict (function not defined)
+# Side Effects: None
+# Idempotency: Safe to call multiple times
+# Example:
+#   if check_function_conflict "mkcd"; then
+#       log "WARNING" "Function 'mkcd' already exists, skipping"
+#   fi
+#######################################
+check_function_conflict() {
+    local function_name="$1"
+
+    # Check if function exists using 'type' command
+    # type returns 0 if function/command exists, 1 if not
+    if type "$function_name" &>/dev/null; then
+        # Check if it's specifically a function (not an alias or command)
+        if declare -f "$function_name" &>/dev/null; then
+            return 0  # Conflict exists
+        fi
+    fi
+    return 1  # No conflict
+}
+
+#######################################
+# Create timestamped backup of .bashrc before modifications
+# Purpose: Ensure recovery capability before making configuration changes
+# Inputs:
+#   - bashrc_path: Path to .bashrc file (string, required)
+# Returns:
+#   0 - Success (backup created)
+#   1 - Error (backup failed) - ABORTS with error message
+# Side Effects:
+#   - Creates backup file with format: {bashrc_path}.backup.YYYYMMDD_HHMMSS
+#   - Preserves original file permissions
+# Idempotency: Safe to call multiple times (creates new backup each time)
+# Example:
+#   if ! create_bashrc_backup "/home/coder/.bashrc"; then
+#       return 1  # Abort on backup failure
+#   fi
+# Notes:
+#   - Must abort if backup creation fails (FR-012, T003)
+#   - Backup format: ~/.bashrc.backup.YYYYMMDD_HHMMSS
+#######################################
+create_bashrc_backup() {
+    local bashrc_path="$1"
+    local backup_path
+    local timestamp
+
+    # Generate timestamp in format YYYYMMDD_HHMMSS
+    timestamp=$(date +%Y%m%d_%H%M%S)
+    backup_path="${bashrc_path}.backup.${timestamp}"
+
+    # Check if .bashrc exists
+    if [ ! -f "$bashrc_path" ]; then
+        log "INFO" "No existing .bashrc found, skipping backup" "create_bashrc_backup()" "bashrc_path=$bashrc_path"
+        return 0  # No file to backup is not an error
+    fi
+
+    # Create backup
+    if ! cp "$bashrc_path" "$backup_path"; then
+        log "ERROR" "[ERROR] [terminal-enhancements] Failed to create .bashrc backup, aborting configuration changes. Ensure write permissions to home directory." "create_bashrc_backup()" "bashrc_path=$bashrc_path backup_path=$backup_path"
+        return 1  # Abort on backup failure (T003 requirement)
+    fi
+
+    # Preserve original file permissions
+    if [ -f "$backup_path" ]; then
+        chmod 600 "$backup_path" 2>/dev/null || true
+    fi
+
+    log "INFO" "Created .bashrc backup: $backup_path" "create_bashrc_backup()" "bashrc_path=$bashrc_path backup_path=$backup_path"
+    return 0
+}
+
+#######################################
 # Configure shell environment (.bashrc)
 # Inputs: username
 # Returns: 0 on success, 1 on error

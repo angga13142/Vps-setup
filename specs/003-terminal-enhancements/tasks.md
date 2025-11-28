@@ -20,9 +20,9 @@
 
 **Purpose**: Project initialization and preparation for terminal enhancements
 
-- [ ] T001 [P] Create helper function `check_alias_conflict()` in scripts/setup-workstation.sh for detecting existing aliases (returns 0 if conflict exists, 1 if not)
-- [ ] T002 [P] Create helper function `check_function_conflict()` in scripts/setup-workstation.sh for detecting existing functions (returns 0 if conflict exists, 1 if not)
-- [ ] T003 [P] Create helper function `create_bashrc_backup()` in scripts/setup-workstation.sh for creating timestamped backups with format `~/.bashrc.backup.YYYYMMDD_HHMMSS` (FR-012). Function must abort if backup creation fails with error: `[ERROR] [terminal-enhancements] Failed to create .bashrc backup, aborting configuration changes. Ensure write permissions to home directory.`
+- [X] T001 [P] Create helper function `check_alias_conflict()` in scripts/setup-workstation.sh for detecting existing aliases (returns 0 if conflict exists, 1 if not)
+- [X] T002 [P] Create helper function `check_function_conflict()` in scripts/setup-workstation.sh for detecting existing functions (returns 0 if conflict exists, 1 if not)
+- [X] T003 [P] Create helper function `create_bashrc_backup()` in scripts/setup-workstation.sh for creating timestamped backups with format `~/.bashrc.backup.YYYYMMDD_HHMMSS` (FR-012). Function must abort if backup creation fails with error: `[ERROR] [terminal-enhancements] Failed to create .bashrc backup, aborting configuration changes. Ensure write permissions to home directory.`
 
 ---
 
