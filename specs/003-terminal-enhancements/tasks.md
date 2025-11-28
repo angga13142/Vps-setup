@@ -144,17 +144,17 @@
 
 ### Implementation for User Story 5
 
-- [ ] T049 [US5] Create `configure_bash_enhancements(username)` function in scripts/setup-workstation.sh with configuration marker check
-- [ ] T050 [US5] Add HISTSIZE=10000 environment variable to .bashrc in `configure_bash_enhancements()` function in scripts/setup-workstation.sh (FR-010)
-- [ ] T089 [US5] Add history file size check and truncation logic in `configure_bash_enhancements()` function in scripts/setup-workstation.sh: if history file > 100MB, truncate to last 10,000 entries and log warning: `[WARN] [terminal-enhancements] History file exceeds 100MB, truncating to last 10,000 entries.` (Edge Cases: Large History Files)
-- [ ] T051 [US5] Add HISTFILESIZE=20000 environment variable to .bashrc in `configure_bash_enhancements()` function in scripts/setup-workstation.sh
-- [ ] T052 [US5] Add HISTCONTROL=ignoreboth:erasedups environment variable to .bashrc in `configure_bash_enhancements()` function in scripts/setup-workstation.sh
-- [ ] T053 [US5] Add shopt -s histappend to .bashrc in `configure_bash_enhancements()` function in scripts/setup-workstation.sh
-- [ ] T054 [US5] Add HISTTIMEFORMAT="%F %T " environment variable to .bashrc in `configure_bash_enhancements()` function in scripts/setup-workstation.sh (FR-008)
-- [ ] T055 [US5] Add case-insensitive completion binding (bind 'set completion-ignore-case on') to .bashrc in `configure_bash_enhancements()` function in scripts/setup-workstation.sh (FR-009)
-- [ ] T056 [US5] Add menu-style completion binding (bind 'set show-all-if-ambiguous on') to .bashrc in `configure_bash_enhancements()` function in scripts/setup-workstation.sh (FR-009)
-- [ ] T057 [US5] Add menu completion display prefix binding (bind 'set menu-complete-display-prefix on') to .bashrc in `configure_bash_enhancements()` function in scripts/setup-workstation.sh
-- [ ] T058 [US5] Call `configure_bash_enhancements()` from `setup_terminal_enhancements()` function in scripts/setup-workstation.sh
+- [X] T049 [US5] Create `configure_bash_enhancements(username)` function in scripts/setup-workstation.sh with configuration marker check
+- [X] T050 [US5] Add HISTSIZE=10000 environment variable to .bashrc in `configure_bash_enhancements()` function in scripts/setup-workstation.sh (FR-010)
+- [X] T089 [US5] Add history file size check and truncation logic in `configure_bash_enhancements()` function in scripts/setup-workstation.sh: if history file > 100MB, truncate to last 10,000 entries and log warning: `[WARN] [terminal-enhancements] History file exceeds 100MB, truncating to last 10,000 entries.` (Edge Cases: Large History Files)
+- [X] T051 [US5] Add HISTFILESIZE=20000 environment variable to .bashrc in `configure_bash_enhancements()` function in scripts/setup-workstation.sh
+- [X] T052 [US5] Add HISTCONTROL=ignoreboth:erasedups environment variable to .bashrc in `configure_bash_enhancements()` function in scripts/setup-workstation.sh
+- [X] T053 [US5] Add shopt -s histappend to .bashrc in `configure_bash_enhancements()` function in scripts/setup-workstation.sh
+- [X] T054 [US5] Add HISTTIMEFORMAT="%F %T " environment variable to .bashrc in `configure_bash_enhancements()` function in scripts/setup-workstation.sh (FR-008)
+- [X] T055 [US5] Add case-insensitive completion binding (bind 'set completion-ignore-case on') to .bashrc in `configure_bash_enhancements()` function in scripts/setup-workstation.sh (FR-009)
+- [X] T056 [US5] Add menu-style completion binding (bind 'set show-all-if-ambiguous on') to .bashrc in `configure_bash_enhancements()` function in scripts/setup-workstation.sh (FR-009)
+- [X] T057 [US5] Add menu completion display prefix binding (bind 'set menu-complete-display-prefix on') to .bashrc in `configure_bash_enhancements()` function in scripts/setup-workstation.sh
+- [X] T058 [US5] Call `configure_bash_enhancements()` from `setup_terminal_enhancements()` function in scripts/setup-workstation.sh
 
 **Checkpoint**: At this point, User Stories 1-5 should all work independently. Users have improved history management and tab completion, enhancing overall terminal productivity.
 

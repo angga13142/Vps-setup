@@ -1652,6 +1652,106 @@ WEATHER_EOF
 }
 
 #######################################
+# Configure Bash history and completion enhancements
+#
+# Purpose: Configure Bash history to persist across sessions with timestamps, duplicate removal,
+#          and enhanced tab completion with case-insensitive menu-style selection
+#
+# Inputs:
+#   - username: Username for which to configure enhancements (string, required)
+#
+# Outputs: None (uses structured logging)
+#
+# Side Effects:
+#   - Modifies .bashrc with history and completion settings
+#   - Sets environment variables (HISTSIZE, HISTFILESIZE, etc.)
+#   - Configures readline bindings
+#   - Checks and truncates history file if > 100MB
+#
+# Returns:
+#   0 - Success (enhancements configured or already configured)
+#   1 - Error (configuration failed)
+#
+# Idempotency: Yes
+#   - Checks for configuration marker before adding
+#   - Safe to run multiple times
+#
+# Dependencies:
+#   - User's .bashrc file must exist or be creatable
+#   - Write permissions for user's home directory
+#
+# Configuration Added:
+#   - History size: 10000 commands (HISTSIZE)
+#   - History file size: 20000 commands (HISTFILESIZE)
+#   - History control: ignore duplicates, timestamps (HISTCONTROL, HISTTIMEFORMAT)
+#   - Completion: case-insensitive, menu-style (readline bindings)
+#
+# Example:
+#   configure_bash_enhancements "coder"
+#######################################
+configure_bash_enhancements() {
+    local username="$1"
+    local home_dir="/home/$username"
+    local bashrc_file="$home_dir/.bashrc"
+    local enhancements_marker="# Bash History & Completion Enhancements - Added by setup-workstation.sh"
+
+    log "INFO" "Configuring Bash history and completion enhancements..." "configure_bash_enhancements()" "username=$username"
+
+    # Configuration marker check (T049)
+    if [ -f "$bashrc_file" ] && grep -q "$enhancements_marker" "$bashrc_file"; then
+        log "INFO" "Bash enhancements already configured, skipping" "configure_bash_enhancements()" "username=$username"
+        return 0
+    fi
+
+    # Ensure .bashrc exists
+    if [ ! -f "$bashrc_file" ]; then
+        touch "$bashrc_file"
+        chown "$username:$username" "$bashrc_file"
+        chmod 644 "$bashrc_file"
+    fi
+
+    # Check and truncate history file if > 100MB (T089, Edge Cases: Large History Files)
+    local history_file="$home_dir/.bash_history"
+    if [ -f "$history_file" ]; then
+        local history_size
+        history_size=$(stat -f%z "$history_file" 2>/dev/null || stat -c%s "$history_file" 2>/dev/null || echo "0")
+        # 100MB = 104857600 bytes
+        if [ "$history_size" -gt 104857600 ]; then
+            log "WARNING" "[WARN] [terminal-enhancements] History file exceeds 100MB, truncating to last 10,000 entries." "configure_bash_enhancements()" "username=$username history_size=${history_size}bytes"
+            # Get last 10,000 lines and write back
+            tail -n 10000 "$history_file" > "${history_file}.tmp" 2>/dev/null && mv "${history_file}.tmp" "$history_file" 2>/dev/null || true
+            chown "$username:$username" "$history_file" 2>/dev/null || true
+            chmod 600 "$history_file" 2>/dev/null || true
+        fi
+    fi
+
+    # Add Bash enhancements (T050, T051, T052, T053, T054, T055, T056, T057)
+    {
+        echo ""
+        echo "$enhancements_marker"
+        echo ""
+        echo "# Bash History Configuration (T050, T051, T052, T053, T054, FR-008, FR-010)"
+        echo "export HISTSIZE=10000"
+        echo "export HISTFILESIZE=20000"
+        echo "export HISTCONTROL=ignoreboth:erasedups"
+        echo "shopt -s histappend"
+        echo 'export HISTTIMEFORMAT="%F %T "'
+        echo ""
+        echo "# Bash Completion Enhancements (T055, T056, T057, FR-009)"
+        echo "bind 'set completion-ignore-case on'"
+        echo "bind 'set show-all-if-ambiguous on'"
+        echo "bind 'set menu-complete-display-prefix on'"
+    } >> "$bashrc_file"
+
+    # Ensure correct ownership and permissions
+    chown "$username:$username" "$bashrc_file" 2>/dev/null || true
+    chmod 644 "$bashrc_file" 2>/dev/null || true
+
+    log "INFO" "✓ Bash history and completion enhancements configured successfully" "configure_bash_enhancements()" "username=$username"
+    return 0
+}
+
+#######################################
 # Setup terminal enhancements (main orchestration function)
 #
 # Purpose: Main orchestration function for installing and configuring all terminal enhancements
@@ -1799,8 +1899,10 @@ setup_terminal_enhancements() {
     # Configure utility functions (T048)
     configure_terminal_functions "$username"
 
+    # Configure Bash history and completion enhancements (T058)
+    configure_bash_enhancements "$username"
+
     # TODO: Tool installations will be added in later phases:
-    # - configure_bash_enhancements()
     # - configure_terminal_visuals()
 
     # Add configuration marker to .bashrc
