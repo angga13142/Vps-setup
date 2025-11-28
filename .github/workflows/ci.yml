@@ -17,6 +17,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Cache APT packages
+        uses: actions/cache@v4
+        with:
+          path: /var/cache/apt
+          key: ${{ runner.os }}-apt-${{ hashFiles('**/apt-cache-key') }}
+          restore-keys: |
+            ${{ runner.os }}-apt-
+
       - name: Install ShellCheck
         run: |
           sudo apt-get update
@@ -43,10 +51,28 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Cache APT packages
+        uses: actions/cache@v4
+        with:
+          path: /var/cache/apt
+          key: ${{ runner.os }}-apt-${{ hashFiles('**/apt-cache-key') }}
+          restore-keys: |
+            ${{ runner.os }}-apt-
+
       - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y bats git
+
+      - name: Cache bats helpers
+        uses: actions/cache@v4
+        with:
+          path: |
+            tests/helpers/bats-support
+            tests/helpers/bats-assert
+          key: ${{ runner.os }}-bats-helpers-${{ hashFiles('tests/helpers/**') }}
+          restore-keys: |
+            ${{ runner.os }}-bats-helpers-
 
       - name: Download bats helpers
         run: |

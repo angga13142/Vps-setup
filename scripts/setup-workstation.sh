@@ -102,6 +102,121 @@ log() {
 }
 
 #######################################
+# Verify installation success
+# Purpose: Check that all critical components were installed successfully
+# Inputs:
+#   - username: Username to verify installation for
+# Outputs: Logs verification results
+# Side Effects: None
+# Returns:
+#   0 - All components verified successfully
+#   1 - One or more components failed verification
+# Idempotency: Safe to call multiple times
+# Example:
+#   verify_installation "coder"
+#######################################
+verify_installation() {
+    local username="$1"
+    local home_dir="/home/$username"
+    local all_ok=true
+
+    log "INFO" "Verifying installation..." "verify_installation()" "username=$username"
+
+    # Verify user exists
+    if ! id "$username" &>/dev/null; then
+        log "ERROR" "User '$username' does not exist" "verify_installation()" "username=$username"
+        all_ok=false
+    else
+        log "INFO" "✓ User '$username' exists" "verify_installation()"
+    fi
+
+    # Verify essential packages
+    local essential_packages=("curl" "git" "htop" "vim" "build-essential")
+    for package in "${essential_packages[@]}"; do
+        if ! dpkg -l | grep -q "^ii  $package "; then
+            log "WARNING" "Package '$package' is not installed" "verify_installation()" "package=$package"
+            all_ok=false
+        else
+            log "INFO" "✓ Package '$package' is installed" "verify_installation()"
+        fi
+    done
+
+    # Verify XFCE4
+    if ! dpkg -l | grep -q "^ii  xfce4 "; then
+        log "WARNING" "XFCE4 is not installed" "verify_installation()"
+        all_ok=false
+    else
+        log "INFO" "✓ XFCE4 is installed" "verify_installation()"
+    fi
+
+    # Verify XRDP
+    if ! dpkg -l | grep -q "^ii  xrdp "; then
+        log "WARNING" "XRDP is not installed" "verify_installation()"
+        all_ok=false
+    else
+        log "INFO" "✓ XRDP is installed" "verify_installation()"
+    fi
+
+    # Verify XRDP service
+    if ! systemctl is-enabled xrdp &>/dev/null; then
+        log "WARNING" "XRDP service is not enabled" "verify_installation()"
+        all_ok=false
+    else
+        log "INFO" "✓ XRDP service is enabled" "verify_installation()"
+    fi
+
+    # Verify Docker
+    if ! command -v docker &>/dev/null; then
+        log "WARNING" "Docker is not installed or not in PATH" "verify_installation()"
+        all_ok=false
+    else
+        log "INFO" "✓ Docker is installed" "verify_installation()"
+    fi
+
+    # Verify user is in docker group
+    if ! groups "$username" | grep -q "\bdocker\b"; then
+        log "WARNING" "User '$username' is not in docker group" "verify_installation()" "username=$username"
+        all_ok=false
+    else
+        log "INFO" "✓ User '$username' is in docker group" "verify_installation()" "username=$username"
+    fi
+
+    # Verify NVM
+    if [ ! -d "$home_dir/.nvm" ] || [ ! -f "$home_dir/.nvm/nvm.sh" ]; then
+        log "WARNING" "NVM is not installed for user '$username'" "verify_installation()" "username=$username"
+        all_ok=false
+    else
+        log "INFO" "✓ NVM is installed" "verify_installation()" "username=$username"
+    fi
+
+    # Verify Python 3
+    if ! command -v python3 &>/dev/null; then
+        log "WARNING" "Python 3 is not installed or not in PATH" "verify_installation()"
+        all_ok=false
+    else
+        local python_version
+        python_version=$(python3 --version 2>&1)
+        log "INFO" "✓ Python 3 is available: $python_version" "verify_installation()"
+    fi
+
+    # Verify .bashrc configuration
+    if [ ! -f "$home_dir/.bashrc" ] || ! grep -q "# Mobile-Ready Workstation Custom Configuration" "$home_dir/.bashrc" 2>/dev/null; then
+        log "WARNING" ".bashrc is not configured for user '$username'" "verify_installation()" "username=$username"
+        all_ok=false
+    else
+        log "INFO" "✓ .bashrc is configured" "verify_installation()" "username=$username"
+    fi
+
+    if [ "$all_ok" = true ]; then
+        log "INFO" "✓ All installation components verified successfully" "verify_installation()" "username=$username"
+        return 0
+    else
+        log "WARNING" "Some installation components failed verification. Review warnings above." "verify_installation()" "username=$username"
+        return 1
+    fi
+}
+
+#######################################
 # Check if running on Debian 13 (Trixie)
 # Exits with error if not Debian 13
 # Returns: 0 if Debian 13, exits with 1 otherwise
@@ -390,7 +505,7 @@ system_prep() {
     done
 
     if [ ${#packages_to_install[@]} -gt 0 ]; then
-        log "INFO" "Installing essential packages: ${packages_to_install[*]}" "system_prep()"
+        log "INFO" "Installing essential packages: ${packages_to_install[*]} (this may take a few minutes)..." "system_prep()"
         if ! apt-get install -y "${packages_to_install[@]}"; then
             log "ERROR" "Failed to install essential packages: ${packages_to_install[*]}. Context: Function system_prep() attempted to install packages but apt-get install failed. Recovery: Check package availability, verify APT repository configuration, or install manually: apt-get install -y ${packages_to_install[*]}" "system_prep()" "packages=${packages_to_install[*]}"
             return 1
@@ -710,7 +825,7 @@ setup_desktop_mobile() {
     if dpkg -l | grep -q "^ii  xfce4 "; then
         log "INFO" "✓ XFCE4 already installed" "setup_desktop_mobile()"
     else
-        log "INFO" "Installing XFCE4 desktop environment..." "setup_desktop_mobile()"
+        log "INFO" "Installing XFCE4 desktop environment... (this may take 5-10 minutes)" "setup_desktop_mobile()"
         # Set DEBIAN_FRONTEND to noninteractive to avoid prompts
         export DEBIAN_FRONTEND=noninteractive
         if ! apt-get install -y xfce4 xfce4-goodies; then
@@ -958,7 +1073,7 @@ install_docker() {
     if command -v docker &>/dev/null && dpkg -l | grep -q "^ii  docker-ce "; then
         log "INFO" "✓ Docker already installed" "install_docker()"
     else
-        log "INFO" "Installing Docker packages..." "install_docker()"
+        log "INFO" "Installing Docker packages... (this may take a few minutes)" "install_docker()"
         if ! apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin; then
             log "ERROR" "Failed to install Docker packages. Context: Function install_docker() attempted to install Docker packages but apt-get install failed. Recovery: Check Docker repository configuration, verify package availability, check network connectivity, or install manually: apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin" "install_docker()" "username=$username"
             return 1
@@ -1061,7 +1176,7 @@ NVM_EOF
     fi
 
     # Install Node.js LTS
-    log "INFO" "Installing Node.js LTS..." "install_nvm_nodejs()" "username=$username"
+    log "INFO" "Installing Node.js LTS... (this may take 2-5 minutes)" "install_nvm_nodejs()" "username=$username"
     # Source NVM and install Node.js LTS as the target user
     if ! su - "$username" -c 'export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" && nvm install --lts && nvm use --default --lts' 2>&1 | tail -5; then
         log "WARNING" "Node.js LTS installation may have encountered issues. Check logs for details." "install_nvm_nodejs()" "username=$username"
@@ -1241,6 +1356,9 @@ finalize() {
     apt-get clean -qq
     apt-get autoclean -qq
     log "INFO" "✓ APT cache cleaned" "finalize()"
+
+    # Verify installation
+    verify_installation "$username"
 
     # Get server IP address
     local server_ip
