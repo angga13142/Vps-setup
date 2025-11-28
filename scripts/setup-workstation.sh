@@ -297,11 +297,6 @@ verify_installation() {
         all_ok=false
     fi
 
-    if [ "$all_ok" = true ]; then
-        python_version=$(python3 --version 2>&1)
-        log "INFO" "✓ Python 3 is available: $python_version" "verify_installation()"
-    fi
-
     # Verify .bashrc configuration
     if [ ! -f "$home_dir/.bashrc" ] || ! grep -q "# Mobile-Ready Workstation Custom Configuration" "$home_dir/.bashrc" 2>/dev/null; then
         log "WARNING" ".bashrc is not configured for user '$username'" "verify_installation()" "username=$username"
@@ -1435,7 +1430,9 @@ configure_terminal_aliases() {
         echo "$aliases_marker"
         echo "# bat alias (better cat)"
         if [ "$cat_alias_exists" = false ]; then
-            if command -v bat &>/dev/null || command -v batcat &>/dev/null; then
+            if command -v bat &>/dev/null; then
+                echo "alias cat='bat'"
+            elif command -v batcat &>/dev/null; then
                 echo "alias cat='batcat'"
             fi
         fi
