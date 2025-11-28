@@ -1,5 +1,7 @@
 # Mobile-Ready Coding Workstation Setup Script
 
+[![CI](https://github.com/angga13142/Vps-setup/actions/workflows/ci.yml/badge.svg)](https://github.com/angga13142/Vps-setup/actions/workflows/ci.yml)
+
 A comprehensive Bash installation script for setting up a mobile-ready coding workstation on Debian 13 (Trixie). This script automates the installation and configuration of essential development tools, desktop environment, and remote access capabilities.
 
 ## Overview
@@ -198,11 +200,73 @@ shellcheck scripts/setup-workstation.sh
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed contribution guidelines.
 
+## Logging
+
+The script uses structured logging to track all operations and errors. Logs are written to a file and displayed on the console.
+
+### Log File Location
+
+- **Default**: `/var/log/setup-workstation.log` (requires root privileges)
+- **Fallback**: `~/.setup-workstation.log` (if `/var/log` is not writable)
+
+### Log Levels
+
+- **INFO**: Normal operations and successful actions
+- **WARNING**: Recoverable issues or non-critical problems
+- **ERROR**: Failures that prevent script execution
+- **DEBUG**: Detailed debugging information (only shown if `DEBUG=1` environment variable is set)
+
+### Log Format
+
+Each log entry includes:
+- **Timestamp**: ISO 8601 format (UTC) or local time
+- **Level**: Log level (INFO, WARNING, ERROR, DEBUG)
+- **Context**: Function name where the log was generated
+- **Message**: Descriptive message about the operation
+
+Example log entry:
+```
+[2025-01-27T10:30:45Z] [INFO] [create_user()] ✓ User 'coder' created successfully
+```
+
+### Viewing Logs
+
+```bash
+# View entire log file
+sudo cat /var/log/setup-workstation.log
+
+# View last 50 lines
+sudo tail -n 50 /var/log/setup-workstation.log
+
+# Follow log in real-time (if script is running)
+sudo tail -f /var/log/setup-workstation.log
+
+# Search for errors
+sudo grep ERROR /var/log/setup-workstation.log
+
+# Search for specific function
+sudo grep "create_user()" /var/log/setup-workstation.log
+```
+
+### Error Messages
+
+All error messages include:
+- **Context**: What was being done when the error occurred
+- **Recovery Suggestions**: Specific steps to resolve the issue
+
+Example error message:
+```
+[ERROR] Failed to install Docker packages
+[ERROR] Context: apt-get install failed for Docker packages (docker-ce, docker-ce-cli, containerd.io, etc.).
+[ERROR] Recovery: Check repository configuration, network connectivity, and disk space. Verify repository: cat /etc/apt/sources.list.d/docker.sources
+```
+
 ## Documentation
 
 - **README.md** (this file): Project overview and quick start
 - **CONTRIBUTING.md**: Development workflow and contribution guidelines
 - **docs/troubleshooting.md**: Common issues and solutions
+- **docs/cicd-setup-guide.md**: Step-by-step CI/CD setup and testing guide
 - **CHANGELOG.md**: Version history and changes
 
 ## Function Documentation
@@ -241,3 +305,5 @@ Built with best practices for DevOps automation, following principles of:
 **Version**: 1.0.0  
 **Last Updated**: 2025-01-27  
 **Target Platform**: Debian 13 (Trixie)
+
+# CI/CD Test - 2025-11-28
