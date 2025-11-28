@@ -118,19 +118,19 @@
 
 ### Implementation for User Story 4
 
-- [ ] T036 [US4] Create `configure_terminal_aliases(username)` function in scripts/setup-workstation.sh with configuration marker check
-- [ ] T037 [US4] Implement conflict detection for Git aliases (gst, gco, gcm, gpl, gps) using `check_alias_conflict()` in `configure_terminal_aliases()` function in scripts/setup-workstation.sh
-- [ ] T038 [US4] Add Git aliases (gst, gco, gcm, gpl, gps) to .bashrc with conflict detection in `configure_terminal_aliases()` function in scripts/setup-workstation.sh (FR-005)
-- [ ] T039 [US4] Implement conflict detection for Docker aliases (dc, dps, dlog) using `check_alias_conflict()` in `configure_terminal_aliases()` function in scripts/setup-workstation.sh
-- [ ] T040 [US4] Add Docker aliases (dc, dps, dlog) to .bashrc with conflict detection in `configure_terminal_aliases()` function in scripts/setup-workstation.sh (FR-006)
-- [ ] T041 [US4] Create `configure_terminal_functions(username)` function in scripts/setup-workstation.sh with configuration marker check
-- [ ] T042 [US4] Implement conflict detection for utility functions (mkcd, extract, ports, weather) using `check_function_conflict()` in `configure_terminal_functions()` function in scripts/setup-workstation.sh
-- [ ] T043 [US4] Add mkcd() function to .bashrc with conflict detection in `configure_terminal_functions()` function in scripts/setup-workstation.sh
-- [ ] T044 [US4] Add extract() function to .bashrc with conflict detection in `configure_terminal_functions()` function in scripts/setup-workstation.sh
-- [ ] T045 [US4] Add ports() function to .bashrc with conflict detection in `configure_terminal_functions()` function in scripts/setup-workstation.sh
-- [ ] T046 [US4] Add weather() function with error handling for wttr.in unavailability to .bashrc in `configure_terminal_functions()` function in scripts/setup-workstation.sh with error message format: `[ERROR] [weather] Weather service unavailable. Check internet connection or try again later.` (FR-024)
-- [ ] T047 [US4] Add warning logging for skipped aliases/functions due to conflicts in `configure_terminal_aliases()` and `configure_terminal_functions()` functions in scripts/setup-workstation.sh with format: `[WARN] [terminal-enhancements] Alias/function '[name]' already exists, skipping to preserve user customization.` (FR-021)
-- [ ] T048 [US4] Call `configure_terminal_aliases()` and `configure_terminal_functions()` from `setup_terminal_enhancements()` function in scripts/setup-workstation.sh
+- [X] T036 [US4] Create `configure_terminal_aliases(username)` function in scripts/setup-workstation.sh with configuration marker check
+- [X] T037 [US4] Implement conflict detection for Git aliases (gst, gco, gcm, gpl, gps) using `check_alias_conflict()` in `configure_terminal_aliases()` function in scripts/setup-workstation.sh
+- [X] T038 [US4] Add Git aliases (gst, gco, gcm, gpl, gps) to .bashrc with conflict detection in `configure_terminal_aliases()` function in scripts/setup-workstation.sh (FR-005)
+- [X] T039 [US4] Implement conflict detection for Docker aliases (dc, dps, dlog) using `check_alias_conflict()` in `configure_terminal_aliases()` function in scripts/setup-workstation.sh
+- [X] T040 [US4] Add Docker aliases (dc, dps, dlog) to .bashrc with conflict detection in `configure_terminal_aliases()` function in scripts/setup-workstation.sh (FR-006)
+- [X] T041 [US4] Create `configure_terminal_functions(username)` function in scripts/setup-workstation.sh with configuration marker check
+- [X] T042 [US4] Implement conflict detection for utility functions (mkcd, extract, ports, weather) using `check_function_conflict()` in `configure_terminal_functions()` function in scripts/setup-workstation.sh
+- [X] T043 [US4] Add mkcd() function to .bashrc with conflict detection in `configure_terminal_functions()` function in scripts/setup-workstation.sh
+- [X] T044 [US4] Add extract() function to .bashrc with conflict detection in `configure_terminal_functions()` function in scripts/setup-workstation.sh
+- [X] T045 [US4] Add ports() function to .bashrc with conflict detection in `configure_terminal_functions()` function in scripts/setup-workstation.sh
+- [X] T046 [US4] Add weather() function with error handling for wttr.in unavailability to .bashrc in `configure_terminal_functions()` function in scripts/setup-workstation.sh with error message format: `[ERROR] [weather] Weather service unavailable. Check internet connection or try again later.` (FR-024)
+- [X] T047 [US4] Add warning logging for skipped aliases/functions due to conflicts in `configure_terminal_aliases()` and `configure_terminal_functions()` functions in scripts/setup-workstation.sh with format: `[WARN] [terminal-enhancements] Alias/function '[name]' already exists, skipping to preserve user customization.` (FR-021)
+- [X] T048 [US4] Call `configure_terminal_aliases()` and `configure_terminal_functions()` from `setup_terminal_enhancements()` function in scripts/setup-workstation.sh
 
 **Checkpoint**: At this point, User Stories 1, 2, 3, AND 4 should all work independently. Users have convenient shortcuts for common operations, reducing keystrokes by 50% for Git operations.
 

@@ -1324,6 +1324,14 @@ configure_terminal_aliases() {
     local cat_alias_exists=false
     local ls_alias_exists=false
     local ll_alias_exists=false
+    local gst_alias_exists=false
+    local gco_alias_exists=false
+    local gcm_alias_exists=false
+    local gpl_alias_exists=false
+    local gps_alias_exists=false
+    local dc_alias_exists=false
+    local dps_alias_exists=false
+    local dlog_alias_exists=false
 
     if [ -f "$bashrc_file" ]; then
         if grep -qE "^alias cat=" "$bashrc_file" 2>/dev/null; then
@@ -1335,9 +1343,35 @@ configure_terminal_aliases() {
         if grep -qE "^alias ll=" "$bashrc_file" 2>/dev/null; then
             ll_alias_exists=true
         fi
+        # Git aliases (T037)
+        if grep -qE "^alias gst=" "$bashrc_file" 2>/dev/null; then
+            gst_alias_exists=true
+        fi
+        if grep -qE "^alias gco=" "$bashrc_file" 2>/dev/null; then
+            gco_alias_exists=true
+        fi
+        if grep -qE "^alias gcm=" "$bashrc_file" 2>/dev/null; then
+            gcm_alias_exists=true
+        fi
+        if grep -qE "^alias gpl=" "$bashrc_file" 2>/dev/null; then
+            gpl_alias_exists=true
+        fi
+        if grep -qE "^alias gps=" "$bashrc_file" 2>/dev/null; then
+            gps_alias_exists=true
+        fi
+        # Docker aliases (T039)
+        if grep -qE "^alias dc=" "$bashrc_file" 2>/dev/null; then
+            dc_alias_exists=true
+        fi
+        if grep -qE "^alias dps=" "$bashrc_file" 2>/dev/null; then
+            dps_alias_exists=true
+        fi
+        if grep -qE "^alias dlog=" "$bashrc_file" 2>/dev/null; then
+            dlog_alias_exists=true
+        fi
     fi
 
-    # Add aliases (T033, T034)
+    # Add aliases (T033, T034, T038, T040)
     {
         echo ""
         echo "$aliases_marker"
@@ -1365,6 +1399,50 @@ configure_terminal_aliases() {
         else
             log "WARNING" "[WARN] [terminal-enhancements] Alias/function 'll' already exists, skipping to preserve user customization." "configure_terminal_aliases()" "username=$username"
         fi
+        echo ""
+        echo "# Git aliases (T038, FR-005)"
+        if [ "$gst_alias_exists" = false ]; then
+            echo "alias gst='git status'"
+        else
+            log "WARNING" "[WARN] [terminal-enhancements] Alias/function 'gst' already exists, skipping to preserve user customization." "configure_terminal_aliases()" "username=$username"
+        fi
+        if [ "$gco_alias_exists" = false ]; then
+            echo "alias gco='git checkout'"
+        else
+            log "WARNING" "[WARN] [terminal-enhancements] Alias/function 'gco' already exists, skipping to preserve user customization." "configure_terminal_aliases()" "username=$username"
+        fi
+        if [ "$gcm_alias_exists" = false ]; then
+            echo "alias gcm='git commit -m'"
+        else
+            log "WARNING" "[WARN] [terminal-enhancements] Alias/function 'gcm' already exists, skipping to preserve user customization." "configure_terminal_aliases()" "username=$username"
+        fi
+        if [ "$gpl_alias_exists" = false ]; then
+            echo "alias gpl='git pull'"
+        else
+            log "WARNING" "[WARN] [terminal-enhancements] Alias/function 'gpl' already exists, skipping to preserve user customization." "configure_terminal_aliases()" "username=$username"
+        fi
+        if [ "$gps_alias_exists" = false ]; then
+            echo "alias gps='git push'"
+        else
+            log "WARNING" "[WARN] [terminal-enhancements] Alias/function 'gps' already exists, skipping to preserve user customization." "configure_terminal_aliases()" "username=$username"
+        fi
+        echo ""
+        echo "# Docker aliases (T040, FR-006)"
+        if [ "$dc_alias_exists" = false ]; then
+            echo "alias dc='docker-compose'"
+        else
+            log "WARNING" "[WARN] [terminal-enhancements] Alias/function 'dc' already exists, skipping to preserve user customization." "configure_terminal_aliases()" "username=$username"
+        fi
+        if [ "$dps_alias_exists" = false ]; then
+            echo "alias dps='docker ps'"
+        else
+            log "WARNING" "[WARN] [terminal-enhancements] Alias/function 'dps' already exists, skipping to preserve user customization." "configure_terminal_aliases()" "username=$username"
+        fi
+        if [ "$dlog_alias_exists" = false ]; then
+            echo "alias dlog='docker logs -f'"
+        else
+            log "WARNING" "[WARN] [terminal-enhancements] Alias/function 'dlog' already exists, skipping to preserve user customization." "configure_terminal_aliases()" "username=$username"
+        fi
     } >> "$bashrc_file"
 
     # Ensure correct ownership and permissions
@@ -1372,6 +1450,176 @@ configure_terminal_aliases() {
     chmod 644 "$bashrc_file" 2>/dev/null || true
 
     log "INFO" "✓ Terminal aliases configured successfully" "configure_terminal_aliases()" "username=$username"
+    return 0
+}
+
+#######################################
+# Configure terminal functions (utility functions)
+#
+# Purpose: Add utility functions (mkcd, extract, ports, weather) to user's .bashrc with conflict detection
+#
+# Inputs:
+#   - username: Username for which to configure functions (string, required)
+#
+# Outputs: None (uses structured logging)
+#
+# Side Effects:
+#   - Checks for existing functions before adding
+#   - Adds non-conflicting functions to .bashrc
+#   - Logs warnings for skipped conflicts
+#
+# Returns:
+#   0 - Success (functions configured or already configured)
+#   1 - Error (configuration failed)
+#
+# Idempotency: Yes
+#   - Checks for configuration marker before adding
+#   - Checks each function for conflicts before adding
+#   - Safe to run multiple times
+#
+# Dependencies:
+#   - check_function_conflict() function
+#   - User's .bashrc file must exist or be creatable
+#   - Write permissions for user's home directory
+#
+# Functions Added (if no conflicts):
+#   - mkcd() - Create and enter directory
+#   - extract() - Extract archives
+#   - ports() - Show listening ports
+#   - weather() - Weather info (with error handling for wttr.in)
+#
+# Example:
+#   configure_terminal_functions "coder"
+#######################################
+configure_terminal_functions() {
+    local username="$1"
+    local home_dir="/home/$username"
+    local bashrc_file="$home_dir/.bashrc"
+    local functions_marker="# Terminal Functions Configuration - Added by setup-workstation.sh"
+
+    log "INFO" "Configuring terminal functions..." "configure_terminal_functions()" "username=$username"
+
+    # Configuration marker check (T041)
+    if [ -f "$bashrc_file" ] && grep -q "$functions_marker" "$bashrc_file"; then
+        log "INFO" "Terminal functions already configured, skipping" "configure_terminal_functions()" "username=$username"
+        return 0
+    fi
+
+    # Ensure .bashrc exists
+    if [ ! -f "$bashrc_file" ]; then
+        touch "$bashrc_file"
+        chown "$username:$username" "$bashrc_file"
+        chmod 644 "$bashrc_file"
+    fi
+
+    # Check for existing functions in .bashrc (T042)
+    local mkcd_exists=false
+    local extract_exists=false
+    local ports_exists=false
+    local weather_exists=false
+
+    if [ -f "$bashrc_file" ]; then
+        if grep -qE "^mkcd\(\)|^function mkcd" "$bashrc_file" 2>/dev/null; then
+            mkcd_exists=true
+        fi
+        if grep -qE "^extract\(\)|^function extract" "$bashrc_file" 2>/dev/null; then
+            extract_exists=true
+        fi
+        if grep -qE "^ports\(\)|^function ports" "$bashrc_file" 2>/dev/null; then
+            ports_exists=true
+        fi
+        if grep -qE "^weather\(\)|^function weather" "$bashrc_file" 2>/dev/null; then
+            weather_exists=true
+        fi
+    fi
+
+    # Add functions (T043, T044, T045, T046)
+    {
+        echo ""
+        echo "$functions_marker"
+        echo ""
+        echo "# mkcd() - Create and enter directory (T043)"
+        if [ "$mkcd_exists" = false ]; then
+            cat << 'MKCD_EOF'
+mkcd() {
+    mkdir -p "$1" && cd "$1" || return 1
+}
+MKCD_EOF
+        else
+            log "WARNING" "[WARN] [terminal-enhancements] Alias/function 'mkcd' already exists, skipping to preserve user customization." "configure_terminal_functions()" "username=$username"
+        fi
+        echo ""
+        echo "# extract() - Extract archives (T044)"
+        if [ "$extract_exists" = false ]; then
+            cat << 'EXTRACT_EOF'
+extract() {
+    if [ -f "$1" ]; then
+        case "$1" in
+            *.tar.bz2) tar xjf "$1" ;;
+            *.tar.gz) tar xzf "$1" ;;
+            *.bz2) bunzip2 "$1" ;;
+            *.rar) unrar x "$1" ;;
+            *.gz) gunzip "$1" ;;
+            *.tar) tar xf "$1" ;;
+            *.tbz2) tar xjf "$1" ;;
+            *.tgz) tar xzf "$1" ;;
+            *.zip) unzip "$1" ;;
+            *.Z) uncompress "$1" ;;
+            *.7z) 7z x "$1" ;;
+            *) echo "'$1' cannot be extracted via extract()" ;;
+        esac
+    else
+        echo "'$1' is not a valid file"
+    fi
+}
+EXTRACT_EOF
+        else
+            log "WARNING" "[WARN] [terminal-enhancements] Alias/function 'extract' already exists, skipping to preserve user customization." "configure_terminal_functions()" "username=$username"
+        fi
+        echo ""
+        echo "# ports() - Show listening ports (T045)"
+        if [ "$ports_exists" = false ]; then
+            cat << 'PORTS_EOF'
+ports() {
+    netstat -tulanp 2>/dev/null | grep LISTEN || ss -tulanp 2>/dev/null | grep LISTEN || echo "Unable to list listening ports. Install net-tools or iproute2."
+}
+PORTS_EOF
+        else
+            log "WARNING" "[WARN] [terminal-enhancements] Alias/function 'ports' already exists, skipping to preserve user customization." "configure_terminal_functions()" "username=$username"
+        fi
+        echo ""
+        echo "# weather() - Weather info with error handling (T046, FR-024)"
+        if [ "$weather_exists" = false ]; then
+            cat << 'WEATHER_EOF'
+weather() {
+    if command -v curl &>/dev/null; then
+        if ! curl -s --max-time 5 "wttr.in" &>/dev/null; then
+            echo "[ERROR] [weather] Weather service unavailable. Check internet connection or try again later." >&2
+            return 1
+        fi
+        curl -s "wttr.in"
+    elif command -v wget &>/dev/null; then
+        if ! wget -q --timeout=5 --spider "wttr.in" &>/dev/null; then
+            echo "[ERROR] [weather] Weather service unavailable. Check internet connection or try again later." >&2
+            return 1
+        fi
+        wget -qO- "wttr.in"
+    else
+        echo "[ERROR] [weather] Weather service unavailable. Check internet connection or try again later." >&2
+        return 1
+    fi
+}
+WEATHER_EOF
+        else
+            log "WARNING" "[WARN] [terminal-enhancements] Alias/function 'weather' already exists, skipping to preserve user customization." "configure_terminal_functions()" "username=$username"
+        fi
+    } >> "$bashrc_file"
+
+    # Ensure correct ownership and permissions
+    chown "$username:$username" "$bashrc_file" 2>/dev/null || true
+    chmod 644 "$bashrc_file" 2>/dev/null || true
+
+    log "INFO" "✓ Terminal functions configured successfully" "configure_terminal_functions()" "username=$username"
     return 0
 }
 
@@ -1517,13 +1765,13 @@ setup_terminal_enhancements() {
         log "WARNING" "[WARN] [terminal-enhancements] Failed to install exa. Continuing with remaining tools." "setup_terminal_enhancements()" "username=$username"
     fi
 
-    # Configure aliases only if at least one tool is installed
-    if [ "$bat_installed" = true ] || [ "$exa_installed" = true ]; then
-        configure_terminal_aliases "$username"
-    fi
+    # Configure aliases (includes bat/exa aliases if tools installed, plus Git/Docker aliases) (T048)
+    configure_terminal_aliases "$username"
+
+    # Configure utility functions (T048)
+    configure_terminal_functions "$username"
 
     # TODO: Tool installations will be added in later phases:
-    # - configure_terminal_functions()
     # - configure_bash_enhancements()
     # - configure_terminal_visuals()
 
