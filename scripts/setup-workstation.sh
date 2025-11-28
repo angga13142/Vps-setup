@@ -1276,19 +1276,38 @@ install_exa() {
     fi
 
     # Download exa binary (T030)
+    # Use specific version URL to avoid redirect issues with /latest/download/
+    # Latest stable version: v0.10.1 (as of 2024)
+    # Note: File name includes version: exa-linux-x86_64-musl-v0.10.1.zip
     local zip_file="$temp_dir/exa-linux-x86_64-musl.zip"
+    local exa_url="https://github.com/ogham/exa/releases/download/v0.10.1/exa-linux-x86_64-musl-v0.10.1.zip"
+
     if command -v wget &>/dev/null; then
-        if ! wget -q "https://github.com/ogham/exa/releases/latest/download/exa-linux-x86_64-musl.zip" -O "$zip_file"; then
+        if ! wget -q --max-redirect=5 "$exa_url" -O "$zip_file"; then
             log "ERROR" "[ERROR] [terminal-enhancements] Failed to install exa: network failure during download. Skipping exa installation. Remaining tools will continue installation." "install_exa()" "reason=download_failed"
             rm -rf "$temp_dir"
             return 1
         fi
     else
-        if ! curl -sSL "https://github.com/ogham/exa/releases/latest/download/exa-linux-x86_64-musl.zip" -o "$zip_file"; then
+        if ! curl -sSL -L --max-redirs 5 "$exa_url" -o "$zip_file"; then
             log "ERROR" "[ERROR] [terminal-enhancements] Failed to install exa: network failure during download. Skipping exa installation. Remaining tools will continue installation." "install_exa()" "reason=download_failed"
             rm -rf "$temp_dir"
             return 1
         fi
+    fi
+
+    # Verify downloaded file is not empty and is a valid zip
+    if [ ! -s "$zip_file" ]; then
+        log "ERROR" "[ERROR] [terminal-enhancements] Failed to install exa: downloaded file is empty. Skipping exa installation. Remaining tools will continue installation." "install_exa()" "reason=download_failed_empty_file"
+        rm -rf "$temp_dir"
+        return 1
+    fi
+
+    # Check if file is a valid zip (at least check first bytes)
+    if ! file "$zip_file" 2>/dev/null | grep -qE "(Zip|zip|archive)"; then
+        log "ERROR" "[ERROR] [terminal-enhancements] Failed to install exa: downloaded file is not a valid zip archive. Skipping exa installation. Remaining tools will continue installation." "install_exa()" "reason=download_failed_invalid_zip"
+        rm -rf "$temp_dir"
+        return 1
     fi
 
     # Extract binary (T031)
