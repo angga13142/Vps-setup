@@ -570,6 +570,8 @@ load_user_inputs() {
 # Notes:
 #   - Never removes root user (UID 0)
 #   - Never removes the specified keep_username
+#   - Never removes current logged-in user (to prevent disconnection)
+#   - Never removes users with active login sessions (to prevent disconnection)
 #   - Removes home directories with -r flag
 #   - Skips system users (UID < 1000) except root
 #######################################
@@ -579,6 +581,25 @@ remove_unnecessary_users() {
     local users_failed=0
 
     log "INFO" "Removing unnecessary users (keeping root and $keep_username)..." "remove_unnecessary_users()" "keep_username=$keep_username"
+
+    # Detect current logged-in user(s) to avoid disconnecting active sessions
+    # Priority: SUDO_USER (if script run with sudo) > USER > whoami
+    local current_user=""
+    if [ -n "${SUDO_USER:-}" ] && [ "$SUDO_USER" != "root" ]; then
+        current_user="$SUDO_USER"
+    elif [ -n "${USER:-}" ] && [ "$USER" != "root" ]; then
+        current_user="$USER"
+    else
+        current_user=$(whoami 2>/dev/null || echo "")
+    fi
+
+    # Get list of all logged-in users (from who command)
+    local logged_in_users=""
+    if command -v who &>/dev/null; then
+        logged_in_users=$(who 2>/dev/null | awk '{print $1}' | sort -u | tr '\n' ' ' || echo "")
+    fi
+
+    log "INFO" "Current user: ${current_user:-unknown}, Logged-in users: ${logged_in_users:-none}" "remove_unnecessary_users()" "current_user=$current_user logged_in_users=$logged_in_users"
 
     # Get list of all users (excluding system users with UID < 1000, except root)
     # Also exclude the user we want to keep
@@ -597,6 +618,18 @@ remove_unnecessary_users() {
 
         # Skip root and keep_username (shouldn't happen due to grep, but double-check)
         if [ "$username" = "root" ] || [ "$username" = "$keep_username" ]; then
+            continue
+        fi
+
+        # Skip current user to avoid disconnecting active session
+        if [ -n "$current_user" ] && [ "$username" = "$current_user" ]; then
+            log "WARNING" "Skipping removal of current user '$username' to prevent disconnection from server. Please logout and remove manually if needed." "remove_unnecessary_users()" "username=$username reason=current_user"
+            continue
+        fi
+
+        # Skip logged-in users to avoid disconnecting active sessions
+        if [ -n "$logged_in_users" ] && echo "$logged_in_users" | grep -qw "$username"; then
+            log "WARNING" "Skipping removal of logged-in user '$username' to prevent disconnection from server. Please logout and remove manually if needed." "remove_unnecessary_users()" "username=$username reason=logged_in"
             continue
         fi
 
