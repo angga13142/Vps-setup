@@ -195,19 +195,19 @@
 - [X] T074 [P] Test terminal startup time increase is < 100ms compared to baseline in scripts/setup-workstation.sh (SC-009)
 - [X] T075 [P] Update verify_installation() function to check for terminal enhancement tools in scripts/setup-workstation.sh
 - [X] T076 [P] Run quickstart.md validation to ensure all documented features are implemented
-- [ ] T077 [P] Add integration test for terminal enhancements in tests/integration/test_terminal_enhancements.bats
+- [X] T077 [P] Add integration test for terminal enhancements in tests/integration/test_terminal_enhancements.bats
 - [ ] T090 [P] Add edge case handling tests: backup failures, permission errors, network failures, disk space exhaustion, concurrent executions, Git not installed, large history files in tests/integration/test_terminal_enhancements.bats
 - [ ] T091 [P] Add rollback procedure test: verify backup restoration works correctly, verify configuration marker removal works, verify tool uninstallation procedures in tests/integration/test_terminal_enhancements.bats
 - [ ] T092 [P] Add non-functional requirements verification: test resource usage (disk space ~50MB, memory < 10MB), test performance (startup time < 100ms increase), test scalability (history files up to 100MB, directories with 10,000 files) in tests/integration/test_terminal_enhancements.bats
-- [ ] T078 [P] [SC-001] Add verification task: Test Git branch information displays in prompt within 1 second when in a repository
-- [ ] T079 [P] [SC-002] Add performance verification task: Test command history search responds in < 100ms using fzf
-- [ ] T080 [P] [SC-003] Add performance verification task: Test file search responds in < 200ms for directories with up to 10,000 files
-- [ ] T081 [P] [SC-004] Add verification task: Test syntax highlighting works for at least 10 common file types (Python, JavaScript, Bash, Markdown, JSON, YAML, XML, HTML, CSS, SQL)
-- [ ] T082 [P] [SC-005] Add measurement task: Verify Git operations using aliases require 50% fewer keystrokes compared to full commands
-- [ ] T083 [P] [SC-006] Add verification task: Test command history persists across at least 10 terminal sessions without data loss
-- [ ] T084 [P] [SC-007] Add performance verification task: Test tab completion provides suggestions within 50ms for commands with up to 100 possible completions
-- [ ] T085 [P] [SC-008] Add measurement methodology task: Document test matrix for 95% install success rate (20 fresh Debian 13 installations, 19/20 must succeed)
-- [ ] T086 [P] [SC-010] Add verification task: Test all new aliases and functions are accessible immediately after workstation setup without manual configuration
+- [X] T078 [P] [SC-001] Add verification task: Test Git branch information displays in prompt within 1 second when in a repository
+- [X] T079 [P] [SC-002] Add performance verification task: Test command history search responds in < 100ms using fzf
+- [X] T080 [P] [SC-003] Add performance verification task: Test file search responds in < 200ms for directories with up to 10,000 files
+- [X] T081 [P] [SC-004] Add verification task: Test syntax highlighting works for at least 10 common file types (Python, JavaScript, Bash, Markdown, JSON, YAML, XML, HTML, CSS, SQL)
+- [X] T082 [P] [SC-005] Add measurement task: Verify Git operations using aliases require 50% fewer keystrokes compared to full commands
+- [X] T083 [P] [SC-006] Add verification task: Test command history persists across at least 10 terminal sessions without data loss
+- [X] T084 [P] [SC-007] Add performance verification task: Test tab completion provides suggestions within 50ms for commands with up to 100 possible completions
+- [X] T085 [P] [SC-008] Add measurement methodology task: Document test matrix for 95% install success rate (20 fresh Debian 13 installations, 19/20 must succeed)
+- [X] T086 [P] [SC-010] Add verification task: Test all new aliases and functions are accessible immediately after workstation setup without manual configuration
 - [X] T093 [P] Add rollback procedure documentation task: Document rollback procedures in quickstart.md or README.md per spec.md Rollback Procedures section (4 steps: restore .bashrc, remove Starship, uninstall tools, remove configuration marker)
 - [X] T094 [P] Add error message format verification: Verify all error messages match spec.md formats (installation failures, backup failures, permission errors, network failures, disk space, Git not installed, large history files, conflicts) in scripts/setup-workstation.sh
 
