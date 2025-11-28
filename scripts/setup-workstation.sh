@@ -891,8 +891,17 @@ configure_starship_prompt() {
     fi
 
     # Remove lines containing PS1= or PROMPT_COMMAND= (but preserve other content)
-    grep -v "^PS1=" "$bashrc_file" 2>/dev/null | grep -v "^PROMPT_COMMAND=" > "$temp_file" || true
-    mv "$temp_file" "$bashrc_file"
+    # Validate output is not empty before overwriting to prevent data loss
+    if [ -f "$bashrc_file" ]; then
+        grep -v "^PS1=" "$bashrc_file" 2>/dev/null | grep -v "^PROMPT_COMMAND=" > "$temp_file" || true
+        # Verify temp file has content (at least one line) before overwriting original
+        if [ -s "$temp_file" ]; then
+            mv "$temp_file" "$bashrc_file"
+        else
+            log "WARNING" "Filtered .bashrc would be empty, preserving original content" "configure_starship_prompt()" "username=$username bashrc_file=$bashrc_file"
+            rm -f "$temp_file"
+        fi
+    fi
 
     # Add Starship configuration (T012)
     {
@@ -954,7 +963,7 @@ install_fzf() {
     log "INFO" "Installing fzf (fuzzy finder)..." "install_fzf()"
 
     # Install fzf via APT (T017)
-    if ! (apt-get update -qq && apt-get install -y fzf); then
+    if ! (sudo apt-get update -qq && sudo apt-get install -y fzf); then
         log "WARNING" "[WARN] [terminal-enhancements] Failed to install fzf. Continuing with remaining tools." "install_fzf()" "reason=apt_install_failed"
         return 1
     fi
@@ -1101,7 +1110,7 @@ install_bat() {
     log "INFO" "Installing bat (better cat)..." "install_bat()"
 
     # Install bat via APT (T026)
-    if ! (apt-get update -qq && apt-get install -y bat); then
+    if ! (sudo apt-get update -qq && sudo apt-get install -y bat); then
         log "WARNING" "[WARN] [terminal-enhancements] Failed to install bat. Continuing with remaining tools." "install_bat()" "reason=apt_install_failed"
         return 1
     fi
