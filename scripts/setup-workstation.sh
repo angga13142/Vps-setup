@@ -281,7 +281,8 @@ verify_installation() {
     fi
 
     # Verify exa
-    if ! command -v exa &>/dev/null; then
+    # Check both command availability and binary existence (exa is installed to /usr/local/bin/exa)
+    if ! command -v exa &>/dev/null && [ ! -f /usr/local/bin/exa ]; then
         log "WARNING" "exa is not installed or not in PATH" "verify_installation()"
         all_ok=false
     else
