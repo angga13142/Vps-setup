@@ -30,6 +30,77 @@ SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 readonly SCRIPT_NAME
 readonly SCRIPT_DIR
 
+# Log file configuration
+# Default to /var/log/setup-workstation.log, fallback to user's home directory if /var/log is not writable
+if [ -w "/var/log" ] 2>/dev/null; then
+    LOG_FILE="/var/log/setup-workstation.log"
+else
+    # Fallback to user's home directory if /var/log is not writable
+    if [ -d "${HOME:-/tmp}" ] && [ -w "${HOME:-/tmp}" ] 2>/dev/null; then
+        LOG_FILE="${HOME:-/tmp}/.setup-workstation.log"
+    else
+        # Last resort: use /tmp
+        LOG_FILE="/tmp/setup-workstation.log"
+    fi
+fi
+readonly LOG_FILE
+
+#######################################
+# Structured logging function
+# Purpose: Centralized logging with timestamps, levels, and context
+# Inputs:
+#   - level: Log level (INFO, WARNING, ERROR, DEBUG)
+#   - message: Log message
+#   - context: Optional context information (function name, variable values, etc.)
+# Outputs: Writes to log file and displays to stdout/stderr
+# Side Effects: Creates log file if it doesn't exist
+# Returns: 0 on success
+# Idempotency: Safe to call multiple times
+# Examples:
+#   log "INFO" "Starting installation" "main()"
+#   log "ERROR" "User creation failed" "create_user()" "username=testuser"
+# Notes: Logs are written in ISO 8601 UTC format for consistency
+#######################################
+log() {
+    local level="$1"
+    local message="$2"
+    local context="${3:-}"
+    local timestamp
+    timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")  # ISO 8601 UTC
+
+    # Build log entry with context if provided
+    local log_entry
+    if [ -n "$context" ]; then
+        log_entry="[$timestamp] [$level] [$context] $message"
+    else
+        log_entry="[$timestamp] [$level] $message"
+    fi
+
+    # Write to log file (append mode)
+    echo "$log_entry" >> "$LOG_FILE" 2>/dev/null || true
+
+    # Display to stdout/stderr with colors based on level
+    case "$level" in
+        ERROR)
+            echo -e "${RED}${message}${NC}" >&2
+            ;;
+        WARNING)
+            echo -e "${YELLOW}${message}${NC}"
+            ;;
+        INFO)
+            echo -e "${GREEN}${message}${NC}"
+            ;;
+        DEBUG)
+            if [ "${DEBUG:-0}" = "1" ]; then
+                echo -e "${YELLOW}[DEBUG] ${message}${NC}"
+            fi
+            ;;
+        *)
+            echo -e "${message}"
+            ;;
+    esac
+}
+
 #######################################
 # Check if running on Debian 13 (Trixie)
 # Exits with error if not Debian 13
@@ -37,7 +108,7 @@ readonly SCRIPT_DIR
 #######################################
 check_debian_version() {
     if [ ! -f /etc/os-release ]; then
-        echo -e "${RED}ERROR: Cannot determine OS version. /etc/os-release not found.${NC}" >&2
+        log "ERROR" "Cannot determine OS version. /etc/os-release not found. Context: Function check_debian_version() attempted to read /etc/os-release but file does not exist. Recovery: Ensure you are running on a Linux system with systemd or equivalent that provides /etc/os-release." "check_debian_version()" "file=/etc/os-release"
         exit 1
     fi
 
@@ -47,18 +118,17 @@ check_debian_version() {
 
     # Check for Debian
     if [ "$ID" != "debian" ]; then
-        echo -e "${RED}ERROR: This script requires Debian. Detected: $ID${NC}" >&2
+        log "ERROR" "This script requires Debian OS. Detected OS ID: $ID, PRETTY_NAME: ${PRETTY_NAME:-unknown}. Context: Function check_debian_version() verified OS distribution but found non-Debian system. Recovery: This script is designed specifically for Debian 13 (Trixie). Please run on a Debian system or modify the script for your distribution." "check_debian_version()" "detected_id=$ID detected_name=${PRETTY_NAME:-unknown}"
         exit 1
     fi
 
     # Check for Debian 13 (Trixie)
     if [ "$VERSION_CODENAME" != "trixie" ] && [ "$VERSION_ID" != "13" ]; then
-        echo -e "${RED}ERROR: This script requires Debian 13 (Trixie). Detected: $PRETTY_NAME${NC}" >&2
-        echo -e "${YELLOW}Please use this script on Debian 13 (Trixie) only.${NC}" >&2
+        log "ERROR" "This script requires Debian 13 (Trixie). Detected: ${PRETTY_NAME:-unknown} (VERSION_CODENAME: ${VERSION_CODENAME:-unknown}, VERSION_ID: ${VERSION_ID:-unknown}). Context: Function check_debian_version() verified Debian version but found version other than 13/Trixie. Recovery: Please upgrade to Debian 13 (Trixie) or use a compatible version of this script for your Debian version." "check_debian_version()" "detected_codename=${VERSION_CODENAME:-unknown} detected_version=${VERSION_ID:-unknown}"
         exit 1
     fi
 
-    echo -e "${GREEN}✓ Debian 13 (Trixie) detected: $PRETTY_NAME${NC}"
+    log "INFO" "✓ Debian 13 (Trixie) detected: $PRETTY_NAME" "check_debian_version()"
 }
 
 #######################################
@@ -67,9 +137,7 @@ check_debian_version() {
 #######################################
 check_script_permissions() {
     if [ ! -x "$0" ]; then
-        echo -e "${YELLOW}Warning: Script is not executable.${NC}"
-        echo -e "${YELLOW}Please run: chmod +x $0${NC}"
-        echo ""
+        log "WARNING" "Script is not executable. Please run: chmod +x $0" "check_script_permissions()"
     fi
 }
 
@@ -80,11 +148,10 @@ check_script_permissions() {
 #######################################
 check_root_privileges() {
     if [ "$EUID" -ne 0 ]; then
-        echo -e "${RED}ERROR: This script must be run as root or with sudo.${NC}" >&2
-        echo -e "${YELLOW}Please run: sudo $0${NC}" >&2
+        log "ERROR" "This script must be run as root or with sudo. Current EUID: $EUID. Context: Function check_root_privileges() verified user privileges but script is not running as root. Recovery: Run the script with sudo: sudo $0" "check_root_privileges()" "euid=$EUID"
         exit 1
     fi
-    echo -e "${GREEN}✓ Root privileges confirmed${NC}"
+    log "INFO" "✓ Root privileges confirmed" "check_root_privileges()"
 }
 
 #######################################
@@ -158,7 +225,7 @@ validate_hostname() {
 get_user_inputs() {
     show_welcome_banner
 
-    echo -e "${YELLOW}Please provide the following information:${NC}"
+    log "INFO" "Please provide the following information:" "get_user_inputs()"
     echo ""
 
     # Username prompt with default
@@ -172,7 +239,7 @@ get_user_inputs() {
 
     # Validate username (alphanumeric, underscore, hyphen)
     while [[ ! "$CUSTOM_USER" =~ ^[a-zA-Z0-9_-]+$ ]]; do
-        echo -e "${RED}Invalid username. Use only alphanumeric characters, underscore, or hyphen.${NC}"
+        log "WARNING" "Invalid username. Use only alphanumeric characters, underscore, or hyphen." "get_user_inputs()" "username=$CUSTOM_USER"
         if [ -t 0 ] && [ -t 1 ]; then
             read -rp "Username [coder]: " CUSTOM_USER
         else
@@ -196,7 +263,7 @@ get_user_inputs() {
         fi
         echo ""  # Newline after hidden input
         if [[ -z "$CUSTOM_PASS" ]]; then
-            echo -e "${RED}Password cannot be empty. Please enter a password.${NC}"
+            log "WARNING" "Password cannot be empty. Please enter a password." "get_user_inputs()"
         fi
     done
 
@@ -209,7 +276,7 @@ get_user_inputs() {
     fi
     echo ""
     if [[ "$CUSTOM_PASS" != "$pass_confirm" ]]; then
-        echo -e "${RED}Passwords do not match. Please try again.${NC}"
+        log "ERROR" "Passwords do not match. Please try again." "get_user_inputs()"
         return 1
     fi
 
@@ -224,9 +291,9 @@ get_user_inputs() {
     fi
     while [[ -z "$CUSTOM_HOSTNAME" ]] || ! validate_hostname "$CUSTOM_HOSTNAME"; do
         if [[ -z "$CUSTOM_HOSTNAME" ]]; then
-            echo -e "${RED}Hostname cannot be empty.${NC}"
+            log "WARNING" "Hostname cannot be empty." "get_user_inputs()"
         else
-            echo -e "${RED}Invalid hostname format. Use alphanumeric characters and hyphens only.${NC}"
+            log "WARNING" "Invalid hostname format. Use alphanumeric characters and hyphens only." "get_user_inputs()" "hostname=$CUSTOM_HOSTNAME"
         fi
         if [ -t 0 ] && [ -t 1 ]; then
             read -rp "Hostname (e.g., my-vps): " CUSTOM_HOSTNAME
@@ -237,7 +304,7 @@ get_user_inputs() {
 
     # Confirmation prompt
     echo ""
-    echo -e "${YELLOW}Summary:${NC}"
+    log "INFO" "Summary:" "get_user_inputs()"
     echo "  Username: $CUSTOM_USER"
     echo "  Hostname: $CUSTOM_HOSTNAME"
     echo ""
@@ -248,7 +315,7 @@ get_user_inputs() {
         read -rp "Proceed with installation? (yes/no): " confirm < /dev/tty
     fi
     if [[ ! "$confirm" =~ ^[Yy][Ee][Ss]$ ]]; then
-        echo -e "${YELLOW}Installation cancelled.${NC}"
+        log "WARNING" "Installation cancelled by user." "get_user_inputs()"
         return 1
     fi
 
@@ -286,23 +353,29 @@ get_user_inputs() {
 system_prep() {
     local hostname="$1"
 
-    echo -e "${GREEN}Preparing system...${NC}"
+    log "INFO" "Preparing system..." "system_prep()"
 
     # Set hostname with idempotency check
     local current_hostname
     current_hostname=$(hostname)
     if [ "$current_hostname" != "$hostname" ]; then
-        echo -e "${YELLOW}Setting hostname to: $hostname${NC}"
-        hostnamectl set-hostname "$hostname"
-        echo -e "${GREEN}✓ Hostname set to: $hostname${NC}"
+        log "INFO" "Setting hostname to: $hostname" "system_prep()"
+        if ! hostnamectl set-hostname "$hostname"; then
+            log "ERROR" "Failed to set hostname to '$hostname'. Context: Function system_prep() attempted to set hostname via hostnamectl but command failed. Recovery: Check system permissions, ensure hostnamectl is available, or set hostname manually: hostnamectl set-hostname $hostname" "system_prep()" "hostname=$hostname current=$current_hostname"
+            return 1
+        fi
+        log "INFO" "✓ Hostname set to: $hostname" "system_prep()"
     else
-        echo -e "${GREEN}✓ Hostname already set to: $hostname${NC}"
+        log "INFO" "✓ Hostname already set to: $hostname" "system_prep()"
     fi
 
     # Update APT repositories
-    echo -e "${YELLOW}Updating package repositories...${NC}"
-    apt-get update -qq
-    echo -e "${GREEN}✓ Package repositories updated${NC}"
+    log "INFO" "Updating package repositories..." "system_prep()"
+    if ! apt-get update -qq; then
+        log "ERROR" "Failed to update APT repositories. Context: Function system_prep() attempted to update package repositories but apt-get update failed. Recovery: Check network connectivity, verify /etc/apt/sources.list configuration, or run manually: apt-get update" "system_prep()"
+        return 1
+    fi
+    log "INFO" "✓ Package repositories updated" "system_prep()"
 
     # Install essential packages with idempotency checks
     local packages=("curl" "git" "htop" "vim" "build-essential")
@@ -312,14 +385,17 @@ system_prep() {
         if ! dpkg -l | grep -q "^ii  $package "; then
             packages_to_install+=("$package")
         else
-            echo -e "${GREEN}✓ $package already installed${NC}"
+            log "INFO" "✓ $package already installed" "system_prep()"
         fi
     done
 
     if [ ${#packages_to_install[@]} -gt 0 ]; then
-        echo -e "${YELLOW}Installing essential packages: ${packages_to_install[*]}${NC}"
-        apt-get install -y "${packages_to_install[@]}"
-        echo -e "${GREEN}✓ Essential packages installed${NC}"
+        log "INFO" "Installing essential packages: ${packages_to_install[*]}" "system_prep()"
+        if ! apt-get install -y "${packages_to_install[@]}"; then
+            log "ERROR" "Failed to install essential packages: ${packages_to_install[*]}. Context: Function system_prep() attempted to install packages but apt-get install failed. Recovery: Check package availability, verify APT repository configuration, or install manually: apt-get install -y ${packages_to_install[*]}" "system_prep()" "packages=${packages_to_install[*]}"
+            return 1
+        fi
+        log "INFO" "✓ Essential packages installed" "system_prep()"
     fi
 }
 
@@ -360,21 +436,27 @@ create_user() {
     local username="$1"
     local password="$2"
 
-    echo -e "${GREEN}Creating user account...${NC}"
+    log "INFO" "Creating user account..." "create_user()" "username=$username"
 
     # Check if user already exists
     if id "$username" &>/dev/null; then
-        echo -e "${YELLOW}User '$username' already exists. Skipping user creation.${NC}"
+        log "INFO" "User '$username' already exists. Skipping user creation." "create_user()" "username=$username"
         return 0
     fi
 
     # Create user with home directory and bash shell
-    useradd -m -s /bin/bash "$username"
+    if ! useradd -m -s /bin/bash "$username"; then
+        log "ERROR" "Failed to create user '$username'. Context: Function create_user() attempted to create user account via useradd but command failed. Possible causes: username conflicts, invalid username format, or system user limit reached. Recovery: Check if username is valid (alphanumeric, underscore, hyphen), verify no conflicting user exists, check system limits (/etc/login.defs), or create user manually: useradd -m -s /bin/bash $username" "create_user()" "username=$username"
+        return 1
+    fi
 
     # Set password
-    echo "$username:$password" | chpasswd
+    if ! echo "$username:$password" | chpasswd; then
+        log "ERROR" "Failed to set password for user '$username'. Context: Function create_user() attempted to set user password via chpasswd but command failed. Recovery: Verify password meets system requirements, check chpasswd availability, or set password manually: echo '$username:$password' | chpasswd" "create_user()" "username=$username"
+        return 1
+    fi
 
-    echo -e "${GREEN}✓ User '$username' created successfully${NC}"
+    log "INFO" "✓ User '$username' created successfully" "create_user()" "username=$username"
     return 0
 }
 
@@ -430,18 +512,21 @@ configure_shell() {
     local home_dir="/home/$username"
     local bashrc_file="$home_dir/.bashrc"
 
-    echo -e "${GREEN}Configuring shell environment...${NC}"
+    log "INFO" "Configuring shell environment..." "configure_shell()" "username=$username"
 
     # Check if .bashrc already exists and has our custom configuration
     if [ -f "$bashrc_file" ] && grep -q "# Mobile-Ready Workstation Custom Configuration" "$bashrc_file"; then
-        echo -e "${YELLOW}.bashrc already configured. Skipping.${NC}"
+        log "INFO" ".bashrc already configured. Skipping." "configure_shell()" "username=$username"
         return 0
     fi
 
     # Create backup if .bashrc exists
     if [ -f "$bashrc_file" ]; then
-        cp "$bashrc_file" "${bashrc_file}.backup.$(date +%Y%m%d_%H%M%S)"
-        echo -e "${YELLOW}Backed up existing .bashrc${NC}"
+        if ! cp "$bashrc_file" "${bashrc_file}.backup.$(date +%Y%m%d_%H%M%S)"; then
+            log "WARNING" "Failed to backup existing .bashrc. Continuing anyway." "configure_shell()" "username=$username bashrc_file=$bashrc_file"
+        else
+            log "INFO" "Backed up existing .bashrc" "configure_shell()" "username=$username"
+        fi
     fi
 
     # Append custom configuration to .bashrc
@@ -467,10 +552,13 @@ alias docker-clean='docker container prune -f && docker image prune -f'
 BASHRC_EOF
 
     # Ensure correct ownership and permissions
-    chown "$username:$username" "$bashrc_file"
+    if ! chown "$username:$username" "$bashrc_file"; then
+        log "ERROR" "Failed to set ownership of .bashrc. Context: Function configure_shell() attempted to change ownership of .bashrc but chown failed. Recovery: Check filesystem permissions, verify user exists, or set ownership manually: chown $username:$username $bashrc_file" "configure_shell()" "username=$username bashrc_file=$bashrc_file"
+        return 1
+    fi
     chmod 644 "$bashrc_file"
 
-    echo -e "${GREEN}✓ Shell environment configured${NC}"
+    log "INFO" "✓ Shell environment configured" "configure_shell()" "username=$username"
     return 0
 }
 
@@ -535,16 +623,16 @@ configure_xfce_mobile() {
     local username="$1"
     local home_dir="/home/$username"
 
-    echo -e "${GREEN}Configuring XFCE for mobile optimization...${NC}"
+    log "INFO" "Configuring XFCE for mobile optimization..." "configure_xfce_mobile()" "username=$username"
 
     # Set font size to 12pt (mobile-friendly)
     # Note: xfconf-query may fail if XFCE session is not running, but we'll try anyway
     # The settings will be applied when user logs in via RDP
     if su - "$username" -c "DISPLAY=:0 xfconf-query -c xsettings -p /Gtk/FontName -s 'Sans 12' 2>/dev/null" 2>/dev/null || \
        su - "$username" -c "xfconf-query -c xsettings -p /Gtk/FontName -s 'Sans 12' 2>/dev/null" 2>/dev/null; then
-        echo -e "${GREEN}✓ Font size set to 12pt${NC}"
+        log "INFO" "✓ Font size set to 12pt" "configure_xfce_mobile()" "username=$username"
     else
-        echo -e "${YELLOW}⚠ Could not set font size (XFCE may not be running). Will apply on next login.${NC}"
+        log "WARNING" "Could not set font size (XFCE may not be running). Will apply on next login." "configure_xfce_mobile()" "username=$username"
         # Create a script to run on first login
         cat > "$home_dir/.xfce4-mobile-config.sh" << 'XFCE_CONFIG_EOF'
 #!/bin/bash
@@ -592,19 +680,19 @@ DESKTOP_EOF
     # Note: Icon size configuration may vary by XFCE version
     if su - "$username" -c "xfconf-query -c xfce4-desktop -p /desktop-icons/icon-size -t int -s 48 2>/dev/null" 2>/dev/null || \
        su - "$username" -c "xfconf-query -c thunar -p /default-view-icon-size -t string -s 'THUNAR_ICON_SIZE_48' 2>/dev/null" 2>/dev/null; then
-        echo -e "${GREEN}✓ Desktop icon size configured to 48px${NC}"
+        log "INFO" "✓ Desktop icon size configured to 48px" "configure_xfce_mobile()" "username=$username"
     else
-        echo -e "${YELLOW}⚠ Desktop icon size will be configured on first login${NC}"
+        log "WARNING" "Desktop icon size will be configured on first login" "configure_xfce_mobile()" "username=$username"
     fi
 
     # Set panel size to 48px
     if su - "$username" -c "xfconf-query -c xfce4-panel -p /panels/panel-1/size -t int -s 48 2>/dev/null" 2>/dev/null; then
-        echo -e "${GREEN}✓ Panel size set to 48px${NC}"
+        log "INFO" "✓ Panel size set to 48px" "configure_xfce_mobile()" "username=$username"
     else
-        echo -e "${YELLOW}⚠ Panel size will be configured on first login${NC}"
+        log "WARNING" "Panel size will be configured on first login" "configure_xfce_mobile()" "username=$username"
     fi
 
-    echo -e "${GREEN}✓ XFCE mobile optimization configured${NC}"
+    log "INFO" "✓ XFCE mobile optimization configured" "configure_xfce_mobile()" "username=$username"
     return 0
 }
 
@@ -616,54 +704,69 @@ DESKTOP_EOF
 setup_desktop_mobile() {
     local username="$1"
 
-    echo -e "${GREEN}Setting up mobile-optimized desktop environment...${NC}"
+    log "INFO" "Setting up mobile-optimized desktop environment..." "setup_desktop_mobile()" "username=$username"
 
     # Install XFCE4 with idempotency check
     if dpkg -l | grep -q "^ii  xfce4 "; then
-        echo -e "${GREEN}✓ XFCE4 already installed${NC}"
+        log "INFO" "✓ XFCE4 already installed" "setup_desktop_mobile()"
     else
-        echo -e "${YELLOW}Installing XFCE4 desktop environment...${NC}"
+        log "INFO" "Installing XFCE4 desktop environment..." "setup_desktop_mobile()"
         # Set DEBIAN_FRONTEND to noninteractive to avoid prompts
         export DEBIAN_FRONTEND=noninteractive
-        apt-get install -y xfce4 xfce4-goodies
-        echo -e "${GREEN}✓ XFCE4 installed${NC}"
+        if ! apt-get install -y xfce4 xfce4-goodies; then
+            log "ERROR" "Failed to install XFCE4. Context: Function setup_desktop_mobile() attempted to install xfce4 and xfce4-goodies but apt-get install failed. Recovery: Check APT repository configuration, verify package availability, or install manually: apt-get install -y xfce4 xfce4-goodies" "setup_desktop_mobile()" "username=$username"
+            return 1
+        fi
+        log "INFO" "✓ XFCE4 installed" "setup_desktop_mobile()"
     fi
 
     # Install XRDP with idempotency check
     if dpkg -l | grep -q "^ii  xrdp "; then
-        echo -e "${GREEN}✓ XRDP already installed${NC}"
+        log "INFO" "✓ XRDP already installed" "setup_desktop_mobile()"
     else
-        echo -e "${YELLOW}Installing XRDP remote desktop server...${NC}"
-        apt-get install -y xrdp
-        echo -e "${GREEN}✓ XRDP installed${NC}"
+        log "INFO" "Installing XRDP remote desktop server..." "setup_desktop_mobile()"
+        if ! apt-get install -y xrdp; then
+            log "ERROR" "Failed to install XRDP. Context: Function setup_desktop_mobile() attempted to install xrdp but apt-get install failed. Recovery: Check APT repository configuration, verify package availability, or install manually: apt-get install -y xrdp" "setup_desktop_mobile()" "username=$username"
+            return 1
+        fi
+        log "INFO" "✓ XRDP installed" "setup_desktop_mobile()"
     fi
 
     # Enable XRDP service
     if systemctl is-enabled xrdp &>/dev/null; then
-        echo -e "${GREEN}✓ XRDP service already enabled${NC}"
+        log "INFO" "✓ XRDP service already enabled" "setup_desktop_mobile()"
     else
-        echo -e "${YELLOW}Enabling XRDP service...${NC}"
-        systemctl enable xrdp
-        echo -e "${GREEN}✓ XRDP service enabled${NC}"
+        log "INFO" "Enabling XRDP service..." "setup_desktop_mobile()"
+        if ! systemctl enable xrdp; then
+            log "ERROR" "Failed to enable XRDP service. Context: Function setup_desktop_mobile() attempted to enable xrdp service but systemctl enable failed. Recovery: Check systemd permissions, verify xrdp service exists, or enable manually: systemctl enable xrdp" "setup_desktop_mobile()" "username=$username"
+            return 1
+        fi
+        log "INFO" "✓ XRDP service enabled" "setup_desktop_mobile()"
     fi
 
     # Start XRDP service with idempotency check
     if systemctl is-active --quiet xrdp; then
-        echo -e "${GREEN}✓ XRDP service already running${NC}"
+        log "INFO" "✓ XRDP service already running" "setup_desktop_mobile()"
     else
-        echo -e "${YELLOW}Starting XRDP service...${NC}"
-        systemctl start xrdp
+        log "INFO" "Starting XRDP service..." "setup_desktop_mobile()"
+        if ! systemctl start xrdp; then
+            log "ERROR" "Failed to start XRDP service. Context: Function setup_desktop_mobile() attempted to start xrdp service but systemctl start failed. Recovery: Check systemd logs (journalctl -u xrdp), verify xrdp configuration, or start manually: systemctl start xrdp" "setup_desktop_mobile()" "username=$username"
+            return 1
+        fi
         if systemctl is-active --quiet xrdp; then
-            echo -e "${GREEN}✓ XRDP service started${NC}"
+            log "INFO" "✓ XRDP service started" "setup_desktop_mobile()"
         else
-            echo -e "${YELLOW}⚠ XRDP service start may have failed. Check with: systemctl status xrdp${NC}"
+            log "WARNING" "XRDP service start may have failed. Check with: systemctl status xrdp" "setup_desktop_mobile()" "username=$username"
         fi
     fi
 
     # Configure XFCE for mobile optimization
-    configure_xfce_mobile "$username"
+    if ! configure_xfce_mobile "$username"; then
+        log "ERROR" "XFCE mobile configuration failed. Context: Function setup_desktop_mobile() called configure_xfce_mobile() but it failed. Recovery: See configure_xfce_mobile() error messages above for specific recovery steps." "setup_desktop_mobile()" "username=$username"
+        return 1
+    fi
 
-    echo -e "${GREEN}✓ Desktop environment setup completed${NC}"
+    log "INFO" "✓ Desktop environment setup completed" "setup_desktop_mobile()" "username=$username"
     return 0
 }
 
@@ -703,28 +806,32 @@ setup_desktop_mobile() {
 #   - Automatically handles migration from legacy .list format
 #######################################
 setup_docker_repository() {
-    echo -e "${GREEN}Setting up Docker repository...${NC}"
+    log "INFO" "Setting up Docker repository..." "setup_docker_repository()"
 
     # Check if repository already configured
     # Check for both .list and .sources files (legacy support)
     if [ -f /etc/apt/sources.list.d/docker.list ] || [ -f /etc/apt/sources.list.d/docker.sources ]; then
-        echo -e "${GREEN}✓ Docker repository already configured${NC}"
+        log "INFO" "✓ Docker repository already configured" "setup_docker_repository()"
         # Always refresh GPG key to ensure it's up to date
-        echo -e "${YELLOW}Refreshing Docker GPG key...${NC}"
+        log "INFO" "Refreshing Docker GPG key..." "setup_docker_repository()"
         if [ -f /etc/apt/keyrings/docker.asc ]; then
             rm -f /etc/apt/keyrings/docker.asc
         fi
         if [ -f /etc/apt/keyrings/docker.gpg ]; then
             rm -f /etc/apt/keyrings/docker.gpg
         fi
-        curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
+        if ! curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc; then
+            log "ERROR" "Failed to download Docker GPG key. Context: Function setup_docker_repository() attempted to download GPG key from Docker repository but curl failed. Recovery: Check network connectivity, verify Docker GPG key URL is accessible, or download manually: curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc" "setup_docker_repository()"
+            return 1
+        fi
         chmod a+r /etc/apt/keyrings/docker.asc
 
         # If old .list file exists, remove it and use .sources format
         if [ -f /etc/apt/sources.list.d/docker.list ]; then
-            echo -e "${YELLOW}Migrating to DEB822 format (.sources)...${NC}"
+            log "INFO" "Migrating to DEB822 format (.sources)..." "setup_docker_repository()"
             rm -f /etc/apt/sources.list.d/docker.list
             # Recreate with proper format
+            # shellcheck disable=SC1091
             . /etc/os-release
             cat > /etc/apt/sources.list.d/docker.sources <<EOF
 Types: deb
@@ -740,37 +847,47 @@ EOF
 
     # Install prerequisites
     if ! dpkg -l | grep -q "^ii  ca-certificates " || ! dpkg -l | grep -q "^ii  curl "; then
-        echo -e "${YELLOW}Installing Docker repository prerequisites...${NC}"
-        apt-get install -y ca-certificates curl
+        log "INFO" "Installing Docker repository prerequisites..." "setup_docker_repository()"
+        if ! apt-get install -y ca-certificates curl; then
+            log "ERROR" "Failed to install Docker repository prerequisites (ca-certificates, curl). Context: Function setup_docker_repository() attempted to install prerequisites but apt-get install failed. Recovery: Check APT repository configuration, verify network connectivity, or install manually: apt-get install -y ca-certificates curl" "setup_docker_repository()"
+            return 1
+        fi
     fi
 
     # Create keyring directory
-    install -m 0755 -d /etc/apt/keyrings
+    if ! install -m 0755 -d /etc/apt/keyrings; then
+        log "ERROR" "Failed to create /etc/apt/keyrings directory. Context: Function setup_docker_repository() attempted to create keyring directory but install command failed. Recovery: Check filesystem permissions, verify /etc/apt exists, or create manually: install -m 0755 -d /etc/apt/keyrings" "setup_docker_repository()"
+        return 1
+    fi
 
     # Remove old Docker GPG key if exists (for clean reinstall)
     if [ -f /etc/apt/keyrings/docker.asc ]; then
-        echo -e "${YELLOW}Removing old Docker GPG key...${NC}"
+        log "INFO" "Removing old Docker GPG key..." "setup_docker_repository()"
         rm -f /etc/apt/keyrings/docker.asc
     fi
     # Also check for .gpg extension (alternative format)
     if [ -f /etc/apt/keyrings/docker.gpg ]; then
-        echo -e "${YELLOW}Removing old Docker GPG key (.gpg)...${NC}"
+        log "INFO" "Removing old Docker GPG key (.gpg)..." "setup_docker_repository()"
         rm -f /etc/apt/keyrings/docker.gpg
     fi
 
     # Add Docker GPG key
-    echo -e "${YELLOW}Adding Docker GPG key...${NC}"
-    curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
+    log "INFO" "Adding Docker GPG key..." "setup_docker_repository()"
+    if ! curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc; then
+        log "ERROR" "Failed to download Docker GPG key. Context: Function setup_docker_repository() attempted to download GPG key from Docker repository but curl failed. Recovery: Check network connectivity, verify Docker GPG key URL is accessible, or download manually: curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc" "setup_docker_repository()"
+        return 1
+    fi
     chmod a+r /etc/apt/keyrings/docker.asc
 
     # Add Docker repository
-    echo -e "${YELLOW}Adding Docker repository...${NC}"
+    log "INFO" "Adding Docker repository..." "setup_docker_repository()"
+    # shellcheck disable=SC1091
     . /etc/os-release
 
     # Use DEB822 format (.sources) as per official Docker documentation
     # Reference: https://docs.docker.com/engine/install/debian/
     # Note: Components field is optional for Docker repository
-    cat > /etc/apt/sources.list.d/docker.sources <<EOF
+    if ! cat > /etc/apt/sources.list.d/docker.sources <<EOF
 Types: deb
 URIs: https://download.docker.com/linux/debian
 Suites: ${VERSION_CODENAME}
@@ -778,12 +895,19 @@ Components: stable
 Architectures: $(dpkg --print-architecture)
 Signed-By: /etc/apt/keyrings/docker.asc
 EOF
+    then
+        log "ERROR" "Failed to write Docker repository configuration file. Context: Function setup_docker_repository() attempted to create /etc/apt/sources.list.d/docker.sources but file write failed. Recovery: Check filesystem permissions, verify /etc/apt/sources.list.d is writable, or create file manually with correct DEB822 format" "setup_docker_repository()"
+        return 1
+    fi
 
     # Update APT
-    echo -e "${YELLOW}Updating package list...${NC}"
-    apt-get update -qq
+    log "INFO" "Updating package list..." "setup_docker_repository()"
+    if ! apt-get update -qq; then
+        log "ERROR" "Failed to update APT package list after adding Docker repository. Context: Function setup_docker_repository() attempted to refresh APT cache but apt-get update failed. Recovery: Check Docker repository configuration file format, verify GPG key is valid, check network connectivity, or run manually: apt-get update" "setup_docker_repository()"
+        return 1
+    fi
 
-    echo -e "${GREEN}✓ Docker repository configured${NC}"
+    log "INFO" "✓ Docker repository configured" "setup_docker_repository()"
     return 0
 }
 
@@ -822,28 +946,37 @@ EOF
 install_docker() {
     local username="$1"
 
-    echo -e "${GREEN}Installing Docker...${NC}"
+    log "INFO" "Installing Docker..." "install_docker()" "username=$username"
 
     # Setup repository
-    setup_docker_repository
+    if ! setup_docker_repository; then
+        log "ERROR" "Failed to setup Docker repository. Context: Function install_docker() called setup_docker_repository() but it failed. Recovery: See setup_docker_repository() error messages above for specific recovery steps." "install_docker()" "username=$username"
+        return 1
+    fi
 
     # Check if Docker is already installed
     if command -v docker &>/dev/null && dpkg -l | grep -q "^ii  docker-ce "; then
-        echo -e "${GREEN}✓ Docker already installed${NC}"
+        log "INFO" "✓ Docker already installed" "install_docker()"
     else
-        echo -e "${YELLOW}Installing Docker packages...${NC}"
-        apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-        echo -e "${GREEN}✓ Docker installed${NC}"
+        log "INFO" "Installing Docker packages..." "install_docker()"
+        if ! apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin; then
+            log "ERROR" "Failed to install Docker packages. Context: Function install_docker() attempted to install Docker packages but apt-get install failed. Recovery: Check Docker repository configuration, verify package availability, check network connectivity, or install manually: apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin" "install_docker()" "username=$username"
+            return 1
+        fi
+        log "INFO" "✓ Docker installed" "install_docker()"
     fi
 
     # Add user to docker group
     if groups "$username" | grep -q "\bdocker\b"; then
-        echo -e "${GREEN}✓ User '$username' already in docker group${NC}"
+        log "INFO" "✓ User '$username' already in docker group" "install_docker()" "username=$username"
     else
-        echo -e "${YELLOW}Adding user '$username' to docker group...${NC}"
-        usermod -aG docker "$username"
-        echo -e "${GREEN}✓ User '$username' added to docker group${NC}"
-        echo -e "${YELLOW}Note: User must logout and login again for docker group to take effect${NC}"
+        log "INFO" "Adding user '$username' to docker group..." "install_docker()" "username=$username"
+        if ! usermod -aG docker "$username"; then
+            log "ERROR" "Failed to add user '$username' to docker group. Context: Function install_docker() attempted to add user to docker group via usermod but command failed. Recovery: Check if user exists, verify docker group exists, or add manually: usermod -aG docker $username" "install_docker()" "username=$username"
+            return 1
+        fi
+        log "INFO" "✓ User '$username' added to docker group" "install_docker()" "username=$username"
+        log "WARNING" "Note: User must logout and login again for docker group to take effect" "install_docker()" "username=$username"
     fi
 
     return 0
@@ -854,24 +987,30 @@ install_docker() {
 # Returns: 0 on success, 1 on error
 #######################################
 install_browsers() {
-    echo -e "${GREEN}Installing web browsers...${NC}"
+    log "INFO" "Installing web browsers..." "install_browsers()"
 
     # Install Firefox ESR
     if dpkg -l | grep -q "^ii  firefox-esr "; then
-        echo -e "${GREEN}✓ Firefox ESR already installed${NC}"
+        log "INFO" "✓ Firefox ESR already installed" "install_browsers()"
     else
-        echo -e "${YELLOW}Installing Firefox ESR...${NC}"
-        apt-get install -y firefox-esr
-        echo -e "${GREEN}✓ Firefox ESR installed${NC}"
+        log "INFO" "Installing Firefox ESR..." "install_browsers()"
+        if ! apt-get install -y firefox-esr; then
+            log "ERROR" "Failed to install Firefox ESR. Context: Function install_browsers() attempted to install firefox-esr but apt-get install failed. Recovery: Check APT repository configuration, verify package availability, or install manually: apt-get install -y firefox-esr" "install_browsers()"
+            return 1
+        fi
+        log "INFO" "✓ Firefox ESR installed" "install_browsers()"
     fi
 
     # Install Chromium
     if dpkg -l | grep -q "^ii  chromium "; then
-        echo -e "${GREEN}✓ Chromium already installed${NC}"
+        log "INFO" "✓ Chromium already installed" "install_browsers()"
     else
-        echo -e "${YELLOW}Installing Chromium...${NC}"
-        apt-get install -y chromium
-        echo -e "${GREEN}✓ Chromium installed${NC}"
+        log "INFO" "Installing Chromium..." "install_browsers()"
+        if ! apt-get install -y chromium; then
+            log "ERROR" "Failed to install Chromium. Context: Function install_browsers() attempted to install chromium but apt-get install failed. Recovery: Check APT repository configuration, verify package availability, or install manually: apt-get install -y chromium" "install_browsers()"
+            return 1
+        fi
+        log "INFO" "✓ Chromium installed" "install_browsers()"
     fi
 
     return 0
@@ -887,39 +1026,47 @@ install_nvm_nodejs() {
     local home_dir="/home/$username"
     local nvm_dir="$home_dir/.nvm"
 
-    echo -e "${GREEN}Installing NVM and Node.js LTS...${NC}"
+    log "INFO" "Installing NVM and Node.js LTS..." "install_nvm_nodejs()" "username=$username"
 
     # Check if NVM is already installed
     if [ -d "$nvm_dir" ] && [ -f "$nvm_dir/nvm.sh" ]; then
-        echo -e "${GREEN}✓ NVM already installed${NC}"
+        log "INFO" "✓ NVM already installed" "install_nvm_nodejs()" "username=$username"
     else
-        echo -e "${YELLOW}Installing NVM...${NC}"
+        log "INFO" "Installing NVM..." "install_nvm_nodejs()" "username=$username"
         # Install NVM as the target user
-        su - "$username" -c 'curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash' 2>&1 | grep -v "Profile" || true
-        echo -e "${GREEN}✓ NVM installed${NC}"
+        if ! su - "$username" -c 'curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash' 2>&1 | grep -v "Profile" || true; then
+            log "WARNING" "NVM installation may have encountered issues. Check logs for details." "install_nvm_nodejs()" "username=$username"
+        fi
+        log "INFO" "✓ NVM installed" "install_nvm_nodejs()" "username=$username"
     fi
 
     # Check if NVM configuration is in .bashrc
     if grep -q "NVM_DIR" "$home_dir/.bashrc" 2>/dev/null; then
-        echo -e "${GREEN}✓ NVM configuration already in .bashrc${NC}"
+        log "INFO" "✓ NVM configuration already in .bashrc" "install_nvm_nodejs()" "username=$username"
     else
-        echo -e "${YELLOW}Adding NVM configuration to .bashrc...${NC}"
-        cat >> "$home_dir/.bashrc" << 'NVM_EOF'
+        log "INFO" "Adding NVM configuration to .bashrc..." "install_nvm_nodejs()" "username=$username"
+        if ! cat >> "$home_dir/.bashrc" << 'NVM_EOF'
 
 # NVM Configuration
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
 NVM_EOF
+        then
+            log "ERROR" "Failed to add NVM configuration to .bashrc. Context: Function install_nvm_nodejs() attempted to append NVM configuration to .bashrc but file write failed. Recovery: Check filesystem permissions, verify home directory exists, or add configuration manually" "install_nvm_nodejs()" "username=$username home_dir=$home_dir"
+            return 1
+        fi
         chown "$username:$username" "$home_dir/.bashrc"
-        echo -e "${GREEN}✓ NVM configuration added to .bashrc${NC}"
+        log "INFO" "✓ NVM configuration added to .bashrc" "install_nvm_nodejs()" "username=$username"
     fi
 
     # Install Node.js LTS
-    echo -e "${YELLOW}Installing Node.js LTS...${NC}"
+    log "INFO" "Installing Node.js LTS..." "install_nvm_nodejs()" "username=$username"
     # Source NVM and install Node.js LTS as the target user
-    su - "$username" -c 'export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" && nvm install --lts && nvm use --default --lts' 2>&1 | tail -5
-    echo -e "${GREEN}✓ Node.js LTS installed and set as default${NC}"
+    if ! su - "$username" -c 'export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" && nvm install --lts && nvm use --default --lts' 2>&1 | tail -5; then
+        log "WARNING" "Node.js LTS installation may have encountered issues. Check logs for details." "install_nvm_nodejs()" "username=$username"
+    fi
+    log "INFO" "✓ Node.js LTS installed and set as default" "install_nvm_nodejs()" "username=$username"
 
     return 0
 }
@@ -929,17 +1076,20 @@ NVM_EOF
 # Returns: 0 if available, 1 if not
 #######################################
 verify_python() {
-    echo -e "${GREEN}Verifying Python 3...${NC}"
+    log "INFO" "Verifying Python 3..." "verify_python()"
 
     if command -v python3 &>/dev/null; then
         local python_version
         python_version=$(python3 --version 2>&1)
-        echo -e "${GREEN}✓ Python 3 available: $python_version${NC}"
+        log "INFO" "✓ Python 3 available: $python_version" "verify_python()"
         return 0
     else
-        echo -e "${YELLOW}⚠ Python 3 not found. Installing...${NC}"
-        apt-get install -y python3 python3-pip
-        echo -e "${GREEN}✓ Python 3 installed${NC}"
+        log "WARNING" "Python 3 not found. Installing..." "verify_python()"
+        if ! apt-get install -y python3 python3-pip; then
+            log "ERROR" "Failed to install Python 3. Context: Function verify_python() attempted to install python3 and python3-pip but apt-get install failed. Recovery: Check APT repository configuration, verify package availability, or install manually: apt-get install -y python3 python3-pip" "verify_python()"
+            return 1
+        fi
+        log "INFO" "✓ Python 3 installed" "verify_python()"
         return 0
     fi
 }
@@ -983,21 +1133,33 @@ verify_python() {
 setup_dev_stack() {
     local username="$1"
 
-    echo -e "${GREEN}Setting up development stack...${NC}"
+    log "INFO" "Setting up development stack..." "setup_dev_stack()" "username=$username"
 
     # Install Docker
-    install_docker "$username"
+    if ! install_docker "$username"; then
+        log "ERROR" "Docker installation failed. Context: Function setup_dev_stack() called install_docker() but it failed. Recovery: See install_docker() error messages above for specific recovery steps." "setup_dev_stack()" "username=$username"
+        return 1
+    fi
 
     # Install browsers
-    install_browsers
+    if ! install_browsers; then
+        log "ERROR" "Browser installation failed. Context: Function setup_dev_stack() called install_browsers() but it failed. Recovery: See install_browsers() error messages above for specific recovery steps." "setup_dev_stack()" "username=$username"
+        return 1
+    fi
 
     # Install NVM and Node.js
-    install_nvm_nodejs "$username"
+    if ! install_nvm_nodejs "$username"; then
+        log "ERROR" "NVM/Node.js installation failed. Context: Function setup_dev_stack() called install_nvm_nodejs() but it failed. Recovery: See install_nvm_nodejs() error messages above for specific recovery steps." "setup_dev_stack()" "username=$username"
+        return 1
+    fi
 
     # Verify Python
-    verify_python
+    if ! verify_python; then
+        log "ERROR" "Python verification/installation failed. Context: Function setup_dev_stack() called verify_python() but it failed. Recovery: See verify_python() error messages above for specific recovery steps." "setup_dev_stack()" "username=$username"
+        return 1
+    fi
 
-    echo -e "${GREEN}✓ Development stack setup completed${NC}"
+    log "INFO" "✓ Development stack setup completed" "setup_dev_stack()" "username=$username"
     return 0
 }
 
@@ -1072,13 +1234,13 @@ finalize() {
     local hostname="$2"
 
     echo ""
-    echo -e "${GREEN}Finalizing installation...${NC}"
+    log "INFO" "Finalizing installation..." "finalize()" "username=$username hostname=$hostname"
 
     # Clean APT cache
-    echo -e "${YELLOW}Cleaning APT cache...${NC}"
+    log "INFO" "Cleaning APT cache..." "finalize()"
     apt-get clean -qq
     apt-get autoclean -qq
-    echo -e "${GREEN}✓ APT cache cleaned${NC}"
+    log "INFO" "✓ APT cache cleaned" "finalize()"
 
     # Get server IP address
     local server_ip
@@ -1121,7 +1283,7 @@ main() {
     check_debian_version
     check_root_privileges
 
-    echo -e "${GREEN}✓ Prerequisites check passed${NC}"
+    log "INFO" "✓ Prerequisites check passed" "main()"
     echo ""
 
     # Get user inputs
@@ -1146,7 +1308,7 @@ main() {
     finalize "$CUSTOM_USER" "$CUSTOM_HOSTNAME"
 
     echo ""
-    echo -e "${GREEN}✓ All phases completed successfully!${NC}"
+    log "INFO" "✓ All phases completed successfully!" "main()"
 }
 
 # Run main function only if script is executed directly

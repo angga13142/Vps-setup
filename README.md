@@ -146,6 +146,46 @@ All installation and configuration steps are idempotent:
 - Configurations are checked before applying
 - Safe to run multiple times
 
+### Logging
+The script implements structured logging with timestamps and log levels for all operations:
+
+- **Log File Location**:
+  - Primary: `/var/log/setup-workstation.log` (if writable)
+  - Fallback: `~/.setup-workstation.log` (user's home directory)
+  - Last resort: `/tmp/setup-workstation.log`
+
+- **Log Levels**:
+  - **INFO**: Normal operations and successful completions
+  - **WARNING**: Non-critical issues or recoverable problems
+  - **ERROR**: Failures that require attention
+  - **DEBUG**: Detailed debugging information (enabled with `DEBUG=1`)
+
+- **Log Format**: ISO 8601 UTC timestamps with structured entries
+  ```
+  [2025-01-27T10:30:45Z] [INFO] [function_name()] Message text
+  [2025-01-27T10:30:46Z] [ERROR] [function_name()] Error message [context=value]
+  ```
+
+- **Viewing Logs**:
+  ```bash
+  # View entire log file
+  sudo cat /var/log/setup-workstation.log
+
+  # Follow log in real-time (if script is running)
+  sudo tail -f /var/log/setup-workstation.log
+
+  # View only errors
+  sudo grep "\[ERROR\]" /var/log/setup-workstation.log
+
+  # View logs for specific function
+  sudo grep "\[function_name()\]" /var/log/setup-workstation.log
+  ```
+
+- **Error Messages**: All error messages include:
+  - Context about what was checked and why it failed
+  - Recovery suggestions with specific commands
+  - Function name and relevant variable values
+
 ## Remote Access
 
 After installation and reboot, connect via RDP:
