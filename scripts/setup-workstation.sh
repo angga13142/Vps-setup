@@ -1006,6 +1006,18 @@ create_user() {
         return 1
     fi
 
+    # Add user to sudo group (for sudo access)
+    # Check if sudo group exists (Debian/Ubuntu typically has 'sudo' group)
+    if getent group sudo &>/dev/null; then
+        if ! usermod -aG sudo "$username" 2>/dev/null; then
+            log "WARNING" "Failed to add user '$username' to sudo group. User may not have sudo access. Recovery: Add manually: usermod -aG sudo $username" "create_user()" "username=$username"
+        else
+            log "INFO" "✓ User '$username' added to sudo group" "create_user()" "username=$username"
+        fi
+    else
+        log "WARNING" "Sudo group not found. User '$username' may not have sudo access. Recovery: Ensure sudo package is installed and sudo group exists." "create_user()" "username=$username"
+    fi
+
     log "INFO" "✓ User '$username' created successfully" "create_user()" "username=$username"
     return 0
 }
