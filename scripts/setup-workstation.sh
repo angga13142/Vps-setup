@@ -616,13 +616,45 @@ remove_unnecessary_users() {
             continue
         fi
 
+        # Check if user has active processes
+        local process_count
+        process_count=$(pgrep -u "$username" 2>/dev/null | wc -l || echo "0")
+
+        if [ "$process_count" -gt 0 ]; then
+            log "INFO" "User '$username' has $process_count active process(es), terminating them..." "remove_unnecessary_users()" "username=$username process_count=$process_count"
+
+            # Kill all processes owned by the user
+            # Use pkill with -9 (SIGKILL) as fallback if normal termination fails
+            if pkill -u "$username" 2>/dev/null; then
+                # Wait a moment for processes to terminate gracefully
+                sleep 2
+
+                # Force kill any remaining processes
+                pkill -9 -u "$username" 2>/dev/null || true
+                sleep 1
+            else
+                # Try killall as alternative
+                killall -u "$username" 2>/dev/null || true
+                sleep 2
+                killall -9 -u "$username" 2>/dev/null || true
+                sleep 1
+            fi
+
+            # Verify processes are terminated
+            process_count=$(pgrep -u "$username" 2>/dev/null | wc -l || echo "0")
+            if [ "$process_count" -gt 0 ]; then
+                log "WARNING" "Some processes for user '$username' could not be terminated ($process_count remaining). Attempting forced removal..." "remove_unnecessary_users()" "username=$username remaining_processes=$process_count"
+            fi
+        fi
+
         # Remove user and home directory
+        # Use -f flag to force removal even if user is logged in or has processes
         log "INFO" "Removing user '$username'..." "remove_unnecessary_users()" "username=$username"
-        if userdel -r "$username" 2>/dev/null; then
+        if userdel -rf "$username" 2>/dev/null; then
             log "INFO" "✓ User '$username' removed successfully" "remove_unnecessary_users()" "username=$username"
             users_removed=$((users_removed + 1))
         else
-            log "WARNING" "Failed to remove user '$username'. Context: Function remove_unnecessary_users() attempted to remove user but userdel failed. Recovery: Check if user has active processes, verify user exists, or remove manually: userdel -r $username" "remove_unnecessary_users()" "username=$username"
+            log "WARNING" "Failed to remove user '$username'. Context: Function remove_unnecessary_users() attempted to remove user but userdel failed even after killing processes. Recovery: Check if user has locked files, verify user exists, or remove manually: userdel -rf $username" "remove_unnecessary_users()" "username=$username"
             users_failed=$((users_failed + 1))
         fi
     done <<< "$all_users"
