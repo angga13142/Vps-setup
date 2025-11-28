@@ -134,7 +134,7 @@ verify_installation() {
     # Verify essential packages
     local essential_packages=("curl" "git" "htop" "vim" "build-essential")
     for package in "${essential_packages[@]}"; do
-        if ! dpkg -l | grep -q "^ii  $package "; then
+        if ! dpkg-query -W -f='${Status}' "$package" 2>/dev/null | grep -q "install ok installed"; then
             log "WARNING" "Package '$package' is not installed" "verify_installation()" "package=$package"
             all_ok=false
         else
@@ -143,7 +143,7 @@ verify_installation() {
     done
 
     # Verify XFCE4
-    if ! dpkg -l | grep -q "^ii  xfce4 "; then
+    if ! dpkg-query -W -f='${Status}' "xfce4" 2>/dev/null | grep -q "install ok installed"; then
         log "WARNING" "XFCE4 is not installed" "verify_installation()"
         all_ok=false
     else
@@ -151,7 +151,7 @@ verify_installation() {
     fi
 
     # Verify XRDP
-    if ! dpkg -l | grep -q "^ii  xrdp "; then
+    if ! dpkg-query -W -f='${Status}' "xrdp" 2>/dev/null | grep -q "install ok installed"; then
         log "WARNING" "XRDP is not installed" "verify_installation()"
         all_ok=false
     else
@@ -498,7 +498,7 @@ system_prep() {
     local packages_to_install=()
 
     for package in "${packages[@]}"; do
-        if ! dpkg -l | grep -q "^ii  $package "; then
+        if ! dpkg-query -W -f='${Status}' "$package" 2>/dev/null | grep -q "install ok installed"; then
             packages_to_install+=("$package")
         else
             log "INFO" "✓ $package already installed" "system_prep()"
@@ -823,7 +823,7 @@ setup_desktop_mobile() {
     log "INFO" "Setting up mobile-optimized desktop environment..." "setup_desktop_mobile()" "username=$username"
 
     # Install XFCE4 with idempotency check
-    if dpkg -l | grep -q "^ii  xfce4 "; then
+    if dpkg-query -W -f='${Status}' "xfce4" 2>/dev/null | grep -q "install ok installed"; then
         log "INFO" "✓ XFCE4 already installed" "setup_desktop_mobile()"
     else
         log "INFO" "Installing XFCE4 desktop environment... (this may take 5-10 minutes)" "setup_desktop_mobile()"
@@ -837,7 +837,7 @@ setup_desktop_mobile() {
     fi
 
     # Install XRDP with idempotency check
-    if dpkg -l | grep -q "^ii  xrdp "; then
+    if dpkg-query -W -f='${Status}' "xrdp" 2>/dev/null | grep -q "install ok installed"; then
         log "INFO" "✓ XRDP already installed" "setup_desktop_mobile()"
     else
         log "INFO" "Installing XRDP remote desktop server..." "setup_desktop_mobile()"
@@ -962,7 +962,7 @@ EOF
     fi
 
     # Install prerequisites
-    if ! dpkg -l | grep -q "^ii  ca-certificates " || ! dpkg -l | grep -q "^ii  curl "; then
+    if ! dpkg-query -W -f='${Status}' "ca-certificates" 2>/dev/null | grep -q "install ok installed" || ! dpkg-query -W -f='${Status}' "curl" 2>/dev/null | grep -q "install ok installed"; then
         log "INFO" "Installing Docker repository prerequisites..." "setup_docker_repository()"
         if ! apt-get install -y ca-certificates curl; then
             log "ERROR" "Failed to install Docker repository prerequisites (ca-certificates, curl). Context: Function setup_docker_repository() attempted to install prerequisites but apt-get install failed. Recovery: Check APT repository configuration, verify network connectivity, or install manually: apt-get install -y ca-certificates curl" "setup_docker_repository()"
@@ -1071,7 +1071,7 @@ install_docker() {
     fi
 
     # Check if Docker is already installed
-    if command -v docker &>/dev/null && dpkg -l | grep -q "^ii  docker-ce "; then
+    if command -v docker &>/dev/null && dpkg-query -W -f='${Status}' "docker-ce" 2>/dev/null | grep -q "install ok installed"; then
         log "INFO" "✓ Docker already installed" "install_docker()"
     else
         log "INFO" "Installing Docker packages... (this may take a few minutes)" "install_docker()"
@@ -1106,7 +1106,7 @@ install_browsers() {
     log "INFO" "Installing web browsers..." "install_browsers()"
 
     # Install Firefox ESR
-    if dpkg -l | grep -q "^ii  firefox-esr "; then
+    if dpkg-query -W -f='${Status}' "firefox-esr" 2>/dev/null | grep -q "install ok installed"; then
         log "INFO" "✓ Firefox ESR already installed" "install_browsers()"
     else
         log "INFO" "Installing Firefox ESR..." "install_browsers()"
@@ -1118,7 +1118,7 @@ install_browsers() {
     fi
 
     # Install Chromium
-    if dpkg -l | grep -q "^ii  chromium "; then
+    if dpkg-query -W -f='${Status}' "chromium" 2>/dev/null | grep -q "install ok installed"; then
         log "INFO" "✓ Chromium already installed" "install_browsers()"
     else
         log "INFO" "Installing Chromium..." "install_browsers()"
