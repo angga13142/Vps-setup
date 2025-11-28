@@ -616,35 +616,56 @@ remove_unnecessary_users() {
             continue
         fi
 
-        # Check if user has active processes
+        # Always attempt to kill processes before removal (even if count is 0, user might be logged in)
+        log "INFO" "Terminating all processes for user '$username'..." "remove_unnecessary_users()" "username=$username"
+
+        # Get process count for logging
         local process_count
         process_count=$(pgrep -u "$username" 2>/dev/null | wc -l || echo "0")
-
         if [ "$process_count" -gt 0 ]; then
-            log "INFO" "User '$username' has $process_count active process(es), terminating them..." "remove_unnecessary_users()" "username=$username process_count=$process_count"
+            log "INFO" "Found $process_count active process(es) for user '$username'" "remove_unnecessary_users()" "username=$username process_count=$process_count"
+        fi
 
-            # Kill all processes owned by the user
-            # Use pkill with -9 (SIGKILL) as fallback if normal termination fails
-            if pkill -u "$username" 2>/dev/null; then
-                # Wait a moment for processes to terminate gracefully
-                sleep 2
+        # Kill all processes owned by the user (try multiple methods for robustness)
+        # Method 1: pkill (preferred)
+        if command -v pkill &>/dev/null; then
+            pkill -u "$username" 2>/dev/null || true
+            sleep 1
+            # Force kill any remaining processes
+            pkill -9 -u "$username" 2>/dev/null || true
+            sleep 1
+        fi
 
-                # Force kill any remaining processes
-                pkill -9 -u "$username" 2>/dev/null || true
-                sleep 1
-            else
-                # Try killall as alternative
-                killall -u "$username" 2>/dev/null || true
-                sleep 2
-                killall -9 -u "$username" 2>/dev/null || true
+        # Method 2: killall (alternative)
+        if command -v killall &>/dev/null; then
+            killall -u "$username" 2>/dev/null || true
+            sleep 1
+            killall -9 -u "$username" 2>/dev/null || true
+            sleep 1
+        fi
+
+        # Method 3: Direct kill via ps and kill (fallback)
+        local pids
+        pids=$(ps -u "$username" -o pid= 2>/dev/null | tr '\n' ' ' || true)
+        if [ -n "$pids" ]; then
+            for pid in $pids; do
+                kill "$pid" 2>/dev/null || true
+            done
+            sleep 1
+            # Force kill any remaining
+            pids=$(ps -u "$username" -o pid= 2>/dev/null | tr '\n' ' ' || true)
+            if [ -n "$pids" ]; then
+                for pid in $pids; do
+                    kill -9 "$pid" 2>/dev/null || true
+                done
                 sleep 1
             fi
+        fi
 
-            # Verify processes are terminated
-            process_count=$(pgrep -u "$username" 2>/dev/null | wc -l || echo "0")
-            if [ "$process_count" -gt 0 ]; then
-                log "WARNING" "Some processes for user '$username' could not be terminated ($process_count remaining). Attempting forced removal..." "remove_unnecessary_users()" "username=$username remaining_processes=$process_count"
-            fi
+        # Verify processes are terminated
+        process_count=$(pgrep -u "$username" 2>/dev/null | wc -l || echo "0")
+        if [ "$process_count" -gt 0 ]; then
+            log "WARNING" "Some processes for user '$username' could not be terminated ($process_count remaining). Attempting forced removal anyway..." "remove_unnecessary_users()" "username=$username remaining_processes=$process_count"
         fi
 
         # Remove user and home directory
