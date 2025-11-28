@@ -32,10 +32,10 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T004 Create main orchestration function `setup_terminal_enhancements(username)` in scripts/setup-workstation.sh with configuration marker check (marker format: `# Terminal Enhancements Configuration - Added by setup-workstation.sh`)
-- [ ] T005 Integrate `setup_terminal_enhancements()` call in main() function after `create_user_and_shell()` call (line ~1472) in scripts/setup-workstation.sh
-- [ ] T087 [P] Add tool-specific prerequisites verification in `setup_terminal_enhancements()` function in scripts/setup-workstation.sh: verify curl/wget, tar/unzip, grep/sed/awk, bash 5.2+, dpkg-query are available
-- [ ] T088 [P] Add Git availability detection in `setup_terminal_enhancements()` function in scripts/setup-workstation.sh: check if Git is installed before configuring Git-related features, log warning if not: `[WARN] [terminal-enhancements] Git is not installed. Git-related features will be disabled.`
+- [X] T004 Create main orchestration function `setup_terminal_enhancements(username)` in scripts/setup-workstation.sh with configuration marker check (marker format: `# Terminal Enhancements Configuration - Added by setup-workstation.sh`)
+- [X] T005 Integrate `setup_terminal_enhancements()` call in main() function after `create_user_and_shell()` call (line ~1472) in scripts/setup-workstation.sh
+- [X] T087 [P] Add tool-specific prerequisites verification in `setup_terminal_enhancements()` function in scripts/setup-workstation.sh: verify curl/wget, tar/unzip, grep/sed/awk, bash 5.2+, dpkg-query are available
+- [X] T088 [P] Add Git availability detection in `setup_terminal_enhancements()` function in scripts/setup-workstation.sh: check if Git is installed before configuring Git-related features, log warning if not: `[WARN] [terminal-enhancements] Git is not installed. Git-related features will be disabled.`
 
 **Checkpoint**: Foundation ready - main function structure in place. User story implementation can now begin.
 

@@ -746,6 +746,148 @@ create_bashrc_backup() {
 }
 
 #######################################
+# Setup terminal enhancements (main orchestration function)
+#
+# Purpose: Main orchestration function for installing and configuring all terminal enhancements
+#
+# Inputs:
+#   - username: Username for which to configure terminal enhancements (string, required)
+#
+# Outputs: None (uses structured logging via log() function)
+#
+# Side Effects:
+#   - Verifies tool-specific prerequisites (curl/wget, tar/unzip, grep/sed/awk, bash 5.2+, dpkg-query)
+#   - Detects Git availability
+#   - Checks for configuration marker in .bashrc
+#   - Installs and configures terminal enhancement tools (to be implemented in later phases)
+#   - Modifies user's .bashrc file (with backup)
+#   - Sets file ownership and permissions
+#
+# Returns:
+#   0 - Success (all tools installed and configured, or already configured)
+#   1 - Error (critical failure preventing configuration)
+#
+# Idempotency: Yes
+#   - Checks for configuration marker in .bashrc: "# Terminal Enhancements Configuration - Added by setup-workstation.sh"
+#   - Skips installation if tools already installed
+#   - Safe to run multiple times
+#
+# Example:
+#   setup_terminal_enhancements "coder"
+#
+# Notes:
+#   - This is the main entry point for all terminal enhancement features
+#   - Prerequisites are verified before any tool installation
+#   - Git detection is performed to enable/disable Git-related features
+#######################################
+setup_terminal_enhancements() {
+    local username="$1"
+    local home_dir="/home/$username"
+    local bashrc_file="$home_dir/.bashrc"
+    local config_marker="# Terminal Enhancements Configuration - Added by setup-workstation.sh"
+
+    log "INFO" "Setting up terminal enhancements..." "setup_terminal_enhancements()" "username=$username"
+
+    # Check if already configured (idempotency check)
+    if [ -f "$bashrc_file" ] && grep -q "$config_marker" "$bashrc_file"; then
+        log "INFO" "Terminal enhancements already configured. Skipping." "setup_terminal_enhancements()" "username=$username"
+        return 0
+    fi
+
+    # Verify tool-specific prerequisites (T087)
+    log "INFO" "Verifying tool-specific prerequisites..." "setup_terminal_enhancements()" "username=$username"
+
+    local missing_prereqs=()
+
+    # Check for curl or wget
+    if ! command -v curl &>/dev/null && ! command -v wget &>/dev/null; then
+        missing_prereqs+=("curl or wget")
+    fi
+
+    # Check for tar or unzip
+    if ! command -v tar &>/dev/null && ! command -v unzip &>/dev/null; then
+        missing_prereqs+=("tar or unzip")
+    fi
+
+    # Check for grep, sed, awk
+    if ! command -v grep &>/dev/null; then
+        missing_prereqs+=("grep")
+    fi
+    if ! command -v sed &>/dev/null; then
+        missing_prereqs+=("sed")
+    fi
+    if ! command -v awk &>/dev/null; then
+        missing_prereqs+=("awk")
+    fi
+
+    # Check for bash 5.2+
+    local bash_version
+    bash_version=$(bash --version 2>/dev/null | head -n1 | grep -oE '[0-9]+\.[0-9]+' | head -n1 || echo "0.0")
+    local bash_major bash_minor
+    bash_major=$(echo "$bash_version" | cut -d. -f1)
+    bash_minor=$(echo "$bash_version" | cut -d. -f2)
+    if [ "$bash_major" -lt 5 ] || ([ "$bash_major" -eq 5 ] && [ "${bash_minor:-0}" -lt 2 ]); then
+        missing_prereqs+=("bash 5.2+")
+    fi
+
+    # Check for dpkg-query
+    if ! command -v dpkg-query &>/dev/null; then
+        missing_prereqs+=("dpkg-query")
+    fi
+
+    # Report missing prerequisites
+    if [ ${#missing_prereqs[@]} -gt 0 ]; then
+        log "ERROR" "Missing required prerequisites: ${missing_prereqs[*]}. Context: Function setup_terminal_enhancements() requires these tools for terminal enhancement installation. Recovery: Install missing tools: sudo apt install ${missing_prereqs[*]}" "setup_terminal_enhancements()" "username=$username missing_prereqs=${missing_prereqs[*]}"
+        return 1
+    fi
+
+    log "INFO" "✓ All prerequisites verified" "setup_terminal_enhancements()" "username=$username"
+
+    # Detect Git availability (T088)
+    if ! command -v git &>/dev/null; then
+        log "WARNING" "[WARN] [terminal-enhancements] Git is not installed. Git-related features will be disabled." "setup_terminal_enhancements()" "username=$username"
+    else
+        log "INFO" "Git detected and available" "setup_terminal_enhancements()" "username=$username"
+    fi
+
+    # Create backup before any modifications
+    if ! create_bashrc_backup "$bashrc_file"; then
+        log "ERROR" "Failed to create backup, aborting terminal enhancements setup" "setup_terminal_enhancements()" "username=$username bashrc_file=$bashrc_file"
+        return 1
+    fi
+
+    # TODO: Tool installations will be added in later phases:
+    # - install_starship()
+    # - install_fzf()
+    # - install_bat()
+    # - install_exa()
+    # - configure_starship_prompt()
+    # - configure_fzf_key_bindings()
+    # - configure_terminal_aliases()
+    # - configure_terminal_functions()
+    # - configure_bash_enhancements()
+    # - configure_terminal_visuals()
+
+    # Add configuration marker to .bashrc
+    if [ -f "$bashrc_file" ]; then
+        if ! grep -q "$config_marker" "$bashrc_file"; then
+            echo "" >> "$bashrc_file"
+            echo "$config_marker" >> "$bashrc_file"
+            log "INFO" "Added configuration marker to .bashrc" "setup_terminal_enhancements()" "username=$username"
+        fi
+    fi
+
+    # Ensure correct ownership and permissions
+    if [ -f "$bashrc_file" ]; then
+        chown "$username:$username" "$bashrc_file" 2>/dev/null || true
+        chmod 644 "$bashrc_file" 2>/dev/null || true
+    fi
+
+    log "INFO" "✓ Terminal enhancements setup completed (foundational phase)" "setup_terminal_enhancements()" "username=$username"
+    return 0
+}
+
+#######################################
 # Configure shell environment (.bashrc)
 # Inputs: username
 # Returns: 0 on success, 1 on error
@@ -1578,6 +1720,9 @@ main() {
 
     # Create user
     create_user_and_shell "$CUSTOM_USER" "$CUSTOM_PASS"
+
+    # Setup terminal enhancements
+    setup_terminal_enhancements "$CUSTOM_USER"
 
     # Setup desktop environment
     setup_desktop_mobile "$CUSTOM_USER"
