@@ -1,0 +1,35 @@
+# ShellCheck Configuration
+# Project: Mobile-Ready Coding Workstation Setup Script
+
+# Shell dialect
+shell=bash
+
+# Disable external sources (for security)
+external-sources=false
+
+# Severity levels
+# error: Issues that are likely to cause bugs or security problems
+# warning: Issues that may cause problems but are not critical
+# info: Style suggestions and best practices
+
+# Enable all checks by default
+# Use # shellcheck disable=SC#### for intentional violations
+
+# Exclusion Rules (FR-016)
+# All excluded SC codes must be documented here with justification
+# Additional exclusions in source code must include inline comments explaining why
+
+# SC2034: Unused variables
+# Justification: Acceptable for future use or readability
+# Used for: SCRIPT_NAME, SCRIPT_DIR variables kept for future logging/debugging
+# Example: Variables declared but not immediately used (intentional for future features)
+
+# SC2016: Expressions don't expand in single quotes
+# Justification: Intentional for documentation or when variables need to expand in user's shell, not current shell
+# Used for: Documentation strings, heredoc content, or when passing commands to su -c
+# Example: su - "$username" -c "export NVM_DIR=\"\$HOME/.nvm\" && ..." (variables expand in user's shell)
+
+# SC1091: External file sourcing
+# Justification: Standard system files that are safe to source
+# Used for: /etc/os-release (standard system file), configuration files
+# Example: . /etc/os-release (standard Debian system file, safe to source)

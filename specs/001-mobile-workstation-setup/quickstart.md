@@ -203,4 +203,3 @@ For issues or questions:
 - Verify all prerequisites are met
 - Ensure Debian 13 (Trixie) compatibility
 - Review constitution principles for script behavior
-

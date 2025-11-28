@@ -18,7 +18,7 @@
 
 **Decision**: Use ShellCheck for static analysis of all Bash scripts
 
-**Rationale**: 
+**Rationale**:
 - Industry-standard tool for Bash script analysis
 - Detects common errors, security issues, and best practice violations
 - Integrates well with pre-commit hooks and CI/CD pipelines
@@ -161,7 +161,7 @@ jobs:
         run: sudo apt install shellcheck
       - name: Lint scripts
         run: shellcheck scripts/*.sh
-  
+
   test:
     runs-on: ubuntu-latest
     steps:
@@ -219,7 +219,7 @@ repos:
       - id: end-of-file-fixer
       - id: check-yaml
       - id: check-added-large-files
-  
+
   - repo: https://github.com/koalaman/shellcheck-precommit
     rev: v0.9.0
     hooks:
@@ -318,4 +318,3 @@ repos:
 3. Create `.github/workflows/ci.yml` for GitHub Actions
 4. Write initial test cases for critical functions
 5. Create documentation files (README, CONTRIBUTING)
-

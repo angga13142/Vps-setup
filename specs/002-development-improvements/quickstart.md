@@ -220,4 +220,3 @@ ls -la .git/hooks/pre-commit
 - Bats-core: https://github.com/bats-core/bats-core
 - Pre-commit: https://pre-commit.com/
 - GitHub Actions: https://docs.github.com/en/actions
-

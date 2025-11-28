@@ -116,6 +116,33 @@ A developer or user needs detailed error messages and logging to diagnose issues
 - **FR-013**: System MUST provide progress indicators for long-running operations
 - **FR-014**: System MUST include verification functions to check installation success
 - **FR-015**: System MUST follow semantic versioning for script releases
+- **FR-016**: System MUST configure ShellCheck with severity level "error" and document exclusion rules
+- **FR-017**: System MUST lint all `.sh` files recursively in repository
+- **FR-018**: System MUST provide error messages with format: `[file:line:column] [SC####] [severity] [message]`
+- **FR-019**: System MUST define explicit list of critical functions requiring test coverage
+- **FR-020**: System MUST define explicit list of public functions requiring documentation
+- **FR-021**: System MUST provide recovery procedures for failed pre-commit hooks
+- **FR-022**: System MUST provide recovery procedures for failed CI/CD checks
+- **FR-023**: System MUST define requirements for zero test coverage scenario (new projects)
+- **FR-024**: System MUST define requirements for 100% test coverage scenario (maximum coverage)
+- **FR-025**: System MUST define performance limits for very large script files (>10,000 lines)
+- **FR-026**: System MUST define execution time limits for very large test suites (>100 tests)
+- **FR-027**: System MUST specify ShellCheck version compatibility (>=0.9.0)
+- **FR-028**: System MUST specify bats-core version compatibility (>=1.10.0)
+- **FR-029**: System MUST define log file permissions (600 for user-only access)
+- **FR-030**: System MUST define log retention policy (30 days or 100MB, whichever comes first)
+- **FR-031**: System MUST define test suite stability requirements (95% pass rate over 10 runs)
+- **FR-032**: System MUST define pre-commit hook reliability requirements (99% success rate)
+- **FR-033**: System MUST define documentation update process (review on each PR, major update quarterly)
+- **FR-034**: System MUST define developer workflow requirements (install tools → write code → lint → test → commit)
+- **FR-035**: System MUST define measurement methods for all success criteria
+- **FR-036**: System MUST define README mandatory sections (Overview, Installation, Quick Start, Features, Usage, Troubleshooting, Contributing)
+- **FR-037**: System MUST define CONTRIBUTING.md mandatory sections (Development Workflow, Coding Standards, Testing Guidelines, Pull Request Process)
+- **FR-038**: System MUST define troubleshooting guide minimum coverage (at least 5 common issues)
+- **FR-039**: System MUST define error context required fields (function name, line number, variable values, error type)
+- **FR-040**: System MUST define recovery suggestion format (actionable command or step-by-step instructions)
+- **FR-041**: System MUST define which operations must be logged (all function calls, all errors, all warnings, major state changes)
+- **FR-042**: System MUST define pre-commit hook bypass mechanism (use `--no-verify` flag with documented justification requirement)
 
 ### Key Entities
 
@@ -140,6 +167,198 @@ A developer or user needs detailed error messages and logging to diagnose issues
 - **SC-009**: Troubleshooting guide resolves 80% of common user issues without additional support
 - **SC-010**: Code review time reduced by 50% due to automated quality checks
 
+### Measurement Methods
+
+- **SC-001 Measurement**: Count total `.sh` files in repository, run ShellCheck on all files, verify zero errors reported. Tool: ShellCheck exit code (0 = pass, non-zero = fail)
+- **SC-002 Measurement**: Use test coverage tool (e.g., `bats-coverage` or manual count) to calculate: (tested critical functions / total critical functions) × 100%. Target: ≥80%
+- **SC-003 Measurement**: List all public functions from source code, verify each has documentation block with all required fields (inputs, outputs, side effects, idempotency). Manual review or automated doc parser
+- **SC-004 Measurement**: Track new user installations via survey or analytics. Calculate: (successful first attempts / total first attempts) × 100%. Target: ≥90%
+- **SC-005 Measurement**: Monitor GitHub Actions workflow runs. Calculate: (successful runs / total runs) × 100%. Target: 100%
+- **SC-006 Measurement**: Verify branch protection rules require status checks. Monitor merge attempts blocked by failed checks. Target: 100% blocking rate
+- **SC-007 Measurement**: Review all error messages in codebase, verify each includes required context fields. Manual review or automated parsing
+- **SC-008 Measurement**: Review log files, verify all major operations have log entries with appropriate levels. Manual review or log analysis tool
+- **SC-009 Measurement**: Track user support requests, identify issues covered in troubleshooting guide. Calculate: (resolved via guide / total common issues) × 100%. Target: ≥80%
+- **SC-010 Measurement**: Compare code review time before and after implementation. Baseline: average review time in 3 months before implementation. Target: 50% reduction
+
+### Critical Functions Definition
+
+**Critical Functions** (explicit list requiring 80% test coverage):
+1. `create_user()` - User account creation
+2. `setup_docker_repository()` - Docker repository configuration
+3. `install_docker()` - Docker installation
+4. `configure_xfce_mobile()` - XFCE mobile optimization
+5. `configure_shell()` - Shell configuration
+6. `get_user_inputs()` - User input collection
+7. `system_prep()` - System preparation
+8. `finalize()` - Installation finalization
+9. `setup_desktop_mobile()` - Desktop environment setup
+10. `setup_dev_stack()` - Development stack setup
+11. `install_nvm_nodejs()` - NVM and Node.js installation
+12. `verify_python()` - Python verification
+13. `verify_installation()` - Installation verification
+14. `log()` - Structured logging function
+15. `check_debian_version()` - Debian version validation
+
+### Public Functions Definition
+
+**Public Functions** (explicit list requiring complete documentation):
+All functions defined in `scripts/setup-workstation.sh` that are:
+- Called from `main()` function (entry points)
+- Exported or intended for external use
+- Documented with function header comments
+
+Complete list matches Critical Functions list above, plus any helper functions that may be called independently.
+
+### ShellCheck Configuration Requirements
+
+- **Severity Level**: Minimum severity to report is `error` (only errors block commits, warnings are informational)
+- **Exclusion Rules**: Document all excluded SC codes in `.shellcheckrc` with justification:
+  - `SC2034`: Unused variables (acceptable for future use or readability)
+  - `SC2016`: Expressions don't expand in single quotes (intentional for documentation)
+  - Additional exclusions must be documented with reason
+- **File Patterns**: Lint all files matching pattern `**/*.sh` recursively from repository root
+- **Shell Dialect**: `bash` (as specified in `.shellcheckrc`)
+- **External Sources**: `false` (do not check sourced files to avoid false positives)
+- **Inline Directives**: Use `# shellcheck disable=SC####` with comment explaining why
+
+### Recovery Flows
+
+- **Pre-commit Hook Failure Recovery**:
+  1. Developer receives error message with file:line:column and SC code
+  2. Developer fixes issues in code
+  3. Developer re-runs `pre-commit run --all-files` to verify fixes
+  4. Developer commits again (hook will re-run automatically)
+  5. If bypass needed: Use `git commit --no-verify` with documented justification in commit message
+
+- **CI/CD Check Failure Recovery**:
+  1. Developer receives notification of failed CI checks via GitHub PR status
+  2. Developer reviews error messages in CI logs
+  3. Developer fixes issues locally
+  4. Developer runs `pre-commit run --all-files` and `bats tests/` locally to verify
+  5. Developer pushes fixes to same branch
+  6. CI/CD automatically re-runs on new push
+  7. Process repeats until all checks pass
+
+- **Rollback Procedures** (if deployment fails):
+  1. Identify failed deployment step from logs
+  2. Revert code changes via `git revert` or `git reset`
+  3. Verify reverted code passes all checks
+  4. Document failure reason in issue tracker
+  5. Re-deploy after fixes are implemented
+
+### Boundary Conditions
+
+- **Zero Test Coverage Scenario** (new projects):
+  - Acceptable for initial project setup
+  - Must achieve 80% coverage before first production release
+  - Document coverage gap in README with timeline for test addition
+
+- **100% Test Coverage Scenario** (maximum coverage):
+  - Ideal but not required
+  - Focus on critical functions first (80% minimum)
+  - Additional coverage is optional but encouraged
+  - Do not sacrifice code quality for 100% coverage
+
+- **Very Large Script Files** (>10,000 lines):
+  - Performance limit: Linting must complete in <60 seconds (2x normal limit)
+  - Consider splitting into modules if linting exceeds limit
+  - Document performance impact in plan
+
+- **Very Large Test Suites** (>100 tests):
+  - Execution time limit: <10 minutes (2x normal limit)
+  - Use test tags to run subsets during development
+  - Full suite runs in CI/CD only
+
+### Version Compatibility
+
+- **ShellCheck**: Minimum version 0.9.0 (available in Debian 13 APT)
+- **bats-core**: Minimum version 1.10.0 (available in Debian 13 APT)
+- **pre-commit**: Minimum version 3.0.0 (via pip)
+- **Python**: Minimum version 3.11+ (for pre-commit framework)
+- All versions must be documented in README installation instructions
+
+### Security Requirements
+
+- **Log File Permissions**: 600 (user read/write only, no group/other access)
+- **Log File Location**: Primary: `/var/log/setup-workstation.log`, Fallback: `$HOME/.setup-workstation.log`
+- **Secrets in Logs**: Never log passwords, API keys, or sensitive user data
+- **CI/CD Secrets**: Use GitHub Secrets, never commit secrets to repository
+
+### Reliability Requirements
+
+- **Test Suite Stability**: 95% pass rate over 10 consecutive runs (allows for flaky test tolerance)
+- **Pre-commit Hook Reliability**: 99% success rate (allows for rare environment issues)
+- **CI/CD Pipeline Reliability**: 100% execution rate (GitHub Actions handles retries automatically)
+
+### Documentation Requirements
+
+- **README Mandatory Sections**:
+  1. Overview/Description
+  2. Installation Instructions
+  3. Quick Start Guide
+  4. Features List
+  5. Usage Examples
+  6. Troubleshooting (or link to troubleshooting guide)
+  7. Contributing (or link to CONTRIBUTING.md)
+
+- **CONTRIBUTING.md Mandatory Sections**:
+  1. Development Workflow
+  2. Coding Standards
+  3. Testing Guidelines
+  4. Pull Request Process
+  5. Code Review Guidelines
+
+- **Troubleshooting Guide Minimum Coverage**: At least 5 common issues must be documented:
+  1. ShellCheck not installed
+  2. Pre-commit hook failures
+  3. Test failures
+  4. CI/CD failures
+  5. Common script errors
+
+- **Documentation Update Process**:
+  - Review documentation on each PR that changes functionality
+  - Major documentation review quarterly
+  - Update version and last_updated date when changes are made
+
+### Error Message Format Requirements
+
+- **Format**: `[timestamp] [LEVEL] [context] message`
+- **Required Context Fields**:
+  1. Function name where error occurred
+  2. Line number (if applicable)
+  3. Variable values relevant to error
+  4. Error type (validation, system, network, etc.)
+- **Recovery Suggestion Format**:
+  - Actionable command: `Run: <command>`
+  - Step-by-step: `1. Check <condition>, 2. Verify <requirement>, 3. Run <command>`
+
+### Logging Requirements
+
+- **Operations That Must Be Logged**:
+  1. All function calls (entry and exit)
+  2. All errors (with full context)
+  3. All warnings (with context)
+  4. Major state changes (user creation, package installation, service starts)
+  5. Long-running operations (start and completion)
+- **Log Retention Policy**: 30 days or 100MB file size, whichever comes first (then rotate/archive)
+
+### Developer Workflow Requirements
+
+**Standard Workflow** (must be documented in CONTRIBUTING.md):
+1. Install development tools (ShellCheck, bats, pre-commit)
+2. Clone repository
+3. Install pre-commit hooks (`pre-commit install`)
+4. Create feature branch
+5. Write code
+6. Run linting locally (`pre-commit run --all-files`)
+7. Write/update tests
+8. Run tests locally (`bats tests/`)
+9. Commit changes (pre-commit hooks run automatically)
+10. Push to remote branch
+11. Create pull request (CI/CD runs automatically)
+12. Address review feedback
+13. Merge after all checks pass
+
 ## Edge Cases
 
 - What happens when ShellCheck is not installed? (Provide installation instructions)
@@ -150,4 +369,3 @@ A developer or user needs detailed error messages and logging to diagnose issues
 - How does system validate idempotency for complex multi-step operations? (Comprehensive test coverage)
 - What if logging directory doesn't exist or is not writable? (Fallback logging mechanism)
 - How does system handle partial script execution failures? (Rollback or cleanup procedures)
-

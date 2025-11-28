@@ -35,4 +35,3 @@
 - Specification is ready for `/speckit.plan` or `/speckit.clarify`
 - User stories are independently testable and prioritized
 - Success criteria are technology-agnostic and measurable
-

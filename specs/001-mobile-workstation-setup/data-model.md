@@ -59,7 +59,7 @@
 - `bashrc_path` (path): `/home/$username/.bashrc`
 - `ps1_prompt` (string): Custom prompt format with colors
 - `git_branch_function` (function): `parse_git_branch()` function definition
-- `aliases` (object): 
+- `aliases` (object):
   - `ll`: `ls -alFh --color=auto`
   - `update`: `sudo apt update && sudo apt upgrade -y`
   - `docker-clean`: Docker cleanup command
@@ -150,4 +150,3 @@ All entities include existence checks before modification:
 - Services: `systemctl is-enabled service_name`
 
 This ensures idempotency and prevents duplicate operations.
-

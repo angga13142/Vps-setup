@@ -9,13 +9,20 @@ on:
 
 jobs:
   lint:
-    name: lint
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Cache APT packages
+        uses: actions/cache@v4
+        with:
+          path: /var/cache/apt
+          key: ${{ runner.os }}-apt-${{ hashFiles('**/apt-cache-key') }}
+          restore-keys: |
+            ${{ runner.os }}-apt-
 
       - name: Install ShellCheck
         run: |
@@ -27,7 +34,7 @@ jobs:
           echo "Running ShellCheck on all .sh files..."
           shellcheck --version
           # Find and check all shell scripts recursively
-          # Use --severity=error to only fail on errors, not warnings/info
+          # Use --severity=error to only fail on errors, not warnings
           find . -name "*.sh" -type f -not -path "./.git/*" -not -path "./tests/helpers/*" | while read -r script; do
             echo "Checking: $script"
             shellcheck --severity=error "$script" || exit 1
@@ -35,19 +42,36 @@ jobs:
           echo "✅ All ShellCheck checks passed"
 
   test:
-    name: test
     runs-on: ubuntu-latest
     needs: lint
     timeout-minutes: 10
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Cache APT packages
+        uses: actions/cache@v4
+        with:
+          path: /var/cache/apt
+          key: ${{ runner.os }}-apt-${{ hashFiles('**/apt-cache-key') }}
+          restore-keys: |
+            ${{ runner.os }}-apt-
 
       - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y bats git
+
+      - name: Cache bats helpers
+        uses: actions/cache@v4
+        with:
+          path: |
+            tests/helpers/bats-support
+            tests/helpers/bats-assert
+          key: ${{ runner.os }}-bats-helpers-${{ hashFiles('tests/helpers/**') }}
+          restore-keys: |
+            ${{ runner.os }}-bats-helpers-
 
       - name: Download bats helpers
         run: |
@@ -67,16 +91,16 @@ jobs:
           # Run tests and capture output to check for actual failures
           TEST_OUTPUT=$(bats --tap tests/ 2>&1)
           EXIT_CODE=$?
-          
+
           # Display test output
           echo "$TEST_OUTPUT"
-          
+
           if [ $EXIT_CODE -eq 0 ]; then
             echo "✅ Test suite completed successfully"
           else
             echo "❌ Test suite exited with code: $EXIT_CODE"
             echo "Some tests may require root privileges (run locally with: sudo bats tests/)"
-            
+
             # Check if there are actual test failures (not ok) vs just skipped tests
             # TAP format: "not ok" indicates failure, "ok" indicates pass, "# skip" indicates skip
             if echo "$TEST_OUTPUT" | grep -q "^not ok"; then
@@ -101,4 +125,3 @@ jobs:
           path: |
             tests/
           retention-days: 30
-

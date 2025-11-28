@@ -12,11 +12,12 @@ A comprehensive development infrastructure improvement for the workstation setup
 ## Technical Context
 
 **Language/Version**: Bash 5.2+ (Debian 13 default), Python 3.11+ (for pre-commit), YAML (for GitHub Actions)  
-**Primary Dependencies**: 
-- **Linting**: ShellCheck (via APT: `shellcheck`)
-- **Testing**: bats-core (via APT: `bats`)
+**Primary Dependencies**:
+- **Linting**: ShellCheck >=0.9.0 (via APT: `shellcheck`)
+- **Testing**: bats-core >=1.10.0 (via APT: `bats`)
 - **CI/CD**: GitHub Actions (built-in)
-- **Pre-commit**: pre-commit framework (via pip: `pre-commit`)
+- **Pre-commit**: pre-commit framework >=3.0.0 (via pip: `pre-commit`)
+- **Python**: Python 3.11+ (for pre-commit framework)
 - **Documentation**: Markdown (no dependencies)
 
 **Storage**: File-based configuration:
@@ -26,7 +27,7 @@ A comprehensive development infrastructure improvement for the workstation setup
 - Documentation: `README.md`, `CONTRIBUTING.md` (repository root)
 - ShellCheck config: `.shellcheckrc` (optional, repository root)
 
-**Testing**: 
+**Testing**:
 - Unit tests: bats-core for function-level testing
 - Integration tests: bats-core for end-to-end script execution
 - Idempotency tests: bats-core for verifying re-run safety
@@ -34,20 +35,24 @@ A comprehensive development infrastructure improvement for the workstation setup
 
 **Target Platform**: Debian 13 (Trixie) - 64-bit amd64 architecture  
 **Project Type**: Development infrastructure (quality assurance tools and workflows)  
-**Performance Goals**: 
+**Performance Goals**:
 - Linting completes in < 30 seconds for all scripts
-- Test suite runs in < 5 minutes
+- Test suite runs in < 5 minutes (normal test suite)
+- Large test suites (>100 tests): < 10 minutes execution time (FR-026)
 - CI/CD pipeline completes in < 10 minutes
 - Pre-commit hooks run in < 10 seconds
 
-**Constraints**: 
+**Constraints**:
 - All tools must be available in Debian 13 APT repositories or installable without root
 - Must not interfere with existing script functionality
 - Must be maintainable by team members
-- Pre-commit hooks must be fast enough for daily use
-- CI/CD must run on free GitHub Actions tier
+- Pre-commit hooks must be fast enough for daily use (< 10 seconds)
+- CI/CD must run on free GitHub Actions tier (2000 minutes/month limit)
+- ShellCheck version >=0.9.0 required (available in Debian 13)
+- bats-core version >=1.10.0 required (available in Debian 13)
+- Performance must not conflict with comprehensive coverage (optimize if needed)
 
-**Scale/Scope**: 
+**Scale/Scope**:
 - Single repository with one main script (`scripts/setup-workstation.sh`)
 - Test coverage for ~15 critical functions
 - Documentation for end users and contributors
@@ -57,37 +62,37 @@ A comprehensive development infrastructure improvement for the workstation setup
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-✅ **Idempotency & Safety**: 
+✅ **Idempotency & Safety**:
 - Testing framework will verify idempotency of all functions
 - Pre-commit hooks prevent committing code with errors
 - CI/CD ensures code quality before merge
 - All checks are re-runnable without side effects
 
-✅ **Interactive UX**: 
+✅ **Interactive UX**:
 - Documentation will guide users through installation and usage
 - Error messages in tests will be clear and actionable
 - CI/CD provides clear feedback on failures
 
-✅ **Aesthetic Excellence**: 
+✅ **Aesthetic Excellence**:
 - Documentation will be well-formatted and readable
 - Test output will be clear and organized
 - CI/CD logs will be structured for easy reading
 
-✅ **Mobile-First Optimization**: 
+✅ **Mobile-First Optimization**:
 - Not applicable (development infrastructure, not GUI)
 
-✅ **Clean Architecture**: 
+✅ **Clean Architecture**:
 - Tools installed via package managers (APT, pip)
 - No system-wide pollution
 - Test environment isolated from production
 
-✅ **Modularity**: 
+✅ **Modularity**:
 - Tests organized by function/feature
 - CI/CD jobs separated by concern (lint, test, quality)
 - Documentation organized by topic
 - Pre-commit hooks modular and configurable
 
-✅ **Target Platform**: 
+✅ **Target Platform**:
 - All tools verified for Debian 13 (Trixie) compatibility
 - ShellCheck and bats-core available in APT
 - GitHub Actions runs on Debian-based runners
@@ -187,3 +192,53 @@ See `quickstart.md` for:
 - Running tests locally
 - Running linting
 - Contributing workflow
+
+### Measurement Methods
+
+**Success Criteria Measurement** (see spec.md §Measurement Methods for details):
+- SC-001: ShellCheck exit code verification (automated)
+- SC-002: Test coverage calculation via coverage tool or manual count (semi-automated)
+- SC-003: Documentation completeness review (manual or automated parser)
+- SC-004: User success rate tracking via survey/analytics (manual)
+- SC-005: GitHub Actions workflow run monitoring (automated)
+- SC-006: Branch protection rule verification and merge blocking rate (automated)
+- SC-007: Error message context review (manual or automated parsing)
+- SC-008: Log file analysis (automated log analysis tool)
+- SC-009: Support request tracking and resolution rate (manual)
+- SC-010: Code review time comparison (manual, baseline required)
+
+**Performance Optimization Strategy**:
+- If performance conflicts with comprehensive coverage:
+  1. Use test tags to run subset during development
+  2. Optimize slow tests (mock external dependencies)
+  3. Use parallel test execution where possible
+  4. Cache dependencies in CI/CD
+  5. Consider selective linting for very large files
+
+**Large Test Suite Performance Limits** (FR-026):
+- **Normal test suite** (<100 tests): Target < 5 minutes execution time
+- **Large test suite** (>100 tests): Target < 10 minutes execution time (2x normal limit)
+- **Strategy for large suites**:
+  - Use test tags to run subsets during development (`bats --filter-tags unit tests/`)
+  - Full suite runs in CI/CD only
+  - Monitor execution time in CI/CD logs
+  - If exceeding limits, review test structure for optimization opportunities
+  - Consider splitting large test files if execution time becomes problematic
+
+**Large Script File Performance Limits** (FR-025):
+- **Normal script files** (<10,000 lines): Target < 30 seconds linting time
+- **Large script files** (>10,000 lines): Target < 60 seconds linting time (2x normal limit)
+- **Performance impact**:
+  - ShellCheck processing time increases with file size
+  - Very large files may exceed performance goals
+- **Strategy for large files**:
+  - Consider splitting into modules if linting exceeds 60 seconds
+  - Use ShellCheck exclusion rules for non-critical sections if needed
+  - Document performance impact in plan if limits are approached
+  - Monitor linting time in CI/CD logs
+
+**Version Compatibility Strategy**:
+- Pin minimum versions in documentation
+- Test compatibility on Debian 13 before deployment
+- Document upgrade path if versions change
+- Monitor for security updates
