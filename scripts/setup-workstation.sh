@@ -935,14 +935,16 @@ configure_starship_prompt() {
     fi
 
     # Remove lines containing PS1= or PROMPT_COMMAND= (but preserve other content)
-    # Validate output is not empty before overwriting to prevent data loss
+    # If filtered output is empty, create minimal .bashrc to avoid conflicts
     if [ -f "$bashrc_file" ]; then
         grep -v "^PS1=" "$bashrc_file" 2>/dev/null | grep -v "^PROMPT_COMMAND=" > "$temp_file" || true
-        # Verify temp file has content (at least one line) before overwriting original
+        # If temp file is empty, create minimal .bashrc to avoid PS1/PROMPT_COMMAND conflicts
         if [ -s "$temp_file" ]; then
             mv "$temp_file" "$bashrc_file"
         else
-            log "WARNING" "Filtered .bashrc would be empty, preserving original content" "configure_starship_prompt()" "username=$username bashrc_file=$bashrc_file"
+            # Create minimal .bashrc with just a comment to avoid conflicts
+            echo "# Bash configuration - PS1/PROMPT_COMMAND removed for Starship" > "$bashrc_file"
+            log "INFO" "Filtered .bashrc was empty, created minimal .bashrc to avoid prompt conflicts" "configure_starship_prompt()" "username=$username bashrc_file=$bashrc_file"
             rm -f "$temp_file"
         fi
     fi
@@ -1844,7 +1846,7 @@ configure_terminal_visuals() {
         # Check if DISPLAY is set and not empty, or XDG_SESSION_TYPE indicates desktop
         if [ -n "${DISPLAY:-}" ] && [ "$DISPLAY" != "" ]; then
             has_desktop=true
-        elif [ -n "${XDG_SESSION_TYPE:-}" ] && [ "$XDG_SESSION_TYPE" = "x11" ] || [ "$XDG_SESSION_TYPE" = "wayland" ]; then
+        elif [ -n "${XDG_SESSION_TYPE:-}" ] && ([ "$XDG_SESSION_TYPE" = "x11" ] || [ "$XDG_SESSION_TYPE" = "wayland" ]); then
             has_desktop=true
         fi
     fi
