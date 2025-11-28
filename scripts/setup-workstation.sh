@@ -24,10 +24,11 @@ readonly YELLOW='\033[1;33m'
 readonly NC='\033[0m'  # No Color
 
 # Script configuration
-# shellcheck disable=SC2034  # SCRIPT_NAME and SCRIPT_DIR kept for future logging/debugging
 SCRIPT_NAME=$(basename "$0")
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
+# shellcheck disable=SC2034  # SCRIPT_NAME and SCRIPT_DIR kept for future logging/debugging
 readonly SCRIPT_NAME
+# shellcheck disable=SC2034  # SCRIPT_DIR kept for future logging/debugging
 readonly SCRIPT_DIR
 
 # Log file configuration
@@ -1149,7 +1150,7 @@ install_nvm_nodejs() {
     else
         log "INFO" "Installing NVM..." "install_nvm_nodejs()" "username=$username"
         # Install NVM as the target user
-        if ! su - "$username" -c 'curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash' 2>&1 | grep -v "Profile" || true; then
+        if ! su - "$username" -c "curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash" 2>&1 | grep -v "Profile" || true; then
             log "WARNING" "NVM installation may have encountered issues. Check logs for details." "install_nvm_nodejs()" "username=$username"
         fi
         log "INFO" "✓ NVM installed" "install_nvm_nodejs()" "username=$username"
@@ -1178,7 +1179,8 @@ NVM_EOF
     # Install Node.js LTS
     log "INFO" "Installing Node.js LTS... (this may take 2-5 minutes)" "install_nvm_nodejs()" "username=$username"
     # Source NVM and install Node.js LTS as the target user
-    if ! su - "$username" -c 'export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" && nvm install --lts && nvm use --default --lts' 2>&1 | tail -5; then
+    # shellcheck disable=SC2016  # Variables need to expand in user's shell, not current shell
+    if ! su - "$username" -c "export NVM_DIR=\"\$HOME/.nvm\" && [ -s \"\$NVM_DIR/nvm.sh\" ] && \. \"\$NVM_DIR/nvm.sh\" && nvm install --lts && nvm use --default --lts" 2>&1 | tail -5; then
         log "WARNING" "Node.js LTS installation may have encountered issues. Check logs for details." "install_nvm_nodejs()" "username=$username"
     fi
     log "INFO" "✓ Node.js LTS installed and set as default" "install_nvm_nodejs()" "username=$username"

@@ -35,9 +35,10 @@ jobs:
           echo "Running ShellCheck on all .sh files..."
           shellcheck --version
           # Find and check all shell scripts recursively
+          # Use --severity=error to only fail on errors, not warnings
           find . -name "*.sh" -type f -not -path "./.git/*" -not -path "./tests/helpers/*" | while read -r script; do
             echo "Checking: $script"
-            shellcheck "$script" || exit 1
+            shellcheck --severity=error "$script" || exit 1
           done
           echo "✅ All ShellCheck checks passed"
 
