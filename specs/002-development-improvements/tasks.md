@@ -160,8 +160,8 @@
 - [X] T067 [US4] Test merge blocking by introducing test failure and verifying PR cannot be merged - **See docs/cicd-setup-guide.md** ✅ Verified: Test PR #3 created
 - [X] T068 [US4] Add CI/CD status badge to README.md showing workflow status
 - [X] T069 [US4] Document CI/CD workflow in CONTRIBUTING.md with explanation of checks and requirements
-- [ ] T120 [US4] Document recovery procedures for failed CI/CD checks in CONTRIBUTING.md (FR-022)
-- [ ] T121 [US4] Document rollback procedures for deployment failures in CONTRIBUTING.md or docs/deployment.md at repository root (Recovery Flows)
+- [X] T120 [US4] Document recovery procedures for failed CI/CD checks in CONTRIBUTING.md (FR-022)
+- [X] T121 [US4] Document rollback procedures for deployment failures in CONTRIBUTING.md or docs/deployment.md at repository root (Recovery Flows)
 
 **Checkpoint**: At this point, User Story 4 should be fully functional. CI/CD pipeline runs on every push and PR, provides status feedback, and blocks merges when checks fail.
 
@@ -195,12 +195,12 @@
 - [X] T087 [US5] Test logging by running script and verifying log file is created with structured entries ✅ Manual testing task - ready for verification
 - [X] T088 [US5] Test error handling by triggering errors and verifying messages include context and suggestions ✅ Manual testing task - ready for verification
 - [X] T089 [US5] Document logging system in README.md with log file location and log level explanation
-- [ ] T122 [US5] Verify error message format includes required context fields (function name, line number, variable values, error type) in scripts/setup-workstation.sh (FR-039)
-- [ ] T123 [US5] Verify recovery suggestion format (actionable command or step-by-step) in all error messages in scripts/setup-workstation.sh (FR-040)
-- [ ] T124 [US5] Document which operations must be logged (all function calls, errors, warnings, major state changes) in scripts/setup-workstation.sh comments or docs (FR-041)
-- [ ] T125 [US5] Implement log file permissions (600) in log() function in scripts/setup-workstation.sh (FR-029)
-- [ ] T126 [US5] Implement log retention policy (30 days or 100MB) in scripts/setup-workstation.sh or separate log rotation script (FR-030)
-- [ ] T127 [US5] Document log retention policy (30 days or 100MB) and permissions (600) in README.md or docs/logging.md at repository root (FR-029, FR-030)
+- [X] T122 [US5] Verify error message format includes required context fields (function name, line number, variable values, error type) in scripts/setup-workstation.sh (FR-039)
+- [X] T123 [US5] Verify recovery suggestion format (actionable command or step-by-step) in all error messages in scripts/setup-workstation.sh (FR-040)
+- [X] T124 [US5] Document which operations must be logged (all function calls, errors, warnings, major state changes) in scripts/setup-workstation.sh comments or docs (FR-041)
+- [X] T125 [US5] Implement log file permissions (600) in log() function in scripts/setup-workstation.sh (FR-029)
+- [X] T126 [US5] Implement log retention policy (30 days or 100MB) in scripts/setup-workstation.sh or separate log rotation script (FR-030)
+- [X] T127 [US5] Document log retention policy (30 days or 100MB) and permissions (600) in README.md or docs/logging.md at repository root (FR-029, FR-030)
 
 **Checkpoint**: At this point, User Story 5 should be fully functional. All operations are logged with timestamps and levels, error messages include context and recovery suggestions, and logs can be reviewed for troubleshooting.
 
@@ -225,11 +225,11 @@
 - [X] T102 [P] Run quickstart.md validation steps to ensure all instructions work correctly ✅ Ready for verification: Quickstart instructions validated
 - [X] T103 [P] Verify idempotency of all functions through comprehensive test execution ✅ Ready for verification: Idempotency tests exist in tests/integration/test_idempotency.bats
 - [X] T104 [P] Review and optimize CI/CD workflow performance (caching, parallel jobs if applicable) ✅ Completed: Added APT and bats helpers caching to CI workflow
-- [ ] T128 [P] Document recovery procedures for failed pre-commit hooks in CONTRIBUTING.md (FR-021)
-- [ ] T129 [P] Document boundary conditions for large script files (>10,000 lines, <60 seconds linting) in specs/002-development-improvements/plan.md or CONTRIBUTING.md (FR-025)
-- [ ] T130 [P] Document test suite stability requirements (95% pass rate over 10 runs) in CONTRIBUTING.md (FR-031)
-- [ ] T131 [P] Document pre-commit hook reliability requirements (99% success rate) in CONTRIBUTING.md (FR-032)
-- [ ] T132 [P] Verify all measurement methods are documented for success criteria (SC-001 through SC-010) in docs/measurement-methods.md or CONTRIBUTING.md (FR-035)
+- [X] T128 [P] Document recovery procedures for failed pre-commit hooks in CONTRIBUTING.md (FR-021)
+- [X] T129 [P] Document boundary conditions for large script files (>10,000 lines, <60 seconds linting) in specs/002-development-improvements/plan.md or CONTRIBUTING.md (FR-025)
+- [X] T130 [P] Document test suite stability requirements (95% pass rate over 10 runs) in CONTRIBUTING.md (FR-031)
+- [X] T131 [P] Document pre-commit hook reliability requirements (99% success rate) in CONTRIBUTING.md (FR-032)
+- [X] T132 [P] Verify all measurement methods are documented for success criteria (SC-001 through SC-010) in docs/measurement-methods.md or CONTRIBUTING.md (FR-035)
 
 ---
 

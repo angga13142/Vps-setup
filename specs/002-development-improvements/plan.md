@@ -225,6 +225,18 @@ See `quickstart.md` for:
   - If exceeding limits, review test structure for optimization opportunities
   - Consider splitting large test files if execution time becomes problematic
 
+**Large Script File Performance Limits** (FR-025):
+- **Normal script files** (<10,000 lines): Target < 30 seconds linting time
+- **Large script files** (>10,000 lines): Target < 60 seconds linting time (2x normal limit)
+- **Performance impact**:
+  - ShellCheck processing time increases with file size
+  - Very large files may exceed performance goals
+- **Strategy for large files**:
+  - Consider splitting into modules if linting exceeds 60 seconds
+  - Use ShellCheck exclusion rules for non-critical sections if needed
+  - Document performance impact in plan if limits are approached
+  - Monitor linting time in CI/CD logs
+
 **Version Compatibility Strategy**:
 - Pin minimum versions in documentation
 - Test compatibility on Debian 13 before deployment

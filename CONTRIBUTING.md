@@ -333,6 +333,72 @@ Each public function must have documentation block with:
 4. Quarterly comprehensive review of all documentation
 5. Archive outdated documentation in `docs/archive/` if needed
 
+### Test Suite Stability Requirements (FR-031)
+
+**Stability Target**: 95% pass rate over 10 consecutive runs
+
+**Definition**: Test suite stability measures the consistency of test results across multiple runs. A stable test suite should pass consistently, with only rare flaky failures.
+
+**Measurement**:
+- Run test suite 10 times consecutively: `for i in {1..10}; do sudo bats tests/; done`
+- Count successful runs (all tests pass)
+- Calculate: `(successful runs / 10) × 100%`
+- Target: ≥95% (at least 9 out of 10 runs must pass)
+
+**Acceptable Flaky Test Tolerance**:
+- Up to 5% failure rate is acceptable (allows for rare environment issues)
+- Flaky tests should be identified and fixed
+- Tests that consistently fail should be investigated and fixed
+
+**Improving Stability**:
+- Use proper test isolation (setup/teardown)
+- Avoid race conditions in tests
+- Mock external dependencies
+- Use deterministic test data
+- Avoid time-dependent assertions
+- Clean up test artifacts properly
+
+**Monitoring**:
+- Track test pass rate in CI/CD over time
+- Identify patterns in flaky test failures
+- Document known flaky tests with skip conditions if needed
+
+### Pre-commit Hook Reliability Requirements (FR-032)
+
+**Reliability Target**: 99% success rate
+
+**Definition**: Pre-commit hook reliability measures how often hooks execute successfully. A reliable hook should work consistently, with only rare failures due to environment issues.
+
+**Measurement**:
+- Track pre-commit hook execution over time
+- Count successful hook runs (hooks complete without errors)
+- Count total hook runs (including failures)
+- Calculate: `(successful runs / total runs) × 100%`
+- Target: ≥99% (allows for rare environment issues)
+
+**Acceptable Failure Tolerance**:
+- Up to 1% failure rate is acceptable (allows for rare environment issues)
+- Failures should be investigated and fixed
+- Environment-specific issues should be documented
+
+**Common Failure Causes**:
+- Network issues (downloading hook dependencies)
+- Permission issues (file system access)
+- Environment configuration issues (missing tools)
+- Hook timeout (very rare)
+
+**Improving Reliability**:
+- Cache hook dependencies locally
+- Use stable hook versions
+- Document hook requirements clearly
+- Provide fallback mechanisms
+- Test hooks in CI/CD environment
+
+**Monitoring**:
+- Track hook success rate over time
+- Review hook failures in CI/CD logs
+- Document known issues and workarounds
+
 ### Test Performance Limits (FR-026)
 
 **Large Test Suites** (>100 tests):
@@ -611,7 +677,49 @@ docker run --rm -v "$PWD:/workspace" -w /workspace \
 - ⏳ Yellow circle: Checks are running
 - Wait for completion before merging
 
-### Troubleshooting CI/CD Failures
+### Recovery Procedures for Failed CI/CD Checks (FR-022)
+
+**CI/CD Check Failure Recovery Process**:
+
+When CI/CD checks fail, follow this recovery procedure:
+
+1. **Receive Notification**: Developer receives notification of failed CI checks via GitHub PR status (red X indicator)
+
+2. **Review Error Messages**:
+   - Click on the failed check in PR status
+   - Review error messages in CI logs (GitHub Actions tab)
+   - Identify which job failed (lint or test)
+   - Note specific error details and file locations
+
+3. **Fix Issues Locally**:
+   - Pull latest changes: `git pull origin <branch-name>`
+   - Fix issues based on error messages
+   - For lint failures: Run `shellcheck scripts/*.sh` locally
+   - For test failures: Run `sudo bats tests/` locally
+
+4. **Verify Fixes Locally**:
+   ```bash
+   # Run pre-commit hooks to verify linting
+   pre-commit run --all-files
+
+   # Run test suite to verify tests pass
+   sudo bats tests/
+
+   # Ensure all checks pass locally before pushing
+   ```
+
+5. **Push Fixes**:
+   ```bash
+   git add .
+   git commit -m "fix: Resolve CI/CD check failures"
+   git push origin <branch-name>
+   ```
+
+6. **CI/CD Re-runs Automatically**: GitHub Actions automatically re-runs on new push
+
+7. **Repeat if Needed**: If checks still fail, repeat steps 2-6 until all checks pass
+
+**Common Failure Scenarios**:
 
 **Lint Job Fails**:
 ```bash
@@ -640,6 +748,53 @@ git push
 - Verify branch name matches trigger patterns
 - Check GitHub Actions is enabled for repository
 - Review workflow syntax in Actions tab
+
+### Rollback Procedures for Deployment Failures (Recovery Flows)
+
+**If deployment fails** (e.g., code merged but causes issues in production):
+
+1. **Identify Failed Deployment Step**:
+   - Review deployment logs
+   - Identify which step failed (installation, configuration, service start)
+   - Note error messages and context
+
+2. **Revert Code Changes**:
+   ```bash
+   # Option 1: Revert specific commit (recommended for single bad commit)
+   git revert <commit-hash>
+   git push origin main
+
+   # Option 2: Reset to previous working state (use with caution)
+   git reset --hard <previous-commit-hash>
+   git push --force origin main  # ⚠️ Only if necessary, coordinate with team
+   ```
+
+3. **Verify Reverted Code Passes All Checks**:
+   - CI/CD will automatically run on revert commit
+   - Verify all checks pass (lint, test)
+   - Confirm code is in working state
+
+4. **Document Failure Reason**:
+   - Create GitHub Issue documenting:
+     - What failed
+     - Why it failed
+     - Steps to reproduce (if applicable)
+     - Proposed fix
+   - Link issue to reverted commit
+
+5. **Re-deploy After Fixes**:
+   - Implement fixes in new branch
+   - Test thoroughly locally
+   - Create PR with fixes
+   - Ensure all CI/CD checks pass
+   - Merge after review
+
+**Prevention**:
+- Always test changes locally before pushing
+- Run full test suite before committing
+- Review CI/CD logs before merging
+- Use feature branches for all changes
+- Test in staging environment if available
 
 ### Manual CI/CD Setup Tasks
 

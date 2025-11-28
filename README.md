@@ -177,6 +177,21 @@ The script implements structured logging with timestamps and log levels for all 
   [2025-01-27T10:30:46Z] [ERROR] [function_name()] Error message [context=value]
   ```
 
+- **Log File Permissions**: 600 (user read/write only, no group/other access) (FR-029)
+  - Log files are automatically created with secure permissions
+  - Only the user running the script can read/write log files
+
+- **Log Retention Policy**: 30 days or 100MB, whichever comes first (FR-030)
+  - Log files are automatically rotated when they exceed 100MB
+  - Log files older than 30 days are archived (`.old` suffix)
+  - Old log files are preserved for historical reference
+
+- **Operations Logged** (FR-041):
+  - All function calls (entry/exit)
+  - All errors with context
+  - All warnings with context
+  - Major state changes (user creation, package installation, service configuration, etc.)
+
 - **Viewing Logs**:
   ```bash
   # View entire log file

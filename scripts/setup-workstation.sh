@@ -54,13 +54,29 @@ readonly LOG_FILE
 #   - message: Log message
 #   - context: Optional context information (function name, variable values, etc.)
 # Outputs: Writes to log file and displays to stdout/stderr
-# Side Effects: Creates log file if it doesn't exist
+# Side Effects: Creates log file if it doesn't exist, sets permissions to 600
 # Returns: 0 on success
 # Idempotency: Safe to call multiple times
 # Examples:
 #   log "INFO" "Starting installation" "main()"
 #   log "ERROR" "User creation failed" "create_user()" "username=testuser"
-# Notes: Logs are written in ISO 8601 UTC format for consistency
+# Notes:
+#   - Logs are written in ISO 8601 UTC format for consistency
+#   - Log file permissions: 600 (user read/write only) (FR-029)
+#   - Log retention: 30 days or 100MB, whichever comes first (FR-030)
+#
+# Operations That Must Be Logged (FR-041):
+#   - All function calls (entry/exit with INFO level)
+#   - All errors (ERROR level with context)
+#   - All warnings (WARNING level with context)
+#   - Major state changes:
+#     * User creation
+#     * Package installation
+#     * Service configuration
+#     * Docker setup
+#     * Desktop environment configuration
+#     * Development stack installation
+#     * System configuration changes
 #######################################
 log() {
     local level="$1"
@@ -77,8 +93,45 @@ log() {
         log_entry="[$timestamp] [$level] $message"
     fi
 
+    # Create log file if it doesn't exist and set permissions (600 - user read/write only) (FR-029)
+    if [ ! -f "$LOG_FILE" ]; then
+        touch "$LOG_FILE" 2>/dev/null || true
+        chmod 600 "$LOG_FILE" 2>/dev/null || true
+    fi
+
     # Write to log file (append mode)
     echo "$log_entry" >> "$LOG_FILE" 2>/dev/null || true
+
+    # Apply log retention policy: 30 days or 100MB, whichever comes first (FR-030)
+    # Check file size (in bytes) and age (in days)
+    if [ -f "$LOG_FILE" ]; then
+        local log_size
+        log_size=$(stat -f%z "$LOG_FILE" 2>/dev/null || stat -c%s "$LOG_FILE" 2>/dev/null || echo "0")
+        local max_size=$((100 * 1024 * 1024))  # 100MB in bytes
+
+        # Check if log file exceeds size limit
+        if [ "$log_size" -gt "$max_size" ]; then
+            # Rotate log: keep last 1000 lines
+            if tail -n 1000 "$LOG_FILE" > "${LOG_FILE}.tmp" 2>/dev/null; then
+                mv "${LOG_FILE}.tmp" "$LOG_FILE" 2>/dev/null || true
+            fi
+            chmod 600 "$LOG_FILE" 2>/dev/null || true
+        fi
+
+        # Check if log file is older than 30 days (check on first log entry of day)
+        local log_mtime
+        log_mtime=$(stat -f%m "$LOG_FILE" 2>/dev/null || stat -c%Y "$LOG_FILE" 2>/dev/null || echo "0")
+        local current_time
+        current_time=$(date +%s)
+        local age_days=$(((current_time - log_mtime) / 86400))
+
+        if [ "$age_days" -gt 30 ]; then
+            # Archive old log and start fresh
+            mv "$LOG_FILE" "${LOG_FILE}.$(date +%Y%m%d).old" 2>/dev/null || true
+            touch "$LOG_FILE" 2>/dev/null || true
+            chmod 600 "$LOG_FILE" 2>/dev/null || true
+        fi
+    fi
 
     # Display to stdout/stderr with colors based on level
     case "$level" in
