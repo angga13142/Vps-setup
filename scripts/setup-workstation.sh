@@ -1650,6 +1650,24 @@ install_exa() {
 
     log "INFO" "Installing exa (modern ls)..." "install_exa()"
 
+    # Clean up any leftover exa files in /tmp/ to avoid conflicts during download
+    # Only remove files/directories older than 1 hour to avoid deleting active downloads
+    log "INFO" "Cleaning up any leftover exa files in /tmp/..." "install_exa()"
+
+    # Remove old exa-related files in /tmp/ (older than 1 hour)
+    find /tmp -maxdepth 1 -type f -name "*exa*" -mmin +60 -delete 2>/dev/null || true
+
+    # Remove old temp directories that might contain exa binary (older than 1 hour)
+    find /tmp -maxdepth 1 -type d -name "tmp.*" -mmin +60 -exec rm -rf {} + 2>/dev/null || true
+
+    # Also clean up any temp directories that contain exa binary (regardless of age, to avoid conflicts)
+    for tmp_dir in /tmp/tmp.*; do
+        if [ -d "$tmp_dir" ] && [ -f "$tmp_dir/exa" ] 2>/dev/null; then
+            log "INFO" "Removing leftover exa temp directory: $tmp_dir" "install_exa()"
+            rm -rf "$tmp_dir" 2>/dev/null || true
+        fi
+    done
+
     # Check disk space (T031, Edge Cases: Disk Space Exhaustion)
     local available_space
     available_space=$(df /usr/local/bin 2>/dev/null | tail -1 | awk '{print $4}' || echo "0")
