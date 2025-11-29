@@ -297,22 +297,24 @@ verify_installation() {
         return 1
     }
 
-    # First try with current PATH
-    if command -v exa &>/dev/null; then
+    # First check if binary file exists at the installation location (most reliable check)
+    if [ -f /usr/local/bin/exa ] && [ -x /usr/local/bin/exa ]; then
+        exa_path="/usr/local/bin/exa"
+        exa_installed=true
+        if _verify_exa_binary "$exa_path"; then
+            exa_can_run=true
+        fi
+    fi
+
+    # Then try with current PATH (in case PATH is already updated)
+    if [ "$exa_installed" = false ] && command -v exa &>/dev/null; then
         exa_path=$(command -v exa)
         exa_installed=true
         _verify_exa_binary "$exa_path" && exa_can_run=true
     fi
 
-    # Then try with explicit /usr/local/bin in PATH
+    # Also try with explicit /usr/local/bin in PATH (for cases where PATH needs refresh)
     if [ "$exa_installed" = false ] && PATH="/usr/local/bin:$PATH" command -v exa &>/dev/null; then
-        exa_path="/usr/local/bin/exa"
-        exa_installed=true
-        _verify_exa_binary "$exa_path" && exa_can_run=true
-    fi
-
-    # Finally check if binary file exists at the installation location
-    if [ "$exa_installed" = false ] && [ -f /usr/local/bin/exa ] && [ -x /usr/local/bin/exa ]; then
         exa_path="/usr/local/bin/exa"
         exa_installed=true
         _verify_exa_binary "$exa_path" && exa_can_run=true
@@ -323,13 +325,29 @@ verify_installation() {
 
     if [ "$exa_installed" = true ]; then
         if [ "$exa_can_run" = true ]; then
-            log "INFO" "✓ exa is installed (found at: $exa_path)" "verify_installation()"
+            log "INFO" "✓ exa is installed and working (found at: $exa_path)" "verify_installation()"
         else
-            log "WARNING" "exa binary found at $exa_path but may not run on this system. This is usually due to architecture or library incompatibility." "verify_installation()"
-            # Still consider it as installed since the binary exists
+            # Binary exists but can't run - provide helpful message
+            log "WARNING" "exa binary found at $exa_path but cannot execute. This may be due to architecture mismatch, missing libraries, or permission issues. Try: chmod +x $exa_path && $exa_path --version" "verify_installation()"
+            # Still consider it as installed since the binary exists, but note the issue
         fi
     else
-        log "WARNING" "exa is not installed or not in PATH. Note: exa installation may have failed during setup. You can install it manually or re-run the script. If /usr/local/bin/exa exists, ensure /usr/local/bin is in your PATH." "verify_installation()"
+        # Check if /usr/local/bin is in PATH
+        local path_has_local_bin=false
+        if echo "$PATH" | grep -qE "(^|:)/usr/local/bin(:|$)"; then
+            path_has_local_bin=true
+        fi
+
+        # Provide more helpful error message
+        if [ -f /usr/local/bin/exa ]; then
+            if [ "$path_has_local_bin" = false ]; then
+                log "WARNING" "exa binary exists at /usr/local/bin/exa but /usr/local/bin is not in PATH. Add it to PATH or use full path: /usr/local/bin/exa" "verify_installation()"
+            else
+                log "WARNING" "exa binary exists at /usr/local/bin/exa but 'exa' command not found. Try: hash -r && exa --version (to refresh command cache)" "verify_installation()"
+            fi
+        else
+            log "WARNING" "exa is not installed. The binary /usr/local/bin/exa does not exist. Re-run the installation script or install exa manually." "verify_installation()"
+        fi
         all_ok=false
     fi
 
