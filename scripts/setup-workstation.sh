@@ -1624,85 +1624,39 @@ install_exa() {
         return 1
     fi
 
-    # Determine download command
-    local download_cmd
-    if command -v wget &>/dev/null; then
-        download_cmd="wget -q"
-    elif command -v curl &>/dev/null; then
-        download_cmd="curl -sSL -o"
-    else
-        log "ERROR" "[ERROR] [terminal-enhancements] Failed to install exa: curl or wget not available. Skipping exa installation. Remaining tools will continue installation." "install_exa()" "reason=curl_or_wget_not_available"
+    # Use local exa folder as source (T030)
+    # Calculate path to exa folder relative to script location
+    local project_root
+    project_root=$(cd "$SCRIPT_DIR/.." && pwd)
+    local exa_source_dir="$project_root/exa"
+    local exa_binary="$exa_source_dir/bin/exa"
+
+    # Verify local exa folder exists
+    if [ ! -d "$exa_source_dir" ]; then
+        log "ERROR" "[ERROR] [terminal-enhancements] Failed to install exa: local exa folder not found at '$exa_source_dir'. Skipping exa installation. Remaining tools will continue installation." "install_exa()" "reason=local_folder_not_found"
         return 1
     fi
 
-    # Create temporary directory for download
-    local temp_dir
-    temp_dir=$(mktemp -d)
-    if [ ! -d "$temp_dir" ]; then
-        log "ERROR" "[ERROR] [terminal-enhancements] Failed to install exa: unable to create temporary directory. Skipping exa installation. Remaining tools will continue installation." "install_exa()" "reason=temp_dir_creation_failed"
+    # Verify binary exists in local folder
+    if [ ! -f "$exa_binary" ]; then
+        log "ERROR" "[ERROR] [terminal-enhancements] Failed to install exa: binary not found at '$exa_binary'. Skipping exa installation. Remaining tools will continue installation." "install_exa()" "reason=binary_not_found"
         return 1
     fi
 
-    # Download exa binary (T030)
-    # Use specific version URL to avoid redirect issues with /latest/download/
-    # Latest stable version: v0.10.1 (as of 2024)
-    # Note: File name includes version: exa-linux-x86_64-v0.10.1.zip
-    local zip_file="$temp_dir/exa-linux-x86_64.zip"
-    local exa_url="https://github.com/ogham/exa/releases/download/v0.10.1/exa-linux-x86_64-v0.10.1.zip"
-
-    if command -v wget &>/dev/null; then
-        if ! wget -q --max-redirect=5 "$exa_url" -O "$zip_file"; then
-            log "ERROR" "[ERROR] [terminal-enhancements] Failed to install exa: network failure during download. Skipping exa installation. Remaining tools will continue installation." "install_exa()" "reason=download_failed"
-            rm -rf "$temp_dir"
-            return 1
-        fi
-    else
-        if ! curl -sSL -L --max-redirs 5 "$exa_url" -o "$zip_file"; then
-            log "ERROR" "[ERROR] [terminal-enhancements] Failed to install exa: network failure during download. Skipping exa installation. Remaining tools will continue installation." "install_exa()" "reason=download_failed"
-            rm -rf "$temp_dir"
-            return 1
-        fi
-    fi
-
-    # Verify downloaded file is not empty and is a valid zip
-    if [ ! -s "$zip_file" ]; then
-        log "ERROR" "[ERROR] [terminal-enhancements] Failed to install exa: downloaded file is empty. Skipping exa installation. Remaining tools will continue installation." "install_exa()" "reason=download_failed_empty_file"
-        rm -rf "$temp_dir"
-        return 1
-    fi
-
-    # Check if file is a valid zip (at least check first bytes)
-    if ! file "$zip_file" 2>/dev/null | grep -qE "(Zip|zip|archive)"; then
-        log "ERROR" "[ERROR] [terminal-enhancements] Failed to install exa: downloaded file is not a valid zip archive. Skipping exa installation. Remaining tools will continue installation." "install_exa()" "reason=download_failed_invalid_zip"
-        rm -rf "$temp_dir"
-        return 1
-    fi
-
-    # Extract binary (T031)
-    if ! unzip -q "$zip_file" -d "$temp_dir" 2>/dev/null; then
-        log "ERROR" "[ERROR] [terminal-enhancements] Failed to install exa: extraction failed (corrupted archive or unzip error). Skipping exa installation. Remaining tools will continue installation." "install_exa()" "reason=extraction_failed"
-        rm -rf "$temp_dir"
-        return 1
+    # Verify binary is executable
+    if [ ! -x "$exa_binary" ]; then
+        log "WARNING" "[WARN] [terminal-enhancements] Binary at '$exa_binary' is not executable. Setting executable permission..." "install_exa()"
+        chmod +x "$exa_binary" 2>/dev/null || true
     fi
 
     # Install binary to /usr/local/bin/exa (T031)
-    if [ ! -f "$temp_dir/bin/exa" ]; then
-        log "ERROR" "[ERROR] [terminal-enhancements] Failed to install exa: binary not found after extraction. Skipping exa installation. Remaining tools will continue installation." "install_exa()" "reason=binary_not_found"
-        rm -rf "$temp_dir"
-        return 1
-    fi
-
-    if ! mv "$temp_dir/bin/exa" /usr/local/bin/exa; then
+    if ! cp "$exa_binary" /usr/local/bin/exa; then
         log "ERROR" "[ERROR] [terminal-enhancements] Failed to install exa: permission denied or filesystem error during installation. Skipping exa installation. Remaining tools will continue installation." "install_exa()" "reason=installation_failed"
-        rm -rf "$temp_dir"
         return 1
     fi
 
     # Set permissions
     chmod +x /usr/local/bin/exa 2>/dev/null || true
-
-    # Cleanup
-    rm -rf "$temp_dir"
 
     # Verify installation (T032, FR-014)
     # Check both command availability and binary existence
