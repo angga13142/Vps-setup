@@ -283,10 +283,18 @@ verify_installation() {
     # Verify exa
     # Check both command availability and binary existence (exa is installed to /usr/local/bin/exa)
     # This handles cases where PATH is not updated or bash hash table is not refreshed
-    if command -v exa &>/dev/null || [ -f /usr/local/bin/exa ]; then
+    # Also check if binary is executable
+    local exa_installed=false
+    if command -v exa &>/dev/null; then
+        exa_installed=true
+    elif [ -f /usr/local/bin/exa ] && [ -x /usr/local/bin/exa ]; then
+        exa_installed=true
+    fi
+
+    if [ "$exa_installed" = true ]; then
         log "INFO" "✓ exa is installed" "verify_installation()"
     else
-        log "WARNING" "exa is not installed or not in PATH" "verify_installation()"
+        log "WARNING" "exa is not installed or not in PATH. Note: exa installation may have failed during setup. You can install it manually or re-run the script." "verify_installation()"
         all_ok=false
     fi
 
@@ -1686,14 +1694,16 @@ install_exa() {
     rm -rf "$temp_dir"
 
     # Verify installation (T032, FR-014)
-    if ! command -v exa &>/dev/null; then
+    # Check both command availability and binary existence
+    # PATH may not be updated immediately, so check binary file directly
+    if command -v exa &>/dev/null || [ -f /usr/local/bin/exa ]; then
+        # Visual feedback (T032, FR-015)
+        log "INFO" "[INFO] [terminal-enhancements] ✓ exa installed and configured successfully" "install_exa()"
+        return 0
+    else
         log "WARNING" "[WARN] [terminal-enhancements] Failed to install exa. Continuing with remaining tools." "install_exa()" "reason=verification_failed"
         return 1
     fi
-
-    # Visual feedback (T032, FR-015)
-    log "INFO" "[INFO] [terminal-enhancements] ✓ exa installed and configured successfully" "install_exa()"
-    return 0
 }
 
 #######################################
