@@ -284,17 +284,28 @@ verify_installation() {
     # Check both command availability and binary existence (exa is installed to /usr/local/bin/exa)
     # This handles cases where PATH is not updated or bash hash table is not refreshed
     # Also check if binary is executable
+    # Try with explicit PATH to ensure /usr/local/bin is checked
     local exa_installed=false
+    local exa_path
+
+    # First try with current PATH
     if command -v exa &>/dev/null; then
         exa_installed=true
+        exa_path=$(command -v exa)
+    # Then try with explicit /usr/local/bin in PATH
+    elif PATH="/usr/local/bin:$PATH" command -v exa &>/dev/null; then
+        exa_installed=true
+        exa_path="/usr/local/bin/exa"
+    # Finally check if binary file exists and is executable
     elif [ -f /usr/local/bin/exa ] && [ -x /usr/local/bin/exa ]; then
         exa_installed=true
+        exa_path="/usr/local/bin/exa"
     fi
 
     if [ "$exa_installed" = true ]; then
-        log "INFO" "✓ exa is installed" "verify_installation()"
+        log "INFO" "✓ exa is installed (found at: ${exa_path:-unknown})" "verify_installation()"
     else
-        log "WARNING" "exa is not installed or not in PATH. Note: exa installation may have failed during setup. You can install it manually or re-run the script." "verify_installation()"
+        log "WARNING" "exa is not installed or not in PATH. Note: exa installation may have failed during setup. You can install it manually or re-run the script. If /usr/local/bin/exa exists, ensure /usr/local/bin is in your PATH." "verify_installation()"
         all_ok=false
     fi
 
@@ -2160,6 +2171,12 @@ configure_bash_enhancements() {
     {
         echo ""
         echo "$enhancements_marker"
+        echo ""
+        echo "# PATH Configuration - Ensure /usr/local/bin is in PATH"
+        echo "# This ensures tools like exa installed to /usr/local/bin are accessible"
+        if ! echo "$PATH" | grep -q "/usr/local/bin"; then
+            echo 'export PATH="/usr/local/bin:$PATH"'
+        fi
         echo ""
         echo "# Bash History Configuration (T050, T051, T052, T053, T054, FR-008, FR-010)"
         echo "export HISTSIZE=10000"
