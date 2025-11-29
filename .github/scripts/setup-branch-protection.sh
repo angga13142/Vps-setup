@@ -40,12 +40,24 @@ set_strict_protection() {
     echo -e "${GREEN}Setting STRICT protection (require PR + CI checks)...${NC}"
     gh api "repos/${REPO_OWNER}/${REPO_NAME}/branches/${BRANCH}/protection" \
         --method PUT \
-        --field required_status_checks='{"strict":true,"contexts":["lint","test"]}' \
-        --field enforce_admins=true \
-        --field required_pull_request_reviews='{"dismissal_restrictions":{},"dismiss_stale_reviews":true,"require_code_owner_reviews":false,"required_approving_review_count":1}' \
-        --field restrictions=null \
-        --field allow_force_pushes=false \
-        --field allow_deletions=false
+        --input - <<EOF
+{
+  "required_status_checks": {
+    "strict": true,
+    "contexts": ["lint", "test"]
+  },
+  "enforce_admins": true,
+  "required_pull_request_reviews": {
+    "dismissal_restrictions": {},
+    "dismiss_stale_reviews": true,
+    "require_code_owner_reviews": false,
+    "required_approving_review_count": 1
+  },
+  "restrictions": null,
+  "allow_force_pushes": false,
+  "allow_deletions": false
+}
+EOF
     echo -e "${GREEN}✓ Strict protection enabled${NC}"
 }
 
@@ -54,11 +66,19 @@ set_flexible_protection() {
     echo -e "${GREEN}Setting FLEXIBLE protection (allow direct push with CI checks)...${NC}"
     gh api "repos/${REPO_OWNER}/${REPO_NAME}/branches/${BRANCH}/protection" \
         --method PUT \
-        --field required_status_checks='{"strict":true,"contexts":["lint","test"]}' \
-        --field enforce_admins=false \
-        --field restrictions=null \
-        --field allow_force_pushes=false \
-        --field allow_deletions=false
+        --input - <<EOF
+{
+  "required_status_checks": {
+    "strict": true,
+    "contexts": ["lint", "test"]
+  },
+  "enforce_admins": false,
+  "required_pull_request_reviews": null,
+  "restrictions": null,
+  "allow_force_pushes": false,
+  "allow_deletions": false
+}
+EOF
     echo -e "${GREEN}✓ Flexible protection enabled${NC}"
 }
 
@@ -67,11 +87,19 @@ set_minimal_protection() {
     echo -e "${GREEN}Setting MINIMAL protection (CI checks only, no PR required)...${NC}"
     gh api "repos/${REPO_OWNER}/${REPO_NAME}/branches/${BRANCH}/protection" \
         --method PUT \
-        --field required_status_checks='{"strict":true,"contexts":["lint","test"]}' \
-        --field enforce_admins=false \
-        --field restrictions=null \
-        --field allow_force_pushes=false \
-        --field allow_deletions=false
+        --input - <<EOF
+{
+  "required_status_checks": {
+    "strict": true,
+    "contexts": ["lint", "test"]
+  },
+  "enforce_admins": false,
+  "required_pull_request_reviews": null,
+  "restrictions": null,
+  "allow_force_pushes": false,
+  "allow_deletions": false
+}
+EOF
     echo -e "${GREEN}✓ Minimal protection enabled${NC}"
 }
 
