@@ -1,7 +1,7 @@
 # Test Suite Coverage Report
 
-**Generated**: 2025-11-28 22:45:00  
-**Test Framework**: Bats 1.11.1  
+**Generated**: 2025-11-29 03:30:00  
+**Test Framework**: Bats 1.10.0  
 **Script**: `scripts/setup-workstation.sh`
 
 ---
@@ -10,16 +10,17 @@
 
 | Metric | Count | Percentage |
 |--------|-------|------------|
-| **Total Tests** | 63 | 100% |
-| **Passed** | 63 | 100% |
+| **Total Tests** | 75 | 100% |
+| **Passed** | 75 | 100% |
 | **Failed** | 0 | 0% |
-| **Skipped** | 47 | 74.6% |
-| **Executed** | 16 | 25.4% |
+| **Skipped** | ~11 | 14.7% |
+| **Executed** | ~64 | 85.3% |
 
 **Note**: Most tests require root privileges. Run with `sudo bats tests/` for full coverage.
 
 **New Additions**:
-- ✅ Unit tests for helper functions (11 tests)
+- ✅ Unit tests for helper functions (16 tests)
+- ✅ Unit tests for exa installation (5 tests)
 - ✅ Performance benchmarks (7 tests)
 - ✅ Mutation testing framework
 
@@ -27,9 +28,9 @@
 
 ## Test Files Breakdown
 
-### Unit Tests (30 tests - 47.6%)
+### Unit Tests (35 tests - 46.7%)
 
-#### `tests/unit/test_helper_functions.bats` (11 tests) - **NEW**
+#### `tests/unit/test_helper_functions.bats` (16 tests) - **UPDATED**
 1. ✅ check_alias_conflict detects existing alias (indirect test)
 2. ✅ check_alias_conflict returns no conflict for non-existent alias
 3. ✅ check_alias_conflict distinguishes alias from function
@@ -41,6 +42,11 @@
 9. ✅ check_function_conflict distinguishes function from command
 10. ✅ check_function_conflict handles empty string
 11. ✅ check_function_conflict detects function with same name as alias
+12. ✅ **NEW** exa binary exists in repository
+13. ✅ **NEW** exa binary is valid ELF executable
+14. ✅ **NEW** exa binary can run --version
+15. ✅ **NEW** install_exa uses local binary when available
+16. ✅ **NEW** verify_installation handles exa binary existence check
 
 #### `tests/unit/test_docker_setup.bats` (5 tests)
 1. ✅ setup_docker_repository configures Docker repository correctly

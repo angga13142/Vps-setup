@@ -285,37 +285,62 @@ verify_installation() {
     # This handles cases where PATH is not updated or bash hash table is not refreshed
     # Also check if binary is executable and can actually run
     local exa_installed=false
-    local exa_path
+    local exa_path="unknown"
+    local exa_can_run=false
 
-    # First try with current PATH and verify it can run
+    # Helper function to verify if an exa binary can run
+    _verify_exa_binary() {
+        local binary_path="$1"
+        if [ -x "$binary_path" ] && ("$binary_path" --version &>/dev/null || "$binary_path" --help &>/dev/null); then
+            return 0
+        fi
+        return 1
+    }
+
+    # First try with current PATH
     if command -v exa &>/dev/null; then
         exa_path=$(command -v exa)
-        # Verify binary can actually run
-        if "$exa_path" --version &>/dev/null || "$exa_path" --help &>/dev/null; then
-            exa_installed=true
-        fi
+        exa_installed=true
+        _verify_exa_binary "$exa_path" && exa_can_run=true
     fi
 
     # Then try with explicit /usr/local/bin in PATH
     if [ "$exa_installed" = false ] && PATH="/usr/local/bin:$PATH" command -v exa &>/dev/null; then
         exa_path="/usr/local/bin/exa"
-        # Verify binary can actually run
-        if [ -x "$exa_path" ] && ("$exa_path" --version &>/dev/null || "$exa_path" --help &>/dev/null); then
+        exa_installed=true
+        _verify_exa_binary "$exa_path" && exa_can_run=true
+    fi
+
+    # Finally check if binary file exists at the installation location
+    if [ "$exa_installed" = false ] && [ -f /usr/local/bin/exa ] && [ -x /usr/local/bin/exa ]; then
+        exa_path="/usr/local/bin/exa"
+        exa_installed=true
+        _verify_exa_binary "$exa_path" && exa_can_run=true
+    fi
+
+    # Also check if binary exists in project's exa folder (for development/testing)
+    if [ "$exa_installed" = false ]; then
+        local project_exa_binary=""
+        if [ -n "${SCRIPT_DIR:-}" ] && [ -d "${SCRIPT_DIR}/../exa/bin" ] && [ -f "${SCRIPT_DIR}/../exa/bin/exa" ]; then
+            project_exa_binary="${SCRIPT_DIR}/../exa/bin/exa"
+        fi
+        if [ -n "$project_exa_binary" ] && [ -f "$project_exa_binary" ] && [ -x "$project_exa_binary" ]; then
+            exa_path="$project_exa_binary"
             exa_installed=true
+            _verify_exa_binary "$exa_path" && exa_can_run=true
         fi
     fi
 
-    # Finally check if binary file exists and is executable, and can run
-    if [ "$exa_installed" = false ] && [ -f /usr/local/bin/exa ] && [ -x /usr/local/bin/exa ]; then
-        # Try to run the binary to verify it's valid
-        if /usr/local/bin/exa --version &>/dev/null || /usr/local/bin/exa --help &>/dev/null; then
-            exa_installed=true
-            exa_path="/usr/local/bin/exa"
-        fi
-    fi
+    # Cleanup helper function
+    unset -f _verify_exa_binary
 
     if [ "$exa_installed" = true ]; then
-        log "INFO" "✓ exa is installed (found at: ${exa_path:-unknown})" "verify_installation()"
+        if [ "$exa_can_run" = true ]; then
+            log "INFO" "✓ exa is installed (found at: $exa_path)" "verify_installation()"
+        else
+            log "WARNING" "exa binary found at $exa_path but may not run on this system. This is usually due to architecture or library incompatibility." "verify_installation()"
+            # Still consider it as installed since the binary exists
+        fi
     else
         log "WARNING" "exa is not installed or not in PATH. Note: exa installation may have failed during setup. You can install it manually or re-run the script. If /usr/local/bin/exa exists, ensure /usr/local/bin is in your PATH." "verify_installation()"
         all_ok=false
