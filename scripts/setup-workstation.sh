@@ -283,23 +283,35 @@ verify_installation() {
     # Verify exa
     # Check both command availability and binary existence (exa is installed to /usr/local/bin/exa)
     # This handles cases where PATH is not updated or bash hash table is not refreshed
-    # Also check if binary is executable
-    # Try with explicit PATH to ensure /usr/local/bin is checked
+    # Also check if binary is executable and can actually run
     local exa_installed=false
     local exa_path
 
-    # First try with current PATH
+    # First try with current PATH and verify it can run
     if command -v exa &>/dev/null; then
-        exa_installed=true
         exa_path=$(command -v exa)
+        # Verify binary can actually run
+        if "$exa_path" --version &>/dev/null || "$exa_path" --help &>/dev/null; then
+            exa_installed=true
+        fi
+    fi
+
     # Then try with explicit /usr/local/bin in PATH
-    elif PATH="/usr/local/bin:$PATH" command -v exa &>/dev/null; then
-        exa_installed=true
+    if [ "$exa_installed" = false ] && PATH="/usr/local/bin:$PATH" command -v exa &>/dev/null; then
         exa_path="/usr/local/bin/exa"
-    # Finally check if binary file exists and is executable
-    elif [ -f /usr/local/bin/exa ] && [ -x /usr/local/bin/exa ]; then
-        exa_installed=true
-        exa_path="/usr/local/bin/exa"
+        # Verify binary can actually run
+        if [ -x "$exa_path" ] && ("$exa_path" --version &>/dev/null || "$exa_path" --help &>/dev/null); then
+            exa_installed=true
+        fi
+    fi
+
+    # Finally check if binary file exists and is executable, and can run
+    if [ "$exa_installed" = false ] && [ -f /usr/local/bin/exa ] && [ -x /usr/local/bin/exa ]; then
+        # Try to run the binary to verify it's valid
+        if /usr/local/bin/exa --version &>/dev/null || /usr/local/bin/exa --help &>/dev/null; then
+            exa_installed=true
+            exa_path="/usr/local/bin/exa"
+        fi
     fi
 
     if [ "$exa_installed" = true ]; then
@@ -1682,6 +1694,13 @@ install_exa() {
             return 1
         fi
 
+        # Verify downloaded file is a valid binary (ELF executable)
+        if ! file "$exa_binary_file" 2>/dev/null | grep -qE "(ELF|executable|binary)"; then
+            log "ERROR" "[ERROR] [terminal-enhancements] Failed to install exa: downloaded file is not a valid binary. Skipping exa installation. Remaining tools will continue installation." "install_exa()" "reason=download_failed_invalid_binary"
+            rm -rf "$temp_dir"
+            return 1
+        fi
+
         # Set binary path
         exa_binary="$exa_binary_file"
 
@@ -1832,7 +1851,26 @@ install_exa() {
     # Verify installation (T032, FR-014)
     # Check both command availability and binary existence
     # PATH may not be updated immediately, so check binary file directly
-    if command -v exa &>/dev/null || [ -f /usr/local/bin/exa ]; then
+    # Also verify binary is executable and can run
+    local exa_verified=false
+
+    # First check if binary file exists and is executable
+    if [ -f /usr/local/bin/exa ] && [ -x /usr/local/bin/exa ]; then
+        # Try to run exa with --version to verify it's a valid binary
+        if /usr/local/bin/exa --version &>/dev/null || /usr/local/bin/exa --help &>/dev/null; then
+            exa_verified=true
+        fi
+    fi
+
+    # Also check with command -v (in case PATH is already updated)
+    if [ "$exa_verified" = false ] && command -v exa &>/dev/null; then
+        # Try to run exa to verify it works
+        if exa --version &>/dev/null || exa --help &>/dev/null; then
+            exa_verified=true
+        fi
+    fi
+
+    if [ "$exa_verified" = true ]; then
         # Visual feedback (T032, FR-015)
         log "INFO" "[INFO] [terminal-enhancements] ✓ exa installed and configured successfully" "install_exa()"
         return 0
