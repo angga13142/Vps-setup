@@ -1646,9 +1646,9 @@ install_exa() {
     # Download exa binary (T030)
     # Use specific version URL to avoid redirect issues with /latest/download/
     # Latest stable version: v0.10.1 (as of 2024)
-    # Note: File name includes version: exa-linux-x86_64-musl-v0.10.1.zip
-    local zip_file="$temp_dir/exa-linux-x86_64-musl.zip"
-    local exa_url="https://github.com/ogham/exa/releases/download/v0.10.1/exa-linux-x86_64-musl-v0.10.1.zip"
+    # Note: File name includes version: exa-linux-x86_64-v0.10.1.zip
+    local zip_file="$temp_dir/exa-linux-x86_64.zip"
+    local exa_url="https://github.com/ogham/exa/releases/download/v0.10.1/exa-linux-x86_64-v0.10.1.zip"
 
     if command -v wget &>/dev/null; then
         if ! wget -q --max-redirect=5 "$exa_url" -O "$zip_file"; then
