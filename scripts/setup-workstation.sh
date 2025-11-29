@@ -1595,29 +1595,123 @@ install_exa() {
 
     log "INFO" "Installing exa (modern ls)..." "install_exa()" "username=$username"
 
-    # Best Practice: Try APT installation first (preferred method for Debian)
-    # This is more secure, easier to maintain, and integrates with package management
-    if dpkg-query -W -f='${Status}' "exa" 2>/dev/null | grep -q "install ok installed"; then
-        log "INFO" "exa already installed via APT" "install_exa()" "username=$username"
-        return 0
+    # Determine script directory to locate exa folder
+    local script_dir
+    script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+    local exa_dir="$script_dir/exa"
+
+    # Check if local exa folder exists with required files
+    local use_local=false
+    if [ -d "$exa_dir" ] && [ -f "$exa_dir/bin/exa" ] && [ -x "$exa_dir/bin/exa" ]; then
+        log "INFO" "Found local exa folder, using local files for installation..." "install_exa()" "username=$username exa_dir=$exa_dir"
+        use_local=true
     fi
 
-    # Attempt APT installation
-    log "INFO" "Attempting to install exa via APT (preferred method)..." "install_exa()" "username=$username"
-    if apt-get update -qq && apt-get install -y exa 2>/dev/null; then
-        # Verify APT installation
-        if command -v exa &>/dev/null; then
-            log "INFO" "[INFO] [terminal-enhancements] ✓ exa installed successfully via APT" "install_exa()" "username=$username"
+    # If local files available, use them; otherwise try APT, then GitHub fallback
+    if [ "$use_local" = true ]; then
+        # Install from local exa folder
+        local exa_binary_file="$exa_dir/bin/exa"
+
+        # Verify local binary is valid
+        if [ ! -s "$exa_binary_file" ]; then
+            log "ERROR" "[ERROR] [terminal-enhancements] Local exa binary is empty. Falling back to APT..." "install_exa()" "reason=local_binary_empty"
+            use_local=false
+        elif command -v file &>/dev/null; then
+            local file_output
+            file_output=$(file "$exa_binary_file" 2>/dev/null)
+            if [ $? -ne 0 ] || ! echo "$file_output" | grep -qE "(ELF|executable|binary)"; then
+                log "ERROR" "[ERROR] [terminal-enhancements] Local exa binary is not valid. Falling back to APT..." "install_exa()" "reason=local_binary_invalid"
+                use_local=false
+            fi
+        fi
+
+        # If local binary is valid, proceed with local installation
+        if [ "$use_local" = true ]; then
+            log "INFO" "Installing exa from local folder..." "install_exa()" "username=$username exa_dir=$exa_dir"
+
+            # Install binary
+            if ! cp "$exa_binary_file" /usr/local/bin/exa 2>/dev/null; then
+                log "ERROR" "[ERROR] [terminal-enhancements] Failed to install exa: permission denied or filesystem error during installation." "install_exa()" "reason=installation_failed"
+                return 1
+            fi
+            chmod +x /usr/local/bin/exa 2>/dev/null || true
+
+            # Install bash completion from local folder
+            if [ -d "/usr/share/bash-completion/completions" ] && [ -f "$exa_dir/completions/exa.bash" ]; then
+                if cp "$exa_dir/completions/exa.bash" /usr/share/bash-completion/completions/exa 2>/dev/null; then
+                    chmod 644 /usr/share/bash-completion/completions/exa 2>/dev/null || true
+                    log "INFO" "Bash completion installed from local folder" "install_exa()" "username=$username"
+                fi
+            fi
+
+            # Install zsh completion from local folder
+            if [ -f "$exa_dir/completions/exa.zsh" ]; then
+                mkdir -p /usr/local/share/zsh/site-functions 2>/dev/null || true
+                if cp "$exa_dir/completions/exa.zsh" /usr/local/share/zsh/site-functions/_exa 2>/dev/null; then
+                    chmod 644 /usr/local/share/zsh/site-functions/_exa 2>/dev/null || true
+                    log "INFO" "Zsh completion installed from local folder" "install_exa()" "username=$username"
+                fi
+            fi
+
+            # Install man pages from local folder
+            local man1_dir="/usr/local/share/man/man1"
+            local man5_dir="/usr/local/share/man/man5"
+            mkdir -p "$man1_dir" "$man5_dir" 2>/dev/null || true
+
+            # Install exa.1 man page
+            if [ -f "$exa_dir/man/exa.1" ]; then
+                if cp "$exa_dir/man/exa.1" "$man1_dir/exa.1" 2>/dev/null; then
+                    chmod 644 "$man1_dir/exa.1" 2>/dev/null || true
+                    log "INFO" "Man page exa.1 installed from local folder" "install_exa()" "username=$username"
+                fi
+            fi
+
+            # Install exa_colors.5 man page
+            if [ -f "$exa_dir/man/exa_colors.5" ]; then
+                if cp "$exa_dir/man/exa_colors.5" "$man5_dir/exa_colors.5" 2>/dev/null; then
+                    chmod 644 "$man5_dir/exa_colors.5" 2>/dev/null || true
+                    log "INFO" "Man page exa_colors.5 installed from local folder" "install_exa()" "username=$username"
+                fi
+            fi
+
+            # Update man database if mandb is available
+            if command -v mandb &>/dev/null; then
+                mandb -q 2>/dev/null || true
+            fi
+
+            # Verify installation
+            if ! command -v exa &>/dev/null; then
+                log "WARNING" "[WARN] [terminal-enhancements] Failed to install exa. Verification failed." "install_exa()" "username=$username reason=verification_failed"
+                return 1
+            fi
+
+            log "INFO" "[INFO] [terminal-enhancements] ✓ exa installed and configured successfully from local folder" "install_exa()" "username=$username"
             return 0
         fi
-    fi
+    else
+        # If local installation not available or failed, try APT then GitHub
+        # Best Practice: Try APT installation first (preferred method for Debian)
+        if dpkg-query -W -f='${Status}' "exa" 2>/dev/null | grep -q "install ok installed"; then
+            log "INFO" "exa already installed via APT" "install_exa()" "username=$username"
+            return 0
+        fi
 
-    # Fallback: Download binary from GitHub releases if APT fails or package not available
-    log "INFO" "APT installation not available, falling back to GitHub binary..." "install_exa()" "username=$username"
+        # Attempt APT installation
+        log "INFO" "Attempting to install exa via APT (preferred method)..." "install_exa()" "username=$username"
+        if apt-get update -qq && apt-get install -y exa 2>/dev/null; then
+            # Verify APT installation
+            if command -v exa &>/dev/null; then
+                log "INFO" "[INFO] [terminal-enhancements] ✓ exa installed successfully via APT" "install_exa()" "username=$username"
+                return 0
+            fi
+        fi
 
-    # Check for download command
-    local download_cmd=""
-    local download_opts=""
+        # Fallback: Download binary from GitHub releases if APT fails
+        log "INFO" "APT installation not available, falling back to GitHub binary..." "install_exa()" "username=$username"
+
+        # Check for download command
+        local download_cmd=""
+        local download_opts=""
     if command -v wget &>/dev/null; then
         download_cmd="wget"
         download_opts="-q --max-redirect=5"
@@ -1696,95 +1790,107 @@ install_exa() {
         fi
     fi
 
-    # Set executable permission on binary
-    chmod +x "$exa_binary_file" 2>/dev/null || true
+        # Install from downloaded binary (GitHub fallback)
+        # Set executable permission on binary
+        chmod +x "$exa_binary_file" 2>/dev/null || true
 
-    # Install binary to /usr/local/bin/exa
-    if ! cp "$exa_binary_file" /usr/local/bin/exa 2>/dev/null; then
-        log "ERROR" "[ERROR] [terminal-enhancements] Failed to install exa: permission denied or filesystem error during installation." "install_exa()" "reason=installation_failed"
-        rm -rf "$temp_dir" 2>/dev/null || true
-        return 1
-    fi
+        # Install binary to /usr/local/bin/exa
+        if ! cp "$exa_binary_file" /usr/local/bin/exa 2>/dev/null; then
+            log "ERROR" "[ERROR] [terminal-enhancements] Failed to install exa: permission denied or filesystem error during installation." "install_exa()" "reason=installation_failed"
+            rm -rf "$temp_dir" 2>/dev/null || true
+            return 1
+        fi
 
-    # Set permissions on installed binary
-    chmod +x /usr/local/bin/exa 2>/dev/null || true
+        # Set permissions on installed binary
+        chmod +x /usr/local/bin/exa 2>/dev/null || true
 
-    # Download and install completions (optional, from GitHub)
-    # Bash completion
-    if [ -d "/usr/share/bash-completion/completions" ]; then
-        local bash_completion_url="https://github.com/ogham/exa/releases/latest/download/completions/exa.bash"
-        local bash_completion_file="/usr/share/bash-completion/completions/exa"
+        # Download and install completions (optional, from GitHub)
+        # Bash completion
+        if [ -d "/usr/share/bash-completion/completions" ]; then
+            local bash_completion_url="https://github.com/ogham/exa/releases/latest/download/completions/exa.bash"
+            local bash_completion_file="/usr/share/bash-completion/completions/exa"
+
+            if [ "$download_cmd" = "wget" ]; then
+                wget $download_opts "$bash_completion_url" -O "$bash_completion_file" 2>/dev/null || true
+            else
+                curl $download_opts "$bash_completion_url" -o "$bash_completion_file" 2>/dev/null || true
+            fi
+            if [ -f "$bash_completion_file" ]; then
+                chmod 644 "$bash_completion_file" 2>/dev/null || true
+                log "INFO" "Bash completion installed" "install_exa()" "username=$username"
+            fi
+        fi
+
+        # Zsh completion
+        local zsh_completion_url="https://github.com/ogham/exa/releases/latest/download/completions/exa.zsh"
+        local zsh_completion_file="/usr/local/share/zsh/site-functions/_exa"
+
+        mkdir -p /usr/local/share/zsh/site-functions 2>/dev/null || true
 
         if [ "$download_cmd" = "wget" ]; then
-            wget $download_opts "$bash_completion_url" -O "$bash_completion_file" 2>/dev/null || true
+            wget $download_opts "$zsh_completion_url" -O "$zsh_completion_file" 2>/dev/null || true
         else
-            curl $download_opts "$bash_completion_url" -o "$bash_completion_file" 2>/dev/null || true
+            curl $download_opts "$zsh_completion_url" -o "$zsh_completion_file" 2>/dev/null || true
         fi
-        if [ -f "$bash_completion_file" ]; then
-            chmod 644 "$bash_completion_file" 2>/dev/null || true
-            log "INFO" "Bash completion installed" "install_exa()" "username=$username"
+        if [ -f "$zsh_completion_file" ]; then
+            chmod 644 "$zsh_completion_file" 2>/dev/null || true
+            log "INFO" "Zsh completion installed" "install_exa()" "username=$username"
         fi
+
+        # Download and install man pages (optional, from GitHub)
+        local man1_dir="/usr/local/share/man/man1"
+        local man5_dir="/usr/local/share/man/man5"
+
+        mkdir -p "$man1_dir" "$man5_dir" 2>/dev/null || true
+
+        # Install exa.1 man page
+        local exa_man1_url="https://github.com/ogham/exa/releases/latest/download/man/exa.1"
+        local exa_man1_file="$man1_dir/exa.1"
+
+        if [ "$download_cmd" = "wget" ]; then
+            wget $download_opts "$exa_man1_url" -O "$exa_man1_file" 2>/dev/null || true
+        else
+            curl $download_opts "$exa_man1_url" -o "$exa_man1_file" 2>/dev/null || true
+        fi
+        if [ -f "$exa_man1_file" ]; then
+            chmod 644 "$exa_man1_file" 2>/dev/null || true
+            log "INFO" "Man page exa.1 installed" "install_exa()" "username=$username"
+        fi
+
+        # Install exa_colors.5 man page
+        local exa_colors_man5_url="https://github.com/ogham/exa/releases/latest/download/man/exa_colors.5"
+        local exa_colors_man5_file="$man5_dir/exa_colors.5"
+
+        if [ "$download_cmd" = "wget" ]; then
+            wget $download_opts "$exa_colors_man5_url" -O "$exa_colors_man5_file" 2>/dev/null || true
+        else
+            curl $download_opts "$exa_colors_man5_url" -o "$exa_colors_man5_file" 2>/dev/null || true
+        fi
+        if [ -f "$exa_colors_man5_file" ]; then
+            chmod 644 "$exa_colors_man5_file" 2>/dev/null || true
+            log "INFO" "Man page exa_colors.5 installed" "install_exa()" "username=$username"
+        fi
+
+        # Update man database if mandb is available
+        if command -v mandb &>/dev/null; then
+            mandb -q 2>/dev/null || true
+        fi
+
+        # Cleanup temporary directory
+        rm -rf "$temp_dir" 2>/dev/null || true
+
+        # Verify installation (T032, FR-014)
+        if ! command -v exa &>/dev/null; then
+            log "WARNING" "[WARN] [terminal-enhancements] Failed to install exa. Verification failed." "install_exa()" "username=$username reason=verification_failed"
+            return 1
+        fi
+
+        # Visual feedback (T032, FR-015)
+        log "INFO" "[INFO] [terminal-enhancements] ✓ exa installed and configured successfully" "install_exa()" "username=$username"
+        return 0
     fi
 
-    # Zsh completion
-    local zsh_completion_url="https://github.com/ogham/exa/releases/latest/download/completions/exa.zsh"
-    local zsh_completion_file="/usr/local/share/zsh/site-functions/_exa"
-
-    mkdir -p /usr/local/share/zsh/site-functions 2>/dev/null || true
-
-    if [ "$download_cmd" = "wget" ]; then
-        wget $download_opts "$zsh_completion_url" -O "$zsh_completion_file" 2>/dev/null || true
-    else
-        curl $download_opts "$zsh_completion_url" -o "$zsh_completion_file" 2>/dev/null || true
-    fi
-    if [ -f "$zsh_completion_file" ]; then
-        chmod 644 "$zsh_completion_file" 2>/dev/null || true
-        log "INFO" "Zsh completion installed" "install_exa()" "username=$username"
-    fi
-
-    # Download and install man pages (optional, from GitHub)
-    local man1_dir="/usr/local/share/man/man1"
-    local man5_dir="/usr/local/share/man/man5"
-
-    mkdir -p "$man1_dir" "$man5_dir" 2>/dev/null || true
-
-    # Install exa.1 man page
-    local exa_man1_url="https://github.com/ogham/exa/releases/latest/download/man/exa.1"
-    local exa_man1_file="$man1_dir/exa.1"
-
-    if [ "$download_cmd" = "wget" ]; then
-        wget $download_opts "$exa_man1_url" -O "$exa_man1_file" 2>/dev/null || true
-    else
-        curl $download_opts "$exa_man1_url" -o "$exa_man1_file" 2>/dev/null || true
-    fi
-    if [ -f "$exa_man1_file" ]; then
-        chmod 644 "$exa_man1_file" 2>/dev/null || true
-        log "INFO" "Man page exa.1 installed" "install_exa()" "username=$username"
-    fi
-
-    # Install exa_colors.5 man page
-    local exa_colors_man5_url="https://github.com/ogham/exa/releases/latest/download/man/exa_colors.5"
-    local exa_colors_man5_file="$man5_dir/exa_colors.5"
-
-    if [ "$download_cmd" = "wget" ]; then
-        wget $download_opts "$exa_colors_man5_url" -O "$exa_colors_man5_file" 2>/dev/null || true
-    else
-        curl $download_opts "$exa_colors_man5_url" -o "$exa_colors_man5_file" 2>/dev/null || true
-    fi
-    if [ -f "$exa_colors_man5_file" ]; then
-        chmod 644 "$exa_colors_man5_file" 2>/dev/null || true
-        log "INFO" "Man page exa_colors.5 installed" "install_exa()" "username=$username"
-    fi
-
-    # Update man database if mandb is available
-    if command -v mandb &>/dev/null; then
-        mandb -q 2>/dev/null || true
-    fi
-
-    # Cleanup temporary directory
-    rm -rf "$temp_dir" 2>/dev/null || true
-
-    # Verify installation (T032, FR-014)
+    # Final verification (should not reach here if local or APT succeeded)
     if ! command -v exa &>/dev/null; then
         log "WARNING" "[WARN] [terminal-enhancements] Failed to install exa. Verification failed." "install_exa()" "username=$username reason=verification_failed"
         return 1
