@@ -1602,15 +1602,11 @@ install_exa() {
 
     # Check if local exa folder exists with required files
     local use_local=false
-    if [ -d "$exa_dir" ] && [ -f "$exa_dir/bin/exa" ] && [ -x "$exa_dir/bin/exa" ]; then
-        log "INFO" "Found local exa folder, using local files for installation..." "install_exa()" "username=$username exa_dir=$exa_dir"
-        use_local=true
-    fi
+    local exa_binary_file=""
 
-    # If local files available, use them; otherwise try APT, then GitHub fallback
-    if [ "$use_local" = true ]; then
-        # Install from local exa folder
-        local exa_binary_file="$exa_dir/bin/exa"
+    if [ -d "$exa_dir" ] && [ -f "$exa_dir/bin/exa" ] && [ -x "$exa_dir/bin/exa" ]; then
+        log "INFO" "Found local exa folder, validating local files..." "install_exa()" "username=$username exa_dir=$exa_dir"
+        exa_binary_file="$exa_dir/bin/exa"
 
         # Verify local binary is valid
         if [ ! -s "$exa_binary_file" ]; then
@@ -1622,72 +1618,77 @@ install_exa() {
             if [ $? -ne 0 ] || ! echo "$file_output" | grep -qE "(ELF|executable|binary)"; then
                 log "ERROR" "[ERROR] [terminal-enhancements] Local exa binary is not valid. Falling back to APT..." "install_exa()" "reason=local_binary_invalid"
                 use_local=false
+            else
+                use_local=true
+            fi
+        else
+            # If file command not available, assume binary is valid if it exists and is executable
+            use_local=true
+        fi
+    fi
+
+    # If local files available and valid, use them; otherwise try APT, then GitHub fallback
+    if [ "$use_local" = true ] && [ -n "$exa_binary_file" ]; then
+        log "INFO" "Installing exa from local folder..." "install_exa()" "username=$username exa_dir=$exa_dir"
+
+        # Install binary
+        if ! cp "$exa_binary_file" /usr/local/bin/exa 2>/dev/null; then
+            log "ERROR" "[ERROR] [terminal-enhancements] Failed to install exa: permission denied or filesystem error during installation." "install_exa()" "reason=installation_failed"
+            return 1
+        fi
+        chmod +x /usr/local/bin/exa 2>/dev/null || true
+
+        # Install bash completion from local folder
+        if [ -d "/usr/share/bash-completion/completions" ] && [ -f "$exa_dir/completions/exa.bash" ]; then
+            if cp "$exa_dir/completions/exa.bash" /usr/share/bash-completion/completions/exa 2>/dev/null; then
+                chmod 644 /usr/share/bash-completion/completions/exa 2>/dev/null || true
+                log "INFO" "Bash completion installed from local folder" "install_exa()" "username=$username"
             fi
         fi
 
-        # If local binary is valid, proceed with local installation
-        if [ "$use_local" = true ]; then
-            log "INFO" "Installing exa from local folder..." "install_exa()" "username=$username exa_dir=$exa_dir"
-
-            # Install binary
-            if ! cp "$exa_binary_file" /usr/local/bin/exa 2>/dev/null; then
-                log "ERROR" "[ERROR] [terminal-enhancements] Failed to install exa: permission denied or filesystem error during installation." "install_exa()" "reason=installation_failed"
-                return 1
+        # Install zsh completion from local folder
+        if [ -f "$exa_dir/completions/exa.zsh" ]; then
+            mkdir -p /usr/local/share/zsh/site-functions 2>/dev/null || true
+            if cp "$exa_dir/completions/exa.zsh" /usr/local/share/zsh/site-functions/_exa 2>/dev/null; then
+                chmod 644 /usr/local/share/zsh/site-functions/_exa 2>/dev/null || true
+                log "INFO" "Zsh completion installed from local folder" "install_exa()" "username=$username"
             fi
-            chmod +x /usr/local/bin/exa 2>/dev/null || true
-
-            # Install bash completion from local folder
-            if [ -d "/usr/share/bash-completion/completions" ] && [ -f "$exa_dir/completions/exa.bash" ]; then
-                if cp "$exa_dir/completions/exa.bash" /usr/share/bash-completion/completions/exa 2>/dev/null; then
-                    chmod 644 /usr/share/bash-completion/completions/exa 2>/dev/null || true
-                    log "INFO" "Bash completion installed from local folder" "install_exa()" "username=$username"
-                fi
-            fi
-
-            # Install zsh completion from local folder
-            if [ -f "$exa_dir/completions/exa.zsh" ]; then
-                mkdir -p /usr/local/share/zsh/site-functions 2>/dev/null || true
-                if cp "$exa_dir/completions/exa.zsh" /usr/local/share/zsh/site-functions/_exa 2>/dev/null; then
-                    chmod 644 /usr/local/share/zsh/site-functions/_exa 2>/dev/null || true
-                    log "INFO" "Zsh completion installed from local folder" "install_exa()" "username=$username"
-                fi
-            fi
-
-            # Install man pages from local folder
-            local man1_dir="/usr/local/share/man/man1"
-            local man5_dir="/usr/local/share/man/man5"
-            mkdir -p "$man1_dir" "$man5_dir" 2>/dev/null || true
-
-            # Install exa.1 man page
-            if [ -f "$exa_dir/man/exa.1" ]; then
-                if cp "$exa_dir/man/exa.1" "$man1_dir/exa.1" 2>/dev/null; then
-                    chmod 644 "$man1_dir/exa.1" 2>/dev/null || true
-                    log "INFO" "Man page exa.1 installed from local folder" "install_exa()" "username=$username"
-                fi
-            fi
-
-            # Install exa_colors.5 man page
-            if [ -f "$exa_dir/man/exa_colors.5" ]; then
-                if cp "$exa_dir/man/exa_colors.5" "$man5_dir/exa_colors.5" 2>/dev/null; then
-                    chmod 644 "$man5_dir/exa_colors.5" 2>/dev/null || true
-                    log "INFO" "Man page exa_colors.5 installed from local folder" "install_exa()" "username=$username"
-                fi
-            fi
-
-            # Update man database if mandb is available
-            if command -v mandb &>/dev/null; then
-                mandb -q 2>/dev/null || true
-            fi
-
-            # Verify installation
-            if ! command -v exa &>/dev/null; then
-                log "WARNING" "[WARN] [terminal-enhancements] Failed to install exa. Verification failed." "install_exa()" "username=$username reason=verification_failed"
-                return 1
-            fi
-
-            log "INFO" "[INFO] [terminal-enhancements] ✓ exa installed and configured successfully from local folder" "install_exa()" "username=$username"
-            return 0
         fi
+
+        # Install man pages from local folder
+        local man1_dir="/usr/local/share/man/man1"
+        local man5_dir="/usr/local/share/man/man5"
+        mkdir -p "$man1_dir" "$man5_dir" 2>/dev/null || true
+
+        # Install exa.1 man page
+        if [ -f "$exa_dir/man/exa.1" ]; then
+            if cp "$exa_dir/man/exa.1" "$man1_dir/exa.1" 2>/dev/null; then
+                chmod 644 "$man1_dir/exa.1" 2>/dev/null || true
+                log "INFO" "Man page exa.1 installed from local folder" "install_exa()" "username=$username"
+            fi
+        fi
+
+        # Install exa_colors.5 man page
+        if [ -f "$exa_dir/man/exa_colors.5" ]; then
+            if cp "$exa_dir/man/exa_colors.5" "$man5_dir/exa_colors.5" 2>/dev/null; then
+                chmod 644 "$man5_dir/exa_colors.5" 2>/dev/null || true
+                log "INFO" "Man page exa_colors.5 installed from local folder" "install_exa()" "username=$username"
+            fi
+        fi
+
+        # Update man database if mandb is available
+        if command -v mandb &>/dev/null; then
+            mandb -q 2>/dev/null || true
+        fi
+
+        # Verify installation
+        if ! command -v exa &>/dev/null; then
+            log "WARNING" "[WARN] [terminal-enhancements] Failed to install exa. Verification failed." "install_exa()" "username=$username reason=verification_failed"
+            return 1
+        fi
+
+        log "INFO" "[INFO] [terminal-enhancements] ✓ exa installed and configured successfully from local folder" "install_exa()" "username=$username"
+        return 0
     else
         # If local installation not available or failed, try APT then GitHub
         # Best Practice: Try APT installation first (preferred method for Debian)
