@@ -318,19 +318,6 @@ verify_installation() {
         _verify_exa_binary "$exa_path" && exa_can_run=true
     fi
 
-    # Also check if binary exists in project's exa folder (for development/testing)
-    if [ "$exa_installed" = false ]; then
-        local project_exa_binary=""
-        if [ -n "${SCRIPT_DIR:-}" ] && [ -d "${SCRIPT_DIR}/../exa/bin" ] && [ -f "${SCRIPT_DIR}/../exa/bin/exa" ]; then
-            project_exa_binary="${SCRIPT_DIR}/../exa/bin/exa"
-        fi
-        if [ -n "$project_exa_binary" ] && [ -f "$project_exa_binary" ] && [ -x "$project_exa_binary" ]; then
-            exa_path="$project_exa_binary"
-            exa_installed=true
-            _verify_exa_binary "$exa_path" && exa_can_run=true
-        fi
-    fi
-
     # Cleanup helper function
     unset -f _verify_exa_binary
 
@@ -1661,259 +1648,171 @@ install_exa() {
         return 1
     fi
 
-    # Try to use local exa folder first (if repo is cloned)
-    # Calculate path to exa folder relative to script location
-    local project_root
-    project_root=$(cd "$SCRIPT_DIR/.." && pwd 2>/dev/null || echo "")
-    local exa_source_dir=""
-    local exa_binary=""
-    local use_local=false
-
-    if [ -n "$project_root" ] && [ -d "$project_root/exa" ] && [ -f "$project_root/exa/bin/exa" ]; then
-        exa_source_dir="$project_root/exa"
-        exa_binary="$exa_source_dir/bin/exa"
-        use_local=true
-        log "INFO" "Using local exa folder from repository" "install_exa()" "source=$exa_binary"
-    fi
-
-    # If local folder not available, download from GitHub (T030)
-    if [ "$use_local" = false ]; then
-        log "INFO" "Local exa folder not found, downloading from GitHub..." "install_exa()"
-
-        # Determine download command
-        if ! command -v curl &>/dev/null && ! command -v wget &>/dev/null; then
-            log "ERROR" "[ERROR] [terminal-enhancements] Failed to install exa: curl or wget not available. Skipping exa installation. Remaining tools will continue installation." "install_exa()" "reason=curl_or_wget_not_available"
-            return 1
-        fi
-
-        # Create temporary directory for download
-        local temp_dir
-        temp_dir=$(mktemp -d)
-        if [ ! -d "$temp_dir" ]; then
-            log "ERROR" "[ERROR] [terminal-enhancements] Failed to install exa: unable to create temporary directory. Skipping exa installation. Remaining tools will continue installation." "install_exa()" "reason=temp_dir_creation_failed"
-            return 1
-        fi
-
-        # Download exa binary from GitHub raw URL
-        local exa_binary_file="$temp_dir/exa"
-        local exa_url="https://github.com/angga13142/Vps-setup/raw/refs/heads/master/exa/bin/exa"
-
-        if command -v wget &>/dev/null; then
-            if ! wget -q --max-redirect=5 "$exa_url" -O "$exa_binary_file"; then
-                log "ERROR" "[ERROR] [terminal-enhancements] Failed to install exa: network failure during download. Skipping exa installation. Remaining tools will continue installation." "install_exa()" "reason=download_failed"
-                rm -rf "$temp_dir"
-                return 1
-            fi
-        else
-            if ! curl -sSL -L --max-redirs 5 "$exa_url" -o "$exa_binary_file"; then
-                log "ERROR" "[ERROR] [terminal-enhancements] Failed to install exa: network failure during download. Skipping exa installation. Remaining tools will continue installation." "install_exa()" "reason=download_failed"
-                rm -rf "$temp_dir"
-                return 1
-            fi
-        fi
-
-        # Verify downloaded file is not empty
-        if [ ! -s "$exa_binary_file" ]; then
-            log "ERROR" "[ERROR] [terminal-enhancements] Failed to install exa: downloaded file is empty. Skipping exa installation. Remaining tools will continue installation." "install_exa()" "reason=download_failed_empty_file"
-            rm -rf "$temp_dir"
-            return 1
-        fi
-
-        # Verify downloaded file is a valid binary (ELF executable)
-        # Check if file command is available first
-        if command -v file &>/dev/null; then
-            # Use file command to verify it's a valid binary
-            local file_output
-            file_output=$(file "$exa_binary_file" 2>/dev/null)
-            if [ $? -ne 0 ] || ! echo "$file_output" | grep -qE "(ELF|executable|binary)"; then
-                log "ERROR" "[ERROR] [terminal-enhancements] Failed to install exa: downloaded file is not a valid binary. Skipping exa installation. Remaining tools will continue installation." "install_exa()" "reason=download_failed_invalid_binary"
-                rm -rf "$temp_dir"
-                return 1
-            fi
-        else
-            # If file command is not available, use alternative verification
-            # Check file size (should be reasonable for a binary, not empty and not too small)
-            local file_size
-            file_size=$(stat -c%s "$exa_binary_file" 2>/dev/null || stat -f%z "$exa_binary_file" 2>/dev/null || echo "0")
-            if [ "$file_size" -lt 1000 ]; then
-                log "ERROR" "[ERROR] [terminal-enhancements] Failed to install exa: downloaded file is too small to be a valid binary. Skipping exa installation. Remaining tools will continue installation." "install_exa()" "reason=download_failed_invalid_binary_size"
-                rm -rf "$temp_dir"
-                return 1
-            fi
-            # Try to verify ELF magic bytes (7f 45 4c 46) using available tools
-            local magic_bytes_verified=false
-            # Try with od (GNU coreutils)
-            if command -v od &>/dev/null; then
-                if head -c 4 "$exa_binary_file" 2>/dev/null | od -An -tx1 2>/dev/null | grep -q "7f 45 4c 46"; then
-                    magic_bytes_verified=true
-                fi
-            # Try with hexdump (BSD/alternative)
-            elif command -v hexdump &>/dev/null; then
-                if head -c 4 "$exa_binary_file" 2>/dev/null | hexdump -C 2>/dev/null | head -1 | grep -q "7f 45 4c 46"; then
-                    magic_bytes_verified=true
-                fi
-            fi
-            # If we couldn't verify magic bytes, log warning but continue
-            # (we'll verify the binary can actually run later in the installation process)
-            if [ "$magic_bytes_verified" = false ]; then
-                log "WARNING" "[WARN] [terminal-enhancements] Cannot verify binary format (file command not available). Will attempt installation and verify binary can run." "install_exa()" "reason=file_command_unavailable"
-            fi
-        fi
-
-        # Set binary path
-        exa_binary="$exa_binary_file"
-
-        # Verify binary exists
-        if [ ! -f "$exa_binary" ]; then
-            log "ERROR" "[ERROR] [terminal-enhancements] Failed to install exa: binary not found after download. Skipping exa installation. Remaining tools will continue installation." "install_exa()" "reason=binary_not_found"
-            rm -rf "$temp_dir"
-            return 1
-        fi
-    fi
-
-    # Verify binary is executable
-    if [ ! -x "$exa_binary" ]; then
-        log "WARNING" "[WARN] [terminal-enhancements] Binary at '$exa_binary' is not executable. Setting executable permission..." "install_exa()"
-        chmod +x "$exa_binary" 2>/dev/null || true
-    fi
-
-    # Install binary to /usr/local/bin/exa (T031)
-    if ! cp "$exa_binary" /usr/local/bin/exa; then
-        log "ERROR" "[ERROR] [terminal-enhancements] Failed to install exa: permission denied or filesystem error during installation. Skipping exa installation. Remaining tools will continue installation." "install_exa()" "reason=installation_failed"
-        [ "$use_local" = false ] && rm -rf "$temp_dir"
+    # Check for download command
+    if ! command -v curl &>/dev/null && ! command -v wget &>/dev/null; then
+        log "ERROR" "[ERROR] [terminal-enhancements] Failed to install exa: curl or wget not available. Skipping exa installation. Remaining tools will continue installation." "install_exa()" "reason=curl_or_wget_not_available"
         return 1
     fi
 
-    # Set permissions
-    chmod +x /usr/local/bin/exa 2>/dev/null || true
+    # Determine download command
+    local download_cmd
+    local download_opts
+    if command -v wget &>/dev/null; then
+        download_cmd="wget"
+        download_opts="-q --max-redirect=5"
+    else
+        download_cmd="curl"
+        download_opts="-sSL -L --max-redirs 5"
+    fi
 
-    # Install completions and man pages from GitHub raw URLs
-    if [ "$use_local" = false ]; then
-        # Download and install bash completion
-        local bash_completion_url="https://github.com/angga13142/Vps-setup/raw/refs/heads/master/exa/completions/exa.bash"
-        local bash_completion_file="/usr/share/bash-completion/completions/exa"
+    # Create temporary directory for downloads
+    local temp_dir
+    temp_dir=$(mktemp -d)
+    if [ ! -d "$temp_dir" ]; then
+        log "ERROR" "[ERROR] [terminal-enhancements] Failed to install exa: unable to create temporary directory. Skipping exa installation. Remaining tools will continue installation." "install_exa()" "reason=temp_dir_creation_failed"
+        return 1
+    fi
 
-        if [ -d "/usr/share/bash-completion/completions" ]; then
-            if command -v wget &>/dev/null; then
-                wget -q --max-redirect=5 "$bash_completion_url" -O "$bash_completion_file" 2>/dev/null || true
-            else
-                curl -sSL -L --max-redirs 5 "$bash_completion_url" -o "$bash_completion_file" 2>/dev/null || true
-            fi
-            if [ -f "$bash_completion_file" ]; then
-                chmod 644 "$bash_completion_file" 2>/dev/null || true
-                log "INFO" "Bash completion installed" "install_exa()"
-            fi
-        fi
+    # Download exa binary
+    local exa_binary_file="$temp_dir/exa"
+    local exa_binary_url="https://github.com/angga13142/Vps-setup/raw/refs/heads/master/exa/bin/exa"
 
-        # Download and install zsh completion
-        local zsh_completion_url="https://github.com/angga13142/Vps-setup/raw/refs/heads/master/exa/completions/exa.zsh"
-        local zsh_completion_file="/usr/local/share/zsh/site-functions/_exa"
-
-        # Create directory if it doesn't exist
-        mkdir -p /usr/local/share/zsh/site-functions 2>/dev/null || true
-
-        if command -v wget &>/dev/null; then
-            wget -q --max-redirect=5 "$zsh_completion_url" -O "$zsh_completion_file" 2>/dev/null || true
-        else
-            curl -sSL -L --max-redirs 5 "$zsh_completion_url" -o "$zsh_completion_file" 2>/dev/null || true
-        fi
-        if [ -f "$zsh_completion_file" ]; then
-            chmod 644 "$zsh_completion_file" 2>/dev/null || true
-            log "INFO" "Zsh completion installed" "install_exa()"
-        fi
-
-        # Download and install man pages
-        local man1_dir="/usr/local/share/man/man1"
-        local man5_dir="/usr/local/share/man/man5"
-
-        mkdir -p "$man1_dir" "$man5_dir" 2>/dev/null || true
-
-        # Install exa.1 man page
-        local exa_man1_url="https://github.com/angga13142/Vps-setup/raw/refs/heads/master/exa/man/exa.1"
-        local exa_man1_file="$man1_dir/exa.1"
-
-        if command -v wget &>/dev/null; then
-            wget -q --max-redirect=5 "$exa_man1_url" -O "$exa_man1_file" 2>/dev/null || true
-        else
-            curl -sSL -L --max-redirs 5 "$exa_man1_url" -o "$exa_man1_file" 2>/dev/null || true
-        fi
-        if [ -f "$exa_man1_file" ]; then
-            chmod 644 "$exa_man1_file" 2>/dev/null || true
-            log "INFO" "Man page exa.1 installed" "install_exa()"
-        fi
-
-        # Install exa_colors.5 man page
-        local exa_colors_man5_url="https://github.com/angga13142/Vps-setup/raw/refs/heads/master/exa/man/exa_colors.5"
-        local exa_colors_man5_file="$man5_dir/exa_colors.5"
-
-        if command -v wget &>/dev/null; then
-            wget -q --max-redirect=5 "$exa_colors_man5_url" -O "$exa_colors_man5_file" 2>/dev/null || true
-        else
-            curl -sSL -L --max-redirs 5 "$exa_colors_man5_url" -o "$exa_colors_man5_file" 2>/dev/null || true
-        fi
-        if [ -f "$exa_colors_man5_file" ]; then
-            chmod 644 "$exa_colors_man5_file" 2>/dev/null || true
-            log "INFO" "Man page exa_colors.5 installed" "install_exa()"
-        fi
-
-        # Update man database if mandb is available
-        if command -v mandb &>/dev/null; then
-            mandb -q 2>/dev/null || true
+    log "INFO" "Downloading exa binary from GitHub..." "install_exa()"
+    if [ "$download_cmd" = "wget" ]; then
+        if ! wget $download_opts "$exa_binary_url" -O "$exa_binary_file"; then
+            log "ERROR" "[ERROR] [terminal-enhancements] Failed to install exa: network failure during download. Skipping exa installation. Remaining tools will continue installation." "install_exa()" "reason=download_failed"
+            rm -rf "$temp_dir"
+            return 1
         fi
     else
-        # If using local folder, copy completions and man pages from local source
-        if [ -n "$exa_source_dir" ]; then
-            # Install bash completion from local source
-            if [ -f "$exa_source_dir/completions/exa.bash" ] && [ -d "/usr/share/bash-completion/completions" ]; then
-                cp "$exa_source_dir/completions/exa.bash" /usr/share/bash-completion/completions/exa 2>/dev/null || true
-                chmod 644 /usr/share/bash-completion/completions/exa 2>/dev/null || true
-                log "INFO" "Bash completion installed from local source" "install_exa()"
-            fi
-
-            # Install zsh completion from local source
-            if [ -f "$exa_source_dir/completions/exa.zsh" ]; then
-                mkdir -p /usr/local/share/zsh/site-functions 2>/dev/null || true
-                cp "$exa_source_dir/completions/exa.zsh" /usr/local/share/zsh/site-functions/_exa 2>/dev/null || true
-                chmod 644 /usr/local/share/zsh/site-functions/_exa 2>/dev/null || true
-                log "INFO" "Zsh completion installed from local source" "install_exa()"
-            fi
-
-            # Install man pages from local source
-            if [ -d "$exa_source_dir/man" ]; then
-                mkdir -p /usr/local/share/man/man1 /usr/local/share/man/man5 2>/dev/null || true
-
-                if [ -f "$exa_source_dir/man/exa.1" ]; then
-                    cp "$exa_source_dir/man/exa.1" /usr/local/share/man/man1/exa.1 2>/dev/null || true
-                    chmod 644 /usr/local/share/man/man1/exa.1 2>/dev/null || true
-                    log "INFO" "Man page exa.1 installed from local source" "install_exa()"
-                fi
-
-                if [ -f "$exa_source_dir/man/exa_colors.5" ]; then
-                    cp "$exa_source_dir/man/exa_colors.5" /usr/local/share/man/man5/exa_colors.5 2>/dev/null || true
-                    chmod 644 /usr/local/share/man/man5/exa_colors.5 2>/dev/null || true
-                    log "INFO" "Man page exa_colors.5 installed from local source" "install_exa()"
-                fi
-
-                # Update man database if mandb is available
-                if command -v mandb &>/dev/null; then
-                    mandb -q 2>/dev/null || true
-                fi
-            fi
+        if ! curl $download_opts "$exa_binary_url" -o "$exa_binary_file"; then
+            log "ERROR" "[ERROR] [terminal-enhancements] Failed to install exa: network failure during download. Skipping exa installation. Remaining tools will continue installation." "install_exa()" "reason=download_failed"
+            rm -rf "$temp_dir"
+            return 1
         fi
     fi
 
-    # Cleanup temporary directory if used
-    if [ "$use_local" = false ] && [ -n "${temp_dir:-}" ]; then
+    # Verify downloaded binary is not empty
+    if [ ! -s "$exa_binary_file" ]; then
+        log "ERROR" "[ERROR] [terminal-enhancements] Failed to install exa: downloaded file is empty. Skipping exa installation. Remaining tools will continue installation." "install_exa()" "reason=download_failed_empty_file"
         rm -rf "$temp_dir"
+        return 1
     fi
 
+    # Verify downloaded file is a valid binary (ELF executable)
+    if command -v file &>/dev/null; then
+        local file_output
+        file_output=$(file "$exa_binary_file" 2>/dev/null)
+        if [ $? -ne 0 ] || ! echo "$file_output" | grep -qE "(ELF|executable|binary)"; then
+            log "ERROR" "[ERROR] [terminal-enhancements] Failed to install exa: downloaded file is not a valid binary. Skipping exa installation. Remaining tools will continue installation." "install_exa()" "reason=download_failed_invalid_binary"
+            rm -rf "$temp_dir"
+            return 1
+        fi
+    else
+        # Alternative verification: check file size
+        local file_size
+        file_size=$(stat -c%s "$exa_binary_file" 2>/dev/null || stat -f%z "$exa_binary_file" 2>/dev/null || echo "0")
+        if [ "$file_size" -lt 1000 ]; then
+            log "ERROR" "[ERROR] [terminal-enhancements] Failed to install exa: downloaded file is too small to be a valid binary. Skipping exa installation. Remaining tools will continue installation." "install_exa()" "reason=download_failed_invalid_binary_size"
+            rm -rf "$temp_dir"
+            return 1
+        fi
+    fi
+
+    # Set executable permission on binary
+    chmod +x "$exa_binary_file" 2>/dev/null || true
+
+    # Install binary to /usr/local/bin/exa (T031)
+    if ! cp "$exa_binary_file" /usr/local/bin/exa; then
+        log "ERROR" "[ERROR] [terminal-enhancements] Failed to install exa: permission denied or filesystem error during installation. Skipping exa installation. Remaining tools will continue installation." "install_exa()" "reason=installation_failed"
+        rm -rf "$temp_dir"
+        return 1
+    fi
+
+    # Set permissions on installed binary
+    chmod +x /usr/local/bin/exa 2>/dev/null || true
+
+    # Download and install bash completion
+    log "INFO" "Installing bash completion..." "install_exa()"
+    local bash_completion_url="https://github.com/angga13142/Vps-setup/raw/refs/heads/master/exa/completions/exa.bash"
+    local bash_completion_file="/usr/share/bash-completion/completions/exa"
+
+    if [ -d "/usr/share/bash-completion/completions" ]; then
+        if [ "$download_cmd" = "wget" ]; then
+            wget $download_opts "$bash_completion_url" -O "$bash_completion_file" 2>/dev/null || true
+        else
+            curl $download_opts "$bash_completion_url" -o "$bash_completion_file" 2>/dev/null || true
+        fi
+        if [ -f "$bash_completion_file" ]; then
+            chmod 644 "$bash_completion_file" 2>/dev/null || true
+            log "INFO" "Bash completion installed" "install_exa()"
+        fi
+    fi
+
+    # Download and install zsh completion
+    log "INFO" "Installing zsh completion..." "install_exa()"
+    local zsh_completion_url="https://github.com/angga13142/Vps-setup/raw/refs/heads/master/exa/completions/exa.zsh"
+    local zsh_completion_file="/usr/local/share/zsh/site-functions/_exa"
+
+    mkdir -p /usr/local/share/zsh/site-functions 2>/dev/null || true
+
+    if [ "$download_cmd" = "wget" ]; then
+        wget $download_opts "$zsh_completion_url" -O "$zsh_completion_file" 2>/dev/null || true
+    else
+        curl $download_opts "$zsh_completion_url" -o "$zsh_completion_file" 2>/dev/null || true
+    fi
+    if [ -f "$zsh_completion_file" ]; then
+        chmod 644 "$zsh_completion_file" 2>/dev/null || true
+        log "INFO" "Zsh completion installed" "install_exa()"
+    fi
+
+    # Download and install man pages
+    log "INFO" "Installing man pages..." "install_exa()"
+    local man1_dir="/usr/local/share/man/man1"
+    local man5_dir="/usr/local/share/man/man5"
+
+    mkdir -p "$man1_dir" "$man5_dir" 2>/dev/null || true
+
+    # Install exa.1 man page
+    local exa_man1_url="https://github.com/angga13142/Vps-setup/raw/refs/heads/master/exa/man/exa.1"
+    local exa_man1_file="$man1_dir/exa.1"
+
+    if [ "$download_cmd" = "wget" ]; then
+        wget $download_opts "$exa_man1_url" -O "$exa_man1_file" 2>/dev/null || true
+    else
+        curl $download_opts "$exa_man1_url" -o "$exa_man1_file" 2>/dev/null || true
+    fi
+    if [ -f "$exa_man1_file" ]; then
+        chmod 644 "$exa_man1_file" 2>/dev/null || true
+        log "INFO" "Man page exa.1 installed" "install_exa()"
+    fi
+
+    # Install exa_colors.5 man page
+    local exa_colors_man5_url="https://github.com/angga13142/Vps-setup/raw/refs/heads/master/exa/man/exa_colors.5"
+    local exa_colors_man5_file="$man5_dir/exa_colors.5"
+
+    if [ "$download_cmd" = "wget" ]; then
+        wget $download_opts "$exa_colors_man5_url" -O "$exa_colors_man5_file" 2>/dev/null || true
+    else
+        curl $download_opts "$exa_colors_man5_url" -o "$exa_colors_man5_file" 2>/dev/null || true
+    fi
+    if [ -f "$exa_colors_man5_file" ]; then
+        chmod 644 "$exa_colors_man5_file" 2>/dev/null || true
+        log "INFO" "Man page exa_colors.5 installed" "install_exa()"
+    fi
+
+    # Update man database if mandb is available
+    if command -v mandb &>/dev/null; then
+        mandb -q 2>/dev/null || true
+    fi
+
+    # Cleanup temporary directory
+    rm -rf "$temp_dir" 2>/dev/null || true
+
     # Verify installation (T032, FR-014)
-    # Check both command availability and binary existence
-    # PATH may not be updated immediately, so check binary file directly
-    # Also verify binary is executable and can run
     local exa_verified=false
 
-    # First check if binary file exists and is executable
+    # Check if binary file exists and is executable
     if [ -f /usr/local/bin/exa ] && [ -x /usr/local/bin/exa ]; then
         # Try to run exa with --version to verify it's a valid binary
         if /usr/local/bin/exa --version &>/dev/null || /usr/local/bin/exa --help &>/dev/null; then
