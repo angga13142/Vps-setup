@@ -1695,10 +1695,44 @@ install_exa() {
         fi
 
         # Verify downloaded file is a valid binary (ELF executable)
-        if ! file "$exa_binary_file" 2>/dev/null | grep -qE "(ELF|executable|binary)"; then
-            log "ERROR" "[ERROR] [terminal-enhancements] Failed to install exa: downloaded file is not a valid binary. Skipping exa installation. Remaining tools will continue installation." "install_exa()" "reason=download_failed_invalid_binary"
-            rm -rf "$temp_dir"
-            return 1
+        # Check if file command is available first
+        if command -v file &>/dev/null; then
+            # Use file command to verify it's a valid binary
+            local file_output
+            file_output=$(file "$exa_binary_file" 2>/dev/null)
+            if [ $? -ne 0 ] || ! echo "$file_output" | grep -qE "(ELF|executable|binary)"; then
+                log "ERROR" "[ERROR] [terminal-enhancements] Failed to install exa: downloaded file is not a valid binary. Skipping exa installation. Remaining tools will continue installation." "install_exa()" "reason=download_failed_invalid_binary"
+                rm -rf "$temp_dir"
+                return 1
+            fi
+        else
+            # If file command is not available, use alternative verification
+            # Check file size (should be reasonable for a binary, not empty and not too small)
+            local file_size
+            file_size=$(stat -c%s "$exa_binary_file" 2>/dev/null || stat -f%z "$exa_binary_file" 2>/dev/null || echo "0")
+            if [ "$file_size" -lt 1000 ]; then
+                log "ERROR" "[ERROR] [terminal-enhancements] Failed to install exa: downloaded file is too small to be a valid binary. Skipping exa installation. Remaining tools will continue installation." "install_exa()" "reason=download_failed_invalid_binary_size"
+                rm -rf "$temp_dir"
+                return 1
+            fi
+            # Try to verify ELF magic bytes (7f 45 4c 46) using available tools
+            local magic_bytes_verified=false
+            # Try with od (GNU coreutils)
+            if command -v od &>/dev/null; then
+                if head -c 4 "$exa_binary_file" 2>/dev/null | od -An -tx1 2>/dev/null | grep -q "7f 45 4c 46"; then
+                    magic_bytes_verified=true
+                fi
+            # Try with hexdump (BSD/alternative)
+            elif command -v hexdump &>/dev/null; then
+                if head -c 4 "$exa_binary_file" 2>/dev/null | hexdump -C 2>/dev/null | head -1 | grep -q "7f 45 4c 46"; then
+                    magic_bytes_verified=true
+                fi
+            fi
+            # If we couldn't verify magic bytes, log warning but continue
+            # (we'll verify the binary can actually run later in the installation process)
+            if [ "$magic_bytes_verified" = false ]; then
+                log "WARNING" "[WARN] [terminal-enhancements] Cannot verify binary format (file command not available). Will attempt installation and verify binary can run." "install_exa()" "reason=file_command_unavailable"
+            fi
         fi
 
         # Set binary path
