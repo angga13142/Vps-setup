@@ -1,0 +1,88 @@
+name: "Copilot Setup Steps"
+
+# Automatically run the setup steps when they are changed to allow for easy validation, and
+# allow manual testing through the repository's "Actions" tab
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+  pull_request:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+
+jobs:
+  # The job MUST be called `copilot-setup-steps` or it will not be picked up by Copilot.
+  copilot-setup-steps:
+    runs-on: ubuntu-latest
+
+    # Set the permissions to the lowest permissions possible needed for your steps.
+    # Copilot will be given its own token for its operations.
+    permissions:
+      # If you want to clone the repository as part of your setup steps, for example to install dependencies, you'll need the `contents: read` permission.
+      # If you don't clone the repository in your setup steps, Copilot will do this for you automatically after the steps complete.
+      # Using read-write permission to allow Copilot to make changes to the repository.
+      contents: write
+
+    # You can define any steps you want, and they will run before the agent starts.
+    # If you do not check out your code, Copilot will do this for you.
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Cache APT packages
+        uses: actions/cache@v4
+        with:
+          path: /var/cache/apt
+          key: ${{ runner.os }}-apt-${{ hashFiles('**/apt-cache-key') }}
+          restore-keys: |
+            ${{ runner.os }}-apt-
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck bats git python3 python3-pip python3-venv
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install pre-commit
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install pre-commit
+
+      - name: Install pre-commit hooks
+        run: |
+          pre-commit install --install-hooks
+
+      - name: Cache bats helpers
+        uses: actions/cache@v4
+        with:
+          path: |
+            tests/helpers/bats-support
+            tests/helpers/bats-assert
+          key: ${{ runner.os }}-bats-helpers-${{ hashFiles('tests/helpers/**') }}
+          restore-keys: |
+            ${{ runner.os }}-bats-helpers-
+
+      - name: Download bats helpers
+        run: |
+          mkdir -p tests/helpers
+          if [ ! -d "tests/helpers/bats-support" ]; then
+            git clone --depth 1 https://github.com/bats-core/bats-support.git tests/helpers/bats-support
+          fi
+          if [ ! -d "tests/helpers/bats-assert" ]; then
+            git clone --depth 1 https://github.com/bats-core/bats-assert.git tests/helpers/bats-assert
+          fi
+
+      - name: Verify installations
+        run: |
+          echo "Verifying installed tools..."
+          shellcheck --version
+          bats --version
+          python3 --version
+          pre-commit --version
+          echo "✅ All tools installed successfully"
