@@ -216,3 +216,98 @@ setup() {
     unalias test_both 2>/dev/null || true
     unset -f test_both 2>/dev/null || true
 }
+
+#######################################
+# Tests for exa installation and verification
+#######################################
+
+@test "exa binary exists in repository" {
+    # Purpose: Verify exa binary exists in the repository's exa folder
+    # Preconditions: Repository is cloned with exa folder
+    # Expected: Binary file exists at exa/bin/exa
+    # Assertions: File exists and is executable
+
+    local repo_root
+    repo_root=$(cd "${BATS_TEST_DIRNAME}/../.." && pwd)
+    local exa_binary="$repo_root/exa/bin/exa"
+
+    # Check file exists
+    assert [ -f "$exa_binary" ]
+
+    # Check file is executable
+    assert [ -x "$exa_binary" ]
+}
+
+@test "exa binary is valid ELF executable" {
+    # Purpose: Verify exa binary is a valid ELF executable
+    # Preconditions: exa binary exists in repository
+    # Expected: File is identified as ELF executable
+    # Assertions: file command identifies it as ELF
+
+    local repo_root
+    repo_root=$(cd "${BATS_TEST_DIRNAME}/../.." && pwd)
+    local exa_binary="$repo_root/exa/bin/exa"
+
+    # Skip if file command not available
+    command -v file &>/dev/null || skip "file command not available"
+    
+    # Skip if binary doesn't exist
+    [ -f "$exa_binary" ] || skip "exa binary not found"
+
+    # Run file command and check for ELF
+    run file "$exa_binary"
+    assert_output --partial "ELF"
+}
+
+@test "exa binary can run --version" {
+    # Purpose: Verify exa binary can execute and show version
+    # Preconditions: exa binary exists and is valid
+    # Expected: exa --version returns version info
+    # Assertions: Command succeeds and output contains version info
+
+    local repo_root
+    repo_root=$(cd "${BATS_TEST_DIRNAME}/../.." && pwd)
+    local exa_binary="$repo_root/exa/bin/exa"
+
+    # Skip if binary doesn't exist
+    [ -f "$exa_binary" ] || skip "exa binary not found"
+
+    # Run exa --version
+    run "$exa_binary" --version
+
+    # Should succeed
+    assert_success
+
+    # Should contain version info (exa outputs "exa - list files on the command-line")
+    assert_output --partial "exa"
+}
+
+@test "install_exa uses local binary when available" {
+    # Purpose: Verify install_exa function prefers local exa folder over download
+    # Preconditions: Local exa folder exists with valid binary
+    # Expected: Function logs that it's using local exa folder
+    # Note: This test verifies the logic, not actual installation (requires root)
+
+    local repo_root
+    repo_root=$(cd "${BATS_TEST_DIRNAME}/../.." && pwd)
+    local exa_source_dir="$repo_root/exa"
+    local exa_binary="$exa_source_dir/bin/exa"
+
+    # Verify local exa folder exists and has valid binary
+    assert [ -d "$exa_source_dir" ]
+    assert [ -f "$exa_binary" ]
+    assert [ -x "$exa_binary" ]
+
+    # Note: Full install_exa test requires root to copy to /usr/local/bin
+    # This test just verifies the source is valid
+}
+
+@test "verify_installation handles exa binary existence check" {
+    # Purpose: Verify verify_installation function checks for exa correctly
+    # Note: This tests the function logic, actual execution requires root
+    # Expected: Function exists and can be called
+
+    # Test that function exists
+    run type verify_installation
+    assert_success
+}

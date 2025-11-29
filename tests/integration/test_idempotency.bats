@@ -161,6 +161,18 @@ teardown() {
     # Source script (main() won't run due to guard)
     source "$SCRIPT_PATH" 2>/dev/null || true
 
+    # Note: On non-Debian systems, apt-get update may fail due to Docker repository
+    # configured for Debian. We need to handle this gracefully.
+    # Remove any Docker repository if it exists and causes issues
+    if [ -f /etc/apt/sources.list.d/docker.sources ]; then
+        local codename
+        codename=$(. /etc/os-release && echo "$VERSION_CODENAME")
+        if [ "$codename" != "trixie" ] && [ "$codename" != "bookworm" ]; then
+            rm -f /etc/apt/sources.list.d/docker.sources 2>/dev/null || true
+            rm -f /etc/apt/sources.list.d/docker.list 2>/dev/null || true
+        fi
+    fi
+
     # First call
     run system_prep "$TEST_HOSTNAME"
     assert_success

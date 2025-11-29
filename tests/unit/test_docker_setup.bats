@@ -37,6 +37,11 @@ teardown() {
 
     [ "$EUID" -eq 0 ] || skip "Requires root privileges - run with sudo"
 
+    # Skip on non-Debian systems as Docker repository is configured for Debian
+    local os_id
+    os_id=$(. /etc/os-release && echo "$ID")
+    [ "$os_id" = "debian" ] || skip "Requires Debian - script configures Docker repository for Debian"
+
     # Source script (main() won't run due to guard)
     source "$SCRIPT_PATH" 2>/dev/null || true
 
@@ -64,6 +69,11 @@ teardown() {
     # Assertions: GPG key file exists and is readable
 
     [ "$EUID" -eq 0 ] || skip "Requires root privileges - run with sudo"
+
+    # Skip on non-Debian systems as Docker repository is configured for Debian
+    local os_id
+    os_id=$(. /etc/os-release && echo "$ID")
+    [ "$os_id" = "debian" ] || skip "Requires Debian - script configures Docker repository for Debian"
 
     # Source script but prevent main() from running
     source "$SCRIPT_PATH" 2>/dev/null || true
@@ -114,6 +124,11 @@ teardown() {
     # Assertions: Docker packages are installed
 
     [ "$EUID" -eq 0 ] || skip "Requires root privileges and Docker repository - run with sudo"
+
+    # Skip on non-Debian systems as Docker repository is configured for Debian
+    local os_id
+    os_id=$(. /etc/os-release && echo "$ID")
+    [ "$os_id" = "debian" ] || skip "Requires Debian - script configures Docker repository for Debian"
 
     # Source script (main() won't run due to guard)
     source "$SCRIPT_PATH" 2>/dev/null || true
