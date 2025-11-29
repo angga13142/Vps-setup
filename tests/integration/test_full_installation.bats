@@ -69,8 +69,8 @@ teardown() {
     # Expected: Function checks for root privileges
     # Assertions: Function exists and can be called
 
-    # Extract just the check_root_privileges function
-    eval "$(sed -n '/^check_root_privileges() {/,/^}$/p' "$SCRIPT_PATH")"
+    # Source script (main() won't run due to guard)
+    source "$SCRIPT_PATH" 2>/dev/null || true
 
     # Function should exist
     run type check_root_privileges

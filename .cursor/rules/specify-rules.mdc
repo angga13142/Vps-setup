@@ -1,8 +1,12 @@
+---
+alwaysApply: true
+---
 # project Development Guidelines
 
 Auto-generated from all feature plans. Last updated: 2025-11-28
 
 ## Active Technologies
+- File-based configuration: (003-terminal-enhancements)
 
 - Bash 5.2+ (Debian 13 default) (001-mobile-workstation-setup)
 
@@ -22,6 +26,7 @@ tests/
 Bash 5.2+ (Debian 13 default): Follow standard conventions
 
 ## Recent Changes
+- 003-terminal-enhancements: Added Bash 5.2+ (Debian 13 default)
 
 - 001-mobile-workstation-setup: Added Bash 5.2+ (Debian 13 default)
 
